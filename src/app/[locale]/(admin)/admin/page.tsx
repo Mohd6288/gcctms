@@ -17,10 +17,11 @@ export default async function AdminHomePage({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="text-sm text-muted-foreground">
-        Requests/payments/scheduling screens land in later phases.
-      </p>
+      <p className="text-sm text-muted-foreground">Payments/scheduling screens land in later phases.</p>
       <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button asChild variant="outline">
+          <Link href="/admin/requests">Review queue</Link>
+        </Button>
         <Button asChild variant="outline">
           <Link href="/admin/companies">Company directory</Link>
         </Button>

@@ -12,7 +12,11 @@ const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // matches the "documents" bucket's own file_size_limit
 const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 
-export type DocumentType = "national_id" | "prior_certificate";
+// national_id/prior_certificate are employee-scoped (Phase 3);
+// registration_sheet/hrbl_request_form are request-scoped, required +
+// admin-verified before a request can be approved (Phase 4 — see
+// database-schema.md's documents note).
+export type DocumentType = "national_id" | "prior_certificate" | "registration_sheet" | "hrbl_request_form";
 
 export interface UploadDocumentInput {
   companyId: number;

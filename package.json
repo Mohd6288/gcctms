@@ -13,7 +13,8 @@
     "check:no-service-role": "node scripts/check-no-service-role-in-client.mjs",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "cert:proof": "node scripts/certificate-pdf-proof.mjs"
+    "cert:proof": "node scripts/certificate-pdf-proof.mjs",
+    "bootstrap:super-admin": "node scripts/bootstrap-super-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

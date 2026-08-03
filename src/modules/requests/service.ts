@@ -1,3 +1,397 @@
 // requests module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
-// Implemented starting Phase 1 (schema) / Phase 3+ (this module's own phase) per tms-react-builder skill.
-export {}
+import "server-only";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { companies, courses, documents, payments, requestItems, trainingRequests } from "@/db/schema";
+import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
+import { writeAudit } from "@/modules/platform/audit/service";
+import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
+import { assertTransition, type RequestStatus } from "./machine";
+import type {
+  CreateDraftRequestInput,
+  RejectRequestInput,
+  RequestMoreInfoInput,
+  SetEmployeeDecisionInput,
+  SyncRequestItemsInput,
+  UpdateDraftRequestInput,
+  VerifyRequestDocumentInput,
+} from "./schema";
+
+async function getRequestOrThrow(requestId: number) {
+  const [request] = await db.select().from(trainingRequests).where(eq(trainingRequests.id, requestId));
+  if (!request) throw new Error("Request not found");
+  return request;
+}
+
+// Mirrors training_requests' contractor UPDATE policy exactly
+// (0008_training_requests.sql): own company AND status still editable.
+// platform_admin has a blanket policy, so no per-row check for that role.
+function assertContractorOwnsEditableRequest(context: AuthContext, request: { companyId: number; status: string }) {
+  if (context.role === "platform_admin") return;
+  if (
+    context.role === "contractor_manager" &&
+    context.companyId === request.companyId &&
+    (request.status === "draft" || request.status === "info_requested")
+  ) {
+    return;
+  }
+  throw new Error("Not authorized");
+}
+
+export async function createDraftRequest(context: AuthContext, input: CreateDraftRequestInput) {
+  if (!authorize("submit_requests", context) || !context.companyId) throw new Error("Not authorized");
+
+  const [request] = await db
+    .insert(trainingRequests)
+    .values({
+      companyId: context.companyId,
+      requestedBy: context.userId,
+      courseId: input.courseId,
+      preferredRegion: input.preferredRegion,
+      preferredCity: input.preferredCity,
+      preferredTrainingType: input.preferredTrainingType,
+      preferredStartDate: input.preferredStartDate,
+      preferredEndDate: input.preferredEndDate,
+      notes: input.notes,
+      status: "draft",
+    })
+    .returning({ id: trainingRequests.id });
+
+  await writeAudit({ userId: context.userId, entityType: "training_request", entityId: request.id, action: "create", toStatus: "draft" });
+  return request;
+}
+
+export async function updateDraftRequest(context: AuthContext, input: UpdateDraftRequestInput) {
+  const request = await getRequestOrThrow(input.requestId);
+  assertContractorOwnsEditableRequest(context, request);
+
+  await db
+    .update(trainingRequests)
+    .set({
+      courseId: input.courseId,
+      preferredRegion: input.preferredRegion,
+      preferredCity: input.preferredCity,
+      preferredTrainingType: input.preferredTrainingType,
+      preferredStartDate: input.preferredStartDate,
+      preferredEndDate: input.preferredEndDate,
+      notes: input.notes,
+    })
+    .where(eq(trainingRequests.id, input.requestId));
+}
+
+// Adds/removes employees on a draft/info_requested request to match
+// employeeIds exactly (diff-based — safe pre-submission, since request_items
+// carry no decision/enrollment progress yet in these states).
+export async function syncRequestItems(context: AuthContext, input: SyncRequestItemsInput) {
+  const request = await getRequestOrThrow(input.requestId);
+  assertContractorOwnsEditableRequest(context, request);
+
+  const existing = await db
+    .select({ id: requestItems.id, employeeId: requestItems.employeeId })
+    .from(requestItems)
+    .where(eq(requestItems.requestId, input.requestId));
+  const existingIds = new Set(existing.map((e) => e.employeeId));
+  const wantedIds = new Set(input.employeeIds);
+
+  const toRemove = existing.filter((e) => !wantedIds.has(e.employeeId));
+  const toAdd = input.employeeIds.filter((id) => !existingIds.has(id));
+
+  if (toRemove.length > 0) {
+    await db.delete(requestItems).where(
+      inArray(
+        requestItems.id,
+        toRemove.map((r) => r.id)
+      )
+    );
+  }
+  if (toAdd.length > 0) {
+    await db.insert(requestItems).values(toAdd.map((employeeId) => ({ requestId: input.requestId, employeeId, courseId: request.courseId })));
+  }
+}
+
+// Guard: >=1 request item, and every employee has a national_id document
+// uploaded (the one strictly-mandatory employee-scoped document —
+// prior_certificate is supplementary, not gating).
+export async function submitRequest(context: AuthContext, requestId: number) {
+  const request = await getRequestOrThrow(requestId);
+  assertContractorOwnsEditableRequest(context, request);
+  assertTransition(request.status as RequestStatus, "submitted");
+
+  const items = await db.select({ employeeId: requestItems.employeeId }).from(requestItems).where(eq(requestItems.requestId, requestId));
+  if (items.length === 0) throw new Error("Add at least one employee before submitting.");
+
+  const employeeIds = items.map((i) => i.employeeId);
+  const docs = await db
+    .select({ employeeId: documents.employeeId })
+    .from(documents)
+    .where(and(inArray(documents.employeeId, employeeIds), eq(documents.type, "national_id")));
+  const employeesWithDocs = new Set(docs.map((d) => d.employeeId));
+  const missing = employeeIds.filter((id) => !employeesWithDocs.has(id));
+  if (missing.length > 0) {
+    throw new Error("All employees must have a national ID document uploaded before submitting.");
+  }
+
+  await db.update(trainingRequests).set({ status: "submitted" }).where(eq(trainingRequests.id, requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: requestId,
+    action: "submit",
+    fromStatus: request.status,
+    toStatus: "submitted",
+  });
+  await notifyPlatformAdmins("request.submitted", { requestId, companyId: request.companyId });
+
+  return { id: requestId, status: "submitted" as const };
+}
+
+export async function setEmployeeDecision(context: AuthContext, input: SetEmployeeDecisionInput) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+
+  const [item] = await db.select().from(requestItems).where(eq(requestItems.id, input.requestItemId));
+  if (!item) throw new Error("Request item not found");
+
+  await db
+    .update(requestItems)
+    .set({ decision: input.decision, decisionReason: input.decisionReason ?? null, decidedBy: context.userId, decidedAt: new Date() })
+    .where(eq(requestItems.id, input.requestItemId));
+
+  await writeAudit({
+    userId: context.userId,
+    entityType: "request_item",
+    entityId: input.requestItemId,
+    action: "decide",
+    toStatus: input.decision,
+    note: input.decisionReason,
+  });
+}
+
+// documents' verification-protecting trigger reads auth_role(), which is
+// empty for Drizzle's direct superuser connection (no JWT claims set) — it
+// would otherwise silently null verified_by/verified_at right back out on
+// this UPDATE. The authorize() check above is the real gate for this
+// trusted server-side path (Golden Rule 2), so briefly disabling triggers
+// for just this one statement is intentional, not a bypass of a check we
+// still need.
+export async function verifyRequestDocument(context: AuthContext, input: VerifyRequestDocumentInput) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+
+  const [doc] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.requestId, input.requestId), eq(documents.type, input.type)));
+  if (!doc) throw new Error("Document not found");
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx.update(documents).set({ verifiedBy: context.userId, verifiedAt: new Date() }).where(eq(documents.id, doc.id));
+  });
+
+  await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "verify" });
+}
+
+async function resolvePrice(courseId: number, region: string | null): Promise<string> {
+  const rows = (await db.execute(sql`
+    select price from pricing
+    where course_id = ${courseId}
+      and (region = ${region} or region is null)
+      and effective_from <= current_date
+      and (effective_to is null or effective_to >= current_date)
+    order by region nulls last, effective_from desc
+    limit 1
+  `)) as unknown as Array<{ price: string }>;
+  if (rows.length === 0) throw new Error("No active pricing found for this course.");
+  return rows[0].price;
+}
+
+// Approval is a compound action: both submitted->approved and
+// approved->payment_pending happen for real (two persisted states, two
+// audit rows) EXCEPT when every employee ends up rejected — then the
+// request never actually reaches "approved" at all, it goes straight
+// submitted->rejected (matches roles-and-workflows.md: "if every employee
+// on a request ends up individually rejected, the whole request
+// auto-rejects instead of generating an invoice").
+export async function approveRequest(context: AuthContext, requestId: number) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+
+  const request = await getRequestOrThrow(requestId);
+  if (request.status !== "submitted") {
+    throw new Error(`Illegal training_request transition: ${request.status} -> approved`);
+  }
+
+  const requestDocs = await db
+    .select({ type: documents.type, verifiedAt: documents.verifiedAt })
+    .from(documents)
+    .where(eq(documents.requestId, requestId));
+  const verifiedTypes = new Set(requestDocs.filter((d) => d.verifiedAt !== null).map((d) => d.type));
+  if (!verifiedTypes.has("registration_sheet") || !verifiedTypes.has("hrbl_request_form")) {
+    throw new Error("Both the Registration Sheet and HRBL_0004_FO_001 must be verified before approving.");
+  }
+
+  const items = await db.select().from(requestItems).where(eq(requestItems.requestId, requestId));
+  if (items.length === 0) throw new Error("Request has no employees.");
+  const billable = items.filter((i) => i.decision !== "rejected");
+
+  const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));
+
+  if (billable.length === 0) {
+    assertTransition("submitted", "rejected");
+    await db
+      .update(trainingRequests)
+      .set({ status: "rejected", rejectedReason: "All employees were rejected during review." })
+      .where(eq(trainingRequests.id, requestId));
+    await writeAudit({
+      userId: context.userId,
+      entityType: "training_request",
+      entityId: requestId,
+      action: "auto_reject_all_employees_rejected",
+      fromStatus: "submitted",
+      toStatus: "rejected",
+    });
+    if (company) {
+      await queueNotification({ type: "request.rejected", recipientEmail: company.contactEmail, data: { requestId } });
+    }
+    return { id: requestId, status: "rejected" as const };
+  }
+
+  assertTransition("submitted", "approved");
+  await db.update(trainingRequests).set({ status: "approved" }).where(eq(trainingRequests.id, requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: requestId,
+    action: "approve",
+    fromStatus: "submitted",
+    toStatus: "approved",
+  });
+
+  const unitPrice = await resolvePrice(request.courseId, request.preferredRegion);
+  const [course] = await db.select({ titleEn: courses.titleEn }).from(courses).where(eq(courses.id, request.courseId));
+
+  const [payment] = await db
+    .insert(payments)
+    .values({
+      requestId,
+      description: course?.titleEn ?? "Training course",
+      qty: billable.length,
+      unitPrice,
+    })
+    .returning({ totalAmount: payments.totalAmount });
+
+  assertTransition("approved", "payment_pending");
+  await db
+    .update(trainingRequests)
+    .set({ status: "payment_pending", totalAmount: payment.totalAmount })
+    .where(eq(trainingRequests.id, requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: requestId,
+    action: "invoice_generated",
+    fromStatus: "approved",
+    toStatus: "payment_pending",
+  });
+
+  if (company) {
+    await queueNotification({ type: "request.approved", recipientEmail: company.contactEmail, data: { requestId, totalAmount: payment.totalAmount } });
+  }
+
+  return { id: requestId, status: "payment_pending" as const };
+}
+
+export async function requestMoreInfo(context: AuthContext, input: RequestMoreInfoInput) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+  const request = await getRequestOrThrow(input.requestId);
+  assertTransition(request.status as RequestStatus, "info_requested");
+
+  await db.update(trainingRequests).set({ status: "info_requested", adminNote: input.message }).where(eq(trainingRequests.id, input.requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: input.requestId,
+    action: "request_more_info",
+    fromStatus: request.status,
+    toStatus: "info_requested",
+    note: input.message,
+  });
+
+  const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));
+  if (company) {
+    await queueNotification({ type: "request.info_requested", recipientEmail: company.contactEmail, data: { requestId: input.requestId, message: input.message } });
+  }
+}
+
+// Reject-whole-request marks every employee decision rejected with the
+// same reason (roles-and-workflows.md).
+export async function rejectRequest(context: AuthContext, input: RejectRequestInput) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+  const request = await getRequestOrThrow(input.requestId);
+  assertTransition(request.status as RequestStatus, "rejected");
+
+  await db
+    .update(requestItems)
+    .set({ decision: "rejected", decisionReason: input.reason, decidedBy: context.userId, decidedAt: new Date() })
+    .where(eq(requestItems.requestId, input.requestId));
+  await db.update(trainingRequests).set({ status: "rejected", rejectedReason: input.reason }).where(eq(trainingRequests.id, input.requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: input.requestId,
+    action: "reject",
+    fromStatus: request.status,
+    toStatus: "rejected",
+    note: input.reason,
+  });
+
+  const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));
+  if (company) {
+    await queueNotification({ type: "request.rejected", recipientEmail: company.contactEmail, data: { requestId: input.requestId, reason: input.reason } });
+  }
+}
+
+// Explicit platform_admin action only — never automatic (roles-and-workflows.md).
+export async function closeRequest(context: AuthContext, requestId: number) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+  const request = await getRequestOrThrow(requestId);
+  assertTransition(request.status as RequestStatus, "closed");
+
+  await db.update(trainingRequests).set({ status: "closed", closedAt: new Date() }).where(eq(trainingRequests.id, requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: requestId,
+    action: "close",
+    fromStatus: request.status,
+    toStatus: "closed",
+  });
+
+  const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));
+  if (company) {
+    await queueNotification({ type: "request.closed", recipientEmail: company.contactEmail, data: { requestId } });
+  }
+}
+
+// admin, or contractor while draft/submitted (NOT info_requested — only
+// admin can cancel out of that state, per roles-and-workflows.md).
+export async function cancelRequest(context: AuthContext, requestId: number) {
+  const request = await getRequestOrThrow(requestId);
+
+  if (context.role === "platform_admin") {
+    // blanket, any pre-approved state — checked by assertTransition below.
+  } else if (context.role === "contractor_manager" && context.companyId === request.companyId) {
+    if (request.status !== "draft" && request.status !== "submitted") throw new Error("Not authorized");
+  } else {
+    throw new Error("Not authorized");
+  }
+
+  assertTransition(request.status as RequestStatus, "cancelled");
+  await db.update(trainingRequests).set({ status: "cancelled" }).where(eq(trainingRequests.id, requestId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: requestId,
+    action: "cancel",
+    fromStatus: request.status,
+    toStatus: "cancelled",
+  });
+}
