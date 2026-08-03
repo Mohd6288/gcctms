@@ -14,10 +14,11 @@ import {
   trainingRequests,
 } from "../../db/schema";
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
+import { withRole } from "./with-role";
 
 // Release gate from database-schema.md / roles-and-workflows.md: signs in as
-// each of the four roles (via synthesized JWT claims — see withRole below,
-// the same request.jwt.claims mechanism auth.jwt()/auth_role()/
+// each of the four roles (via synthesized JWT claims — see withRole.ts, the
+// same request.jwt.claims mechanism auth.jwt()/auth_role()/
 // auth_company_id() read in every policy) against the REAL local Supabase
 // Postgres, and proves at the database — not the app layer — that:
 //   1. contractor_manager/trainer cross-tenant access to companies/employees
@@ -25,35 +26,6 @@ import { encryptNationalId, hashNationalId } from "../../modules/platform/securi
 //   2. super_admin's blanket RLS access is scoped to catalog/pricing only,
 //      NOT requests/payments/classes (a deliberate, easy-to-regress design
 //      choice — see roles-and-workflows.md's role split).
-//
-// Every probe runs inside a transaction that always rolls back (withRole),
-// so RLS-violating writes never need manual cleanup and can't corrupt state
-// between tests.
-
-class Rollback extends Error {}
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-async function withRole<T>(claims: Record<string, unknown>, fn: (tx: Tx) => Promise<T>): Promise<T> {
-  let captured: T | undefined;
-  let capturedError: unknown;
-  try {
-    await db.transaction(async (tx) => {
-      await tx.execute(sql`set local role authenticated`);
-      await tx.execute(sql`select set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`);
-      try {
-        captured = await fn(tx);
-      } catch (e) {
-        capturedError = e;
-      }
-      throw new Rollback();
-    });
-  } catch (e) {
-    if (!(e instanceof Rollback)) throw e;
-  }
-  if (capturedError) throw capturedError;
-  return captured as T;
-}
 
 describe("RLS isolation — four fake role users, real database", () => {
   const suffix = randomUUID().slice(0, 8);

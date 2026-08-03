@@ -1,12 +1,14 @@
 import { setRequestLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { SignInForm } from "./sign-in-form";
+import { getContext } from "@/modules/platform/auth/service";
+import { MfaChallengeForm } from "./mfa-challenge-form";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export default async function SignInPage({
+export default async function MfaChallengePage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -14,9 +16,14 @@ export default async function SignInPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
+  const context = await getContext();
+  if (!context) {
+    redirect({ href: "/sign-in", locale });
+  }
+
   return (
     <div className="flex flex-1 items-center justify-center p-6">
-      <SignInForm />
+      <MfaChallengeForm />
     </div>
   );
 }

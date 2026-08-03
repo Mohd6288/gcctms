@@ -5,5 +5,57 @@
     "subtitle": "Contractor Safety Certification Courses, delivered on behalf of Saudi Electricity Company (SEC).",
     "cta": "Sign in",
     "languageSwitch": "العربية"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "invalidCredentials": "Invalid email or password.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "mfaEnroll": {
+      "title": "Set up two-factor authentication",
+      "description": "Your role requires an authenticator app for sign-in. Scan the QR code below, then enter the 6-digit code to confirm.",
+      "codeLabel": "6-digit code",
+      "submit": "Verify and enable",
+      "submitting": "Verifying…",
+      "secretFallback": "Can't scan? Enter this code manually:",
+      "genericError": "Could not verify the code. Please try again."
+    },
+    "mfaChallenge": {
+      "title": "Enter your authentication code",
+      "description": "Open your authenticator app and enter the current 6-digit code.",
+      "codeLabel": "6-digit code",
+      "submit": "Verify",
+      "submitting": "Verifying…",
+      "genericError": "Invalid code. Please try again."
+    }
+  },
+  "superadmin": {
+    "users": {
+      "title": "Admin & Trainer Accounts",
+      "createTitle": "Create account",
+      "fullNameLabel": "Full name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "roleSuperAdmin": "Super Admin",
+      "rolePlatformAdmin": "Platform Admin",
+      "roleTrainer": "Trainer",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "genericError": "Could not create the account. Please try again.",
+      "successTitle": "Account created",
+      "successTempPassword": "Temporary password (share this with the user once — it won't be shown again):",
+      "tableName": "Name",
+      "tableRole": "Role",
+      "tableStatus": "Status",
+      "tableCreated": "Created",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "empty": "No admin or trainer accounts yet."
+    }
   }
 }

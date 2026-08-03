@@ -1,12 +1,11 @@
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
-import { SignInForm } from "./sign-in-form";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export default async function SignInPage({
+export default async function TrainerHomePage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -16,7 +15,9 @@ export default async function SignInPage({
 
   return (
     <div className="flex flex-1 items-center justify-center p-6">
-      <SignInForm />
+      <p className="text-sm text-muted-foreground">
+        Trainer area — my-classes/attendance/results screens land in later phases.
+      </p>
     </div>
   );
 }
