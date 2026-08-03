@@ -10,7 +10,10 @@ export type NotificationType =
   | "request.approved"
   | "request.rejected"
   | "request.info_requested"
-  | "request.closed";
+  | "request.closed"
+  | "payment.uploaded"
+  | "payment.verified"
+  | "payment.rejected";
 
 export interface QueueNotificationInput {
   type: NotificationType;

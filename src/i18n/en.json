@@ -124,6 +124,21 @@
         "decisionPending": "Pending review",
         "decisionApproved": "Approved",
         "decisionRejected": "Rejected"
+      },
+      "payment": {
+        "title": "Payment",
+        "totalDue": "Total due",
+        "statusUploaded": "Awaiting review",
+        "statusVerified": "Verified",
+        "statusRejected": "Rejected",
+        "rejectionReason": "Rejection reason",
+        "uploadLabel": "SADAD receipt",
+        "upload": "Upload",
+        "uploading": "Uploading…",
+        "reupload": "Upload a new receipt",
+        "download": "Download current receipt",
+        "genericError": "Upload failed. Please try again.",
+        "noReceiptYet": "No receipt uploaded yet."
       }
     },
     "employees": {
@@ -218,6 +233,30 @@
         "requestInfo": "Request more info",
         "requestInfoMessageLabel": "Message to contractor",
         "requestInfoConfirm": "Send",
+        "cancel": "Cancel",
+        "genericError": "Something went wrong. Please try again."
+      }
+    },
+    "payments": {
+      "title": "Payment Verification Queue",
+      "tableCompany": "Company",
+      "tableCourse": "Course",
+      "tableTotal": "Total",
+      "tableCreated": "Uploaded",
+      "empty": "No payments awaiting verification.",
+      "review": "Review",
+      "detail": {
+        "title": "Payment",
+        "totalDue": "Total due",
+        "statusUploaded": "Awaiting review",
+        "statusVerified": "Verified",
+        "statusRejected": "Rejected",
+        "download": "Download receipt",
+        "noReceiptYet": "No receipt uploaded yet.",
+        "verify": "Verify payment",
+        "reject": "Reject payment",
+        "rejectReasonLabel": "Rejection reason",
+        "rejectConfirm": "Confirm rejection",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
       }

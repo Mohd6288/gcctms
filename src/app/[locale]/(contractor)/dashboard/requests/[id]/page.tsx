@@ -5,8 +5,10 @@ import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses, getRequestById, getRequestItems, getRequestLevelDocuments } from "@/modules/requests/queries";
 import { listEmployeesForCompany } from "@/modules/employees/queries";
 import { getCompanyEmployeeIdsWithNationalId } from "@/modules/platform/storage/queries";
+import { getPaymentForRequest } from "@/modules/payments/queries";
 import { RequestWizard } from "./request-wizard";
 import { RequestSummary } from "./request-summary";
+import { PaymentPanel } from "./payment-panel";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -34,8 +36,9 @@ export default async function RequestDetailPage({
   const [items, requestDocs] = await Promise.all([getRequestItems(requestId), getRequestLevelDocuments(requestId)]);
 
   if (!EDITABLE_STATUSES.has(request.status)) {
+    const payment = await getPaymentForRequest(requestId);
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="flex flex-1 flex-col items-center gap-6 p-6">
         <RequestSummary
           locale={locale}
           status={request.status}
@@ -51,6 +54,18 @@ export default async function RequestDetailPage({
             )
             .map((d) => ({ type: d.type, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
         />
+        {payment ? (
+          <PaymentPanel
+            requestId={requestId}
+            payment={{
+              id: payment.id,
+              totalAmount: payment.totalAmount,
+              status: payment.status as "uploaded" | "verified" | "rejected",
+              documentId: payment.documentId,
+              rejectionReason: payment.rejectionReason,
+            }}
+          />
+        ) : null}
       </div>
     );
   }

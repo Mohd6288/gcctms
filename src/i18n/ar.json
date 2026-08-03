@@ -124,6 +124,21 @@
         "decisionPending": "بانتظار المراجعة",
         "decisionApproved": "تمت الموافقة",
         "decisionRejected": "مرفوض"
+      },
+      "payment": {
+        "title": "الدفع",
+        "totalDue": "المبلغ المستحق",
+        "statusUploaded": "بانتظار المراجعة",
+        "statusVerified": "تم التحقق",
+        "statusRejected": "مرفوض",
+        "rejectionReason": "سبب الرفض",
+        "uploadLabel": "إيصال سداد",
+        "upload": "رفع",
+        "uploading": "جارٍ الرفع…",
+        "reupload": "رفع إيصال جديد",
+        "download": "تنزيل الإيصال الحالي",
+        "genericError": "فشل الرفع. يرجى المحاولة مرة أخرى.",
+        "noReceiptYet": "لم يتم رفع إيصال بعد."
       }
     },
     "employees": {
@@ -218,6 +233,30 @@
         "requestInfo": "طلب معلومات إضافية",
         "requestInfoMessageLabel": "رسالة إلى المقاول",
         "requestInfoConfirm": "إرسال",
+        "cancel": "إلغاء",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      }
+    },
+    "payments": {
+      "title": "قائمة التحقق من المدفوعات",
+      "tableCompany": "الشركة",
+      "tableCourse": "الدورة",
+      "tableTotal": "الإجمالي",
+      "tableCreated": "تاريخ الرفع",
+      "empty": "لا توجد مدفوعات بانتظار التحقق.",
+      "review": "مراجعة",
+      "detail": {
+        "title": "الدفع",
+        "totalDue": "المبلغ المستحق",
+        "statusUploaded": "بانتظار المراجعة",
+        "statusVerified": "تم التحقق",
+        "statusRejected": "مرفوض",
+        "download": "تنزيل الإيصال",
+        "noReceiptYet": "لم يتم رفع إيصال بعد.",
+        "verify": "التحقق من الدفع",
+        "reject": "رفض الدفع",
+        "rejectReasonLabel": "سبب الرفض",
+        "rejectConfirm": "تأكيد الرفض",
         "cancel": "إلغاء",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }

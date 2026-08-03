@@ -1,7 +1,7 @@
 // platform/storage — Private Supabase Storage bucket access — signed URL issuance only, never public URLs.
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,8 +15,9 @@ const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 // national_id/prior_certificate are employee-scoped (Phase 3);
 // registration_sheet/hrbl_request_form are request-scoped, required +
 // admin-verified before a request can be approved (Phase 4 — see
-// database-schema.md's documents note).
-export type DocumentType = "national_id" | "prior_certificate" | "registration_sheet" | "hrbl_request_form";
+// database-schema.md's documents note). sadad_invoice is also
+// request-scoped — the contractor's SADAD receipt (Phase 5).
+export type DocumentType = "national_id" | "prior_certificate" | "registration_sheet" | "hrbl_request_form" | "sadad_invoice";
 
 export interface UploadDocumentInput {
   companyId: number;
@@ -57,6 +58,38 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
     upsert: false,
   });
   if (uploadError) throw new Error("Upload failed. Please try again.");
+
+  // documents has `unique (request_id, type) where request_id is not null`
+  // — request-scoped types (registration_sheet/hrbl_request_form/
+  // sadad_invoice) allow only one active document per slot. Re-uploading
+  // replaces it in place (same row id — payments.document_id and any other
+  // FK pointing at it stays valid, since that FK is ON DELETE RESTRICT) and
+  // drops verification, never keeps history — see database-schema.md's
+  // documents note. The verification-protecting trigger clears
+  // verified_by/verified_at on this UPDATE, which is exactly the wanted
+  // behavior here.
+  if (input.requestId != null) {
+    const [existing] = await db
+      .select({ id: documents.id, objectKey: documents.objectKey })
+      .from(documents)
+      .where(and(eq(documents.requestId, input.requestId), eq(documents.type, input.type)));
+    if (existing) {
+      await admin.storage.from("documents").remove([existing.objectKey]);
+      await db
+        .update(documents)
+        .set({
+          originalName: input.file.name,
+          mimeType: input.file.type,
+          sizeBytes: bytes.length,
+          checksumSha256: checksum,
+          uploadedBy: context.userId,
+          objectKey,
+        })
+        .where(eq(documents.id, existing.id));
+      await writeAudit({ userId: context.userId, entityType: "document", entityId: existing.id, action: "replace" });
+      return { id: existing.id };
+    }
+  }
 
   const [doc] = await db
     .insert(documents)

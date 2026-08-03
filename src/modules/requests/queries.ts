@@ -2,7 +2,7 @@
 import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
+import { companies, courses, documents, employees, requestItems, trainingRequests } from "@/db/schema";
 
 export async function listRequestsForCompany(companyId: number) {
   return db
@@ -102,21 +102,4 @@ export async function listActiveCourses() {
     .from(courses)
     .where(eq(courses.active, true))
     .orderBy(courses.titleEn);
-}
-
-export async function getPaymentForRequest(requestId: number) {
-  const [payment] = await db
-    .select({
-      id: payments.id,
-      description: payments.description,
-      qty: payments.qty,
-      unitPrice: payments.unitPrice,
-      subtotal: payments.subtotal,
-      vatRate: payments.vatRate,
-      totalAmount: payments.totalAmount,
-      status: payments.status,
-    })
-    .from(payments)
-    .where(eq(payments.requestId, requestId));
-  return payment ?? null;
 }
