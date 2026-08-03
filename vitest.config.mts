@@ -4,6 +4,14 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // Every integration/RLS test file shares ONE real local Postgres
+    // instance (deliberately — see feedback_test_against_real_infra.md).
+    // Most tests scope assertions to their own randomUUID-suffixed fixture
+    // rows, so cross-file parallelism is safe — but any test doing a global
+    // aggregate (e.g. platform-overview-stats.test.ts's COUNT(*) queries)
+    // is exposed to other files' concurrent inserts/deletes. Serializing
+    // file execution trades a few seconds of wall time for determinism.
+    fileParallelism: false,
     env: {
       // Well-known fixed local dev values `supabase start` always prints —
       // not real secrets (see ci.yml, docs/residency.md). Vitest doesn't
