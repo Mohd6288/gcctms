@@ -8,26 +8,15 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 54322:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
-      # Placeholder values so build-time env access doesn't throw — real values
-      # come from Vercel/Supabase platform env in every real deployment.
+      # Matches `supabase start`'s fixed local dev values exactly — see
+      # docs/residency.md. Real secrets come from Vercel/Supabase platform
+      # env in every real deployment; nothing here is a live secret.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
-      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
-      NATIONAL_ID_HASH_KEY: ci-placeholder
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      NATIONAL_ID_HASH_KEY: ci-placeholder-not-a-real-secret
 
     steps:
       - uses: actions/checkout@v4
@@ -42,28 +31,28 @@ jobs:
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Real local Supabase stack (Postgres + Auth + Storage + PostgREST),
+      # not a bare postgres image — our migrations reference auth.users and
+      # auth.jwt()/auth.uid(), which only the Supabase stack provides. This
+      # also means CI applies migrations the exact same way local dev does.
+      - name: Start local Supabase stack
+        run: supabase start --exclude imgproxy,pgbouncer
+
       - name: Typecheck
         run: npm run typecheck
 
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm run test
-
-      - name: Apply migrations (if any)
-        run: |
-          if ls supabase/migrations/*.sql >/dev/null 2>&1; then
-            for f in supabase/migrations/*.sql; do
-              echo "Applying $f"
-              psql "$DATABASE_URL" -f "$f"
-            done
-          else
-            echo "No migrations yet."
-          fi
-
       - name: RLS check (fails if any public table lacks Row Level Security)
         run: npm run rls-check
+
+      - name: Test (unit + DB-backed integration/RLS suites)
+        run: npm run test
 
       - name: Build
         run: npm run build

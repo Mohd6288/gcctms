@@ -1,1 +1,0 @@
-# RLS tests — scripted as four fake role users (super_admin, platform_admin, contractor_manager, trainer) proving cross-tenant access is denied BY THE DATABASE. See database-schema.md and Phase 1 acceptance criteria.
