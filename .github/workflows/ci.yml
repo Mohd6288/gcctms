@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, staging]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+      # Placeholder values so build-time env access doesn't throw — real values
+      # come from Vercel/Supabase platform env in every real deployment.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      NATIONAL_ID_HASH_KEY: ci-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Apply migrations (if any)
+        run: |
+          if ls supabase/migrations/*.sql >/dev/null 2>&1; then
+            for f in supabase/migrations/*.sql; do
+              echo "Applying $f"
+              psql "$DATABASE_URL" -f "$f"
+            done
+          else
+            echo "No migrations yet."
+          fi
+
+      - name: RLS check (fails if any public table lacks Row Level Security)
+        run: npm run rls-check
+
+      - name: Build
+        run: npm run build
+
+      - name: Forbidden pattern check — no service_role in client bundle
+        run: npm run check:no-service-role
