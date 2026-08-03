@@ -4,6 +4,7 @@
     "title": "Training & Certification Management Platform",
     "subtitle": "Contractor Safety Certification Courses, delivered on behalf of Saudi Electricity Company (SEC).",
     "cta": "Sign in",
+    "registerCta": "Register your company",
     "languageSwitch": "العربية"
   },
   "auth": {
@@ -32,6 +33,85 @@
       "submit": "Verify",
       "submitting": "Verifying…",
       "genericError": "Invalid code. Please try again."
+    },
+    "register": {
+      "title": "Register your company",
+      "companyNameLabel": "Company name",
+      "crNumberLabel": "CR number",
+      "vatNumberLabel": "VAT number (optional)",
+      "contactNameLabel": "Contact name",
+      "contactEmailLabel": "Email",
+      "contactPhoneLabel": "Phone",
+      "cityLabel": "City",
+      "addressLabel": "Address (optional)",
+      "passwordLabel": "Password",
+      "submit": "Register",
+      "submitting": "Registering…",
+      "genericError": "Could not complete registration. Please try again.",
+      "signInLink": "Already have an account? Sign in"
+    }
+  },
+  "contractor": {
+    "employees": {
+      "title": "Employees",
+      "addNew": "Add employee",
+      "tableName": "Name",
+      "tableRole": "Job role",
+      "tableStatus": "Status",
+      "tableActions": "Actions",
+      "edit": "Edit",
+      "empty": "No employees yet.",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "createTitle": "Add employee",
+      "editTitle": "Edit employee",
+      "fullNameEnLabel": "Full name (English)",
+      "fullNameArLabel": "Full name (Arabic)",
+      "nationalIdLabel": "Iqama number",
+      "jobRoleLabel": "Job role",
+      "emailLabel": "Email (optional)",
+      "phoneLabel": "Phone (optional)",
+      "statusLabel": "Status",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "genericError": "Could not save employee. Please try again.",
+      "backToList": "Back to employees"
+    },
+    "documents": {
+      "title": "Documents",
+      "nationalId": "National ID",
+      "priorCertificate": "Prior certificate",
+      "uploaded": "Uploaded",
+      "notUploaded": "Not uploaded",
+      "upload": "Upload",
+      "uploading": "Uploading…",
+      "download": "Download",
+      "genericError": "Upload failed. Please try again."
+    }
+  },
+  "admin": {
+    "companies": {
+      "title": "Companies",
+      "tableName": "Name",
+      "tableCr": "CR number",
+      "tableContact": "Contact",
+      "tableCity": "City",
+      "tableStatus": "Status",
+      "statusActive": "Active",
+      "statusPending": "Pending",
+      "statusSuspended": "Suspended",
+      "empty": "No companies registered yet.",
+      "pendingNote": "CR verification is deferred — every registered company is active immediately. There is no approval queue yet."
+    },
+    "employees": {
+      "title": "Employees",
+      "tableName": "Name",
+      "tableCompany": "Company",
+      "tableRole": "Job role",
+      "tableStatus": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "empty": "No employees yet."
     }
   },
   "superadmin": {

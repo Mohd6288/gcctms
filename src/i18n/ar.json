@@ -4,6 +4,7 @@
     "title": "منصة إدارة التدريب والتصديق",
     "subtitle": "دورات تصديق السلامة للمقاولين، تُقدَّم نيابة عن الشركة السعودية للكهرباء.",
     "cta": "تسجيل الدخول",
+    "registerCta": "تسجيل شركتك",
     "languageSwitch": "English"
   },
   "auth": {
@@ -32,6 +33,85 @@
       "submit": "تحقق",
       "submitting": "جارٍ التحقق…",
       "genericError": "رمز غير صحيح. يرجى المحاولة مرة أخرى."
+    },
+    "register": {
+      "title": "تسجيل شركتك",
+      "companyNameLabel": "اسم الشركة",
+      "crNumberLabel": "رقم السجل التجاري",
+      "vatNumberLabel": "الرقم الضريبي (اختياري)",
+      "contactNameLabel": "اسم مسؤول التواصل",
+      "contactEmailLabel": "البريد الإلكتروني",
+      "contactPhoneLabel": "رقم الهاتف",
+      "cityLabel": "المدينة",
+      "addressLabel": "العنوان (اختياري)",
+      "passwordLabel": "كلمة المرور",
+      "submit": "تسجيل",
+      "submitting": "جارٍ التسجيل…",
+      "genericError": "تعذّر إكمال التسجيل. يرجى المحاولة مرة أخرى.",
+      "signInLink": "لديك حساب بالفعل؟ تسجيل الدخول"
+    }
+  },
+  "contractor": {
+    "employees": {
+      "title": "الموظفون",
+      "addNew": "إضافة موظف",
+      "tableName": "الاسم",
+      "tableRole": "المسمى الوظيفي",
+      "tableStatus": "الحالة",
+      "tableActions": "الإجراءات",
+      "edit": "تعديل",
+      "empty": "لا يوجد موظفون بعد.",
+      "statusActive": "نشط",
+      "statusInactive": "غير نشط",
+      "createTitle": "إضافة موظف",
+      "editTitle": "تعديل بيانات الموظف",
+      "fullNameEnLabel": "الاسم الكامل (بالإنجليزية)",
+      "fullNameArLabel": "الاسم الكامل (بالعربية)",
+      "nationalIdLabel": "رقم الإقامة",
+      "jobRoleLabel": "المسمى الوظيفي",
+      "emailLabel": "البريد الإلكتروني (اختياري)",
+      "phoneLabel": "رقم الهاتف (اختياري)",
+      "statusLabel": "الحالة",
+      "submit": "حفظ",
+      "submitting": "جارٍ الحفظ…",
+      "genericError": "تعذّر حفظ بيانات الموظف. يرجى المحاولة مرة أخرى.",
+      "backToList": "العودة إلى الموظفين"
+    },
+    "documents": {
+      "title": "المستندات",
+      "nationalId": "الهوية الوطنية (الإقامة)",
+      "priorCertificate": "شهادة سابقة",
+      "uploaded": "تم الرفع",
+      "notUploaded": "لم يتم الرفع",
+      "upload": "رفع",
+      "uploading": "جارٍ الرفع…",
+      "download": "تنزيل",
+      "genericError": "فشل الرفع. يرجى المحاولة مرة أخرى."
+    }
+  },
+  "admin": {
+    "companies": {
+      "title": "الشركات",
+      "tableName": "الاسم",
+      "tableCr": "رقم السجل التجاري",
+      "tableContact": "جهة التواصل",
+      "tableCity": "المدينة",
+      "tableStatus": "الحالة",
+      "statusActive": "نشط",
+      "statusPending": "قيد الانتظار",
+      "statusSuspended": "موقوف",
+      "empty": "لا توجد شركات مسجلة بعد.",
+      "pendingNote": "التحقق من السجل التجاري مؤجَّل حاليًا — كل شركة تُسجَّل تُصبح نشطة فورًا. لا توجد قائمة انتظار للموافقة بعد."
+    },
+    "employees": {
+      "title": "الموظفون",
+      "tableName": "الاسم",
+      "tableCompany": "الشركة",
+      "tableRole": "المسمى الوظيفي",
+      "tableStatus": "الحالة",
+      "statusActive": "نشط",
+      "statusInactive": "غير نشط",
+      "empty": "لا يوجد موظفون بعد."
     }
   },
   "superadmin": {

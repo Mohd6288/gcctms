@@ -26,9 +26,12 @@ export default async function LandingPage({
         </h1>
         <p className="text-lg text-muted-foreground">{t("subtitle")}</p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild size="lg">
           <Link href="/sign-in">{t("cta")}</Link>
+        </Button>
+        <Button asChild variant="secondary" size="lg">
+          <Link href="/register">{t("registerCta")}</Link>
         </Button>
         <Button asChild variant="outline" size="lg">
           <Link href="/" locale={otherLocale}>

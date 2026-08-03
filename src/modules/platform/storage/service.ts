@@ -1,3 +1,97 @@
 // platform/storage — Private Supabase Storage bucket access — signed URL issuance only, never public URLs.
-// Implemented starting Phase 1/2 per tms-react-builder skill's build-prompts.md.
-export {}
+import "server-only";
+import { createHash, randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { documents } from "@/db/schema";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
+import { writeAudit } from "@/modules/platform/audit/service";
+
+const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // matches the "documents" bucket's own file_size_limit
+const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
+
+export type DocumentType = "national_id" | "prior_certificate";
+
+export interface UploadDocumentInput {
+  companyId: number;
+  employeeId?: number | null;
+  requestId?: number | null;
+  type: DocumentType;
+  file: File;
+}
+
+// Mirrors documents' actual RLS policies exactly (0009_documents.sql):
+// platform_admin has a blanket policy, contractor_manager is scoped to its
+// own company_id, and there is NO super_admin policy — see the identical
+// note in modules/employees/service.ts.
+function assertCanTouchCompany(context: AuthContext, companyId: number) {
+  if (context.role === "platform_admin") return;
+  if (context.role === "contractor_manager" && context.companyId === companyId) return;
+  throw new Error("Not authorized");
+}
+
+export async function uploadDocument(context: AuthContext, input: UploadDocumentInput) {
+  if (!authorize("upload_documents", context)) throw new Error("Not authorized");
+  assertCanTouchCompany(context, input.companyId);
+
+  if (!ALLOWED_MIME_TYPES.has(input.file.type)) {
+    throw new Error("Unsupported file type. Only JPG, PNG, or PDF are allowed.");
+  }
+  if (input.file.size > MAX_SIZE_BYTES) {
+    throw new Error("File is too large. Maximum size is 10MB.");
+  }
+
+  const bytes = Buffer.from(await input.file.arrayBuffer());
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  const objectKey = randomUUID(); // opaque — no PII, no company/employee id in the key itself
+
+  const admin = createAdminClient();
+  const { error: uploadError } = await admin.storage.from("documents").upload(objectKey, bytes, {
+    contentType: input.file.type,
+    upsert: false,
+  });
+  if (uploadError) throw new Error("Upload failed. Please try again.");
+
+  const [doc] = await db
+    .insert(documents)
+    .values({
+      companyId: input.companyId,
+      employeeId: input.employeeId ?? null,
+      requestId: input.requestId ?? null,
+      type: input.type,
+      bucket: "documents",
+      objectKey,
+      originalName: input.file.name,
+      mimeType: input.file.type,
+      sizeBytes: bytes.length,
+      checksumSha256: checksum,
+      uploadedBy: context.userId,
+    })
+    .returning({ id: documents.id });
+
+  await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "upload" });
+
+  return doc;
+}
+
+// Issues a short-lived signed URL after checking the caller actually owns
+// (or platform_admin-administers) the document — never a public/permanent
+// URL. Throws "Not authorized" for cross-tenant attempts, which
+// src/app/api/documents/[id]/download/route.ts turns into a 403.
+export async function getSignedDownloadUrl(context: AuthContext, documentId: number): Promise<string> {
+  if (!authorize("upload_documents", context)) throw new Error("Not authorized");
+
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new Error("Not found");
+  assertCanTouchCompany(context, doc.companyId);
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage.from(doc.bucket).createSignedUrl(doc.objectKey, SIGNED_URL_TTL_SECONDS);
+  if (error || !data) throw new Error("Could not generate download link.");
+
+  await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "download" });
+
+  return data.signedUrl;
+}
