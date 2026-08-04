@@ -442,6 +442,36 @@
       "previous": "السابق",
       "next": "التالي",
       "noClasses": "لا توجد فصول هذا الشهر."
+    },
+    "reports": {
+      "title": "التقارير",
+      "periodMonth": "شهر",
+      "periodYear": "سنة",
+      "basisPrevious": "مقارنة بالفترة السابقة",
+      "basisYearAgo": "مقارنة بنفس الفترة العام الماضي",
+      "exportCsv": "تصدير CSV",
+      "print": "طباعة",
+      "tileRevenue": "الإيرادات المؤكدة (ريال)",
+      "tileOutstanding": "المستحقات (ريال)",
+      "tileCertificates": "الشهادات الصادرة",
+      "tileCompletionRate": "نسبة الإكمال (%)",
+      "tileTotalRequests": "إجمالي الطلبات",
+      "tileActiveCompanies": "الشركات النشطة",
+      "tileActiveLearners": "المتدربون النشطون",
+      "tileAvgRevenue": "متوسط الإيراد لكل دورة (ريال)",
+      "revenueByCourse": "الإيرادات حسب الدورة",
+      "requestsByRegion": "الطلبات حسب المنطقة",
+      "requestsByStatus": "الطلبات حسب الحالة",
+      "status": {
+        "draft": "مسودة",
+        "submitted": "مُقدَّم",
+        "infoRequested": "مطلوب معلومات",
+        "rejected": "مرفوض",
+        "paymentPending": "بانتظار الدفع",
+        "readyForScheduling": "جاهز للجدولة",
+        "scheduled": "مجدول",
+        "completed": "مكتمل"
+      }
     }
   },
   "superadmin": {

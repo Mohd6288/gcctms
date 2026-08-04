@@ -17,7 +17,7 @@ export default async function AdminHomePage({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="text-sm text-muted-foreground">Reports land in a later phase. Certificate release lives on each class&apos;s detail page.</p>
+      <p className="text-sm text-muted-foreground">Certificate release lives on each class&apos;s detail page.</p>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild variant="outline">
           <Link href="/admin/requests">Review queue</Link>
@@ -39,6 +39,9 @@ export default async function AdminHomePage({
         </Button>
         <Button asChild variant="outline">
           <Link href="/admin/employees">Employee browser</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/admin/reports">Reports</Link>
         </Button>
       </div>
     </div>

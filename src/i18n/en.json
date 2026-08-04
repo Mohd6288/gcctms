@@ -442,6 +442,36 @@
       "previous": "Previous",
       "next": "Next",
       "noClasses": "No classes this month."
+    },
+    "reports": {
+      "title": "Reports",
+      "periodMonth": "Month",
+      "periodYear": "Year",
+      "basisPrevious": "vs. previous period",
+      "basisYearAgo": "vs. same period last year",
+      "exportCsv": "Export CSV",
+      "print": "Print",
+      "tileRevenue": "Verified revenue (SAR)",
+      "tileOutstanding": "Outstanding (SAR)",
+      "tileCertificates": "Certificates issued",
+      "tileCompletionRate": "Completion rate (%)",
+      "tileTotalRequests": "Total requests",
+      "tileActiveCompanies": "Active companies",
+      "tileActiveLearners": "Active learners",
+      "tileAvgRevenue": "Avg revenue per course (SAR)",
+      "revenueByCourse": "Revenue by course",
+      "requestsByRegion": "Requests by region",
+      "requestsByStatus": "Requests by status",
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "infoRequested": "Info requested",
+        "rejected": "Rejected",
+        "paymentPending": "Payment pending",
+        "readyForScheduling": "Ready for scheduling",
+        "scheduled": "Scheduled",
+        "completed": "Completed"
+      }
     }
   },
   "superadmin": {
