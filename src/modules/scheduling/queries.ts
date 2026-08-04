@@ -8,6 +8,7 @@ import {
   companies,
   courses,
   employees,
+  profiles,
   regionalAdminAssignments,
   requestItems,
   trainers,
@@ -51,6 +52,14 @@ export async function listActiveEnrollmentRequestItemIds(): Promise<Set<number>>
 
 export async function listRegionalAdminAssignments() {
   return db.select().from(regionalAdminAssignments);
+}
+
+export async function listPlatformAdmins() {
+  return db
+    .select({ userId: profiles.userId, fullName: profiles.fullName })
+    .from(profiles)
+    .where(and(eq(profiles.role, "platform_admin"), eq(profiles.active, true)))
+    .orderBy(asc(profiles.fullName));
 }
 
 export async function listClasses() {
