@@ -10,6 +10,9 @@ import { useRouter } from "@/i18n/navigation";
 import { createPricingAction, setCourseJobRolesAction, updateCourseAction } from "@/modules/catalog/actions";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
+const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
+const selectClassName =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
 interface CourseData {
   id: number;
@@ -19,6 +22,7 @@ interface CourseData {
   description: string | null;
   durationHours: string;
   minAttendancePct: number;
+  contractorCategory: string | null;
   active: boolean;
 }
 
@@ -58,6 +62,9 @@ export function CourseDetail({
   const [description, setDescription] = useState(course.description ?? "");
   const [durationHours, setDurationHours] = useState(course.durationHours);
   const [minAttendancePct, setMinAttendancePct] = useState(String(course.minAttendancePct));
+  const [contractorCategory, setContractorCategory] = useState<(typeof CONTRACTOR_CATEGORIES)[number] | "">(
+    (course.contractorCategory as (typeof CONTRACTOR_CATEGORIES)[number] | null) ?? ""
+  );
   const [active, setActive] = useState(course.active);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
@@ -80,6 +87,7 @@ export function CourseDetail({
         description: description || undefined,
         durationHours: Number(durationHours),
         minAttendancePct: Number(minAttendancePct),
+        contractorCategory: contractorCategory || undefined,
         active,
       });
       router.refresh();
@@ -164,6 +172,22 @@ export function CourseDetail({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="minAttendancePct">{t("minAttendanceLabel")}</Label>
             <Input id="minAttendancePct" type="number" min="1" max="100" value={minAttendancePct} onChange={(e) => setMinAttendancePct(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorCategory">{t("contractorCategoryLabel")}</Label>
+            <select
+              id="contractorCategory"
+              className={selectClassName}
+              value={contractorCategory}
+              onChange={(e) => setContractorCategory(e.target.value as (typeof CONTRACTOR_CATEGORIES)[number] | "")}
+            >
+              <option value="">{t("contractorCategoryNone")}</option>
+              {CONTRACTOR_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center gap-2">
             <input id="active" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />

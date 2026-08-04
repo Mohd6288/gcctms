@@ -13,10 +13,14 @@ create table training_requests (
   preferred_start_date date,
   preferred_end_date date,
   notes text,
+  -- Exactly the validated prototype's RequestStatus set (types/index.ts) —
+  -- no 'approved' (submitted -> payment_pending is a single direct step,
+  -- not a persisted intermediate state), no 'cancelled' (the prototype
+  -- never cancels a request, only classes), no 'closed' (closing is just
+  -- setting closed_at while status stays 'completed', not its own status).
   status text not null default 'draft' check (status in (
-    'draft', 'submitted', 'approved', 'rejected', 'info_requested',
-    'payment_pending', 'ready_for_scheduling', 'scheduled', 'completed',
-    'closed', 'cancelled'
+    'draft', 'submitted', 'info_requested', 'rejected',
+    'payment_pending', 'ready_for_scheduling', 'scheduled', 'completed'
   )),
   total_amount numeric(10, 2),
   admin_note text,

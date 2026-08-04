@@ -44,6 +44,10 @@
       "contactPhoneLabel": "Phone",
       "cityLabel": "City",
       "addressLabel": "Address (optional)",
+      "sectorLabel": "Sector",
+      "regionLabel": "Region",
+      "contractorCategoryLabel": "Contractor category (optional)",
+      "contractorCategoryNone": "Not applicable",
       "passwordLabel": "Password",
       "submit": "Register",
       "submitting": "Registering…",
@@ -114,7 +118,8 @@
         "notAttached": "Not attached",
         "attach": "Attach",
         "attaching": "Attaching…",
-        "download": "Download"
+        "download": "Download",
+        "downloadTemplate": "Download blank template"
       },
       "summary": {
         "adminNote": "Message from GCC Lab",
@@ -128,6 +133,8 @@
       "payment": {
         "title": "Payment",
         "totalDue": "Total due",
+        "sadadReference": "SADAD reference",
+        "dueDate": "Due date",
         "statusUploaded": "Awaiting review",
         "statusVerified": "Verified",
         "statusRejected": "Rejected",
@@ -225,6 +232,7 @@
         "notAttached": "Not attached yet",
         "verify": "Mark as verified",
         "download": "Download",
+        "unitPriceLabel": "Unit price override (SAR, optional)",
         "approve": "Approve request",
         "approveBlocked": "Both request documents must be verified before approving.",
         "reject": "Reject whole request",
@@ -248,6 +256,8 @@
       "detail": {
         "title": "Payment",
         "totalDue": "Total due",
+        "sadadReference": "SADAD reference",
+        "dueDate": "Due date",
         "statusUploaded": "Awaiting review",
         "statusVerified": "Verified",
         "statusRejected": "Rejected",
@@ -320,6 +330,8 @@
       "examLabel": "Exam (optional)",
       "examNone": "No exam",
       "validityMonthsLabel": "Validity (months, optional)",
+      "contractorCategoryLabel": "Contractor category (optional)",
+      "contractorCategoryNone": "Universal (all companies)",
       "statusLabel": "Status",
       "submit": "Save",
       "submitting": "Saving…",

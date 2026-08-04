@@ -307,6 +307,13 @@ export function RequestWizard({
                       {doc ? (doc.verifiedAt ? tDocs("verified") : tDocs("pendingVerification")) : tDocs("notAttached")}
                     </span>
                   </div>
+                  <a
+                    href={type === "registration_sheet" ? "/documents/Registration-sheet.xlsx" : "/documents/HRBL_0004_FO_001.xlsx"}
+                    download
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {tDocs("downloadTemplate")}
+                  </a>
                   <div className="flex items-center gap-2">
                     <input
                       type="file"

@@ -62,6 +62,8 @@ export default async function AdminRequestDetailPage({
         <PaymentReviewPanel
           payment={{
             id: payment.id,
+            sadadInvoiceRef: payment.sadadInvoiceRef,
+            dueDate: payment.dueDate,
             totalAmount: payment.totalAmount,
             status: payment.status as "uploaded" | "verified" | "rejected",
             documentId: payment.documentId,

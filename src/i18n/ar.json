@@ -44,6 +44,10 @@
       "contactPhoneLabel": "رقم الهاتف",
       "cityLabel": "المدينة",
       "addressLabel": "العنوان (اختياري)",
+      "sectorLabel": "القطاع",
+      "regionLabel": "المنطقة",
+      "contractorCategoryLabel": "فئة المقاول (اختياري)",
+      "contractorCategoryNone": "لا ينطبق",
       "passwordLabel": "كلمة المرور",
       "submit": "تسجيل",
       "submitting": "جارٍ التسجيل…",
@@ -114,7 +118,8 @@
         "notAttached": "لم يتم الإرفاق",
         "attach": "إرفاق",
         "attaching": "جارٍ الإرفاق…",
-        "download": "تنزيل"
+        "download": "تنزيل",
+        "downloadTemplate": "تنزيل النموذج الفارغ"
       },
       "summary": {
         "adminNote": "رسالة من مختبر الخليج",
@@ -128,6 +133,8 @@
       "payment": {
         "title": "الدفع",
         "totalDue": "المبلغ المستحق",
+        "sadadReference": "مرجع سداد",
+        "dueDate": "تاريخ الاستحقاق",
         "statusUploaded": "بانتظار المراجعة",
         "statusVerified": "تم التحقق",
         "statusRejected": "مرفوض",
@@ -225,6 +232,7 @@
         "notAttached": "لم يُرفق بعد",
         "verify": "وضع علامة \"تم التحقق\"",
         "download": "تنزيل",
+        "unitPriceLabel": "تجاوز سعر الوحدة (ريال، اختياري)",
         "approve": "الموافقة على الطلب",
         "approveBlocked": "يجب التحقق من كلا مستندي الطلب قبل الموافقة.",
         "reject": "رفض الطلب بالكامل",
@@ -248,6 +256,8 @@
       "detail": {
         "title": "الدفع",
         "totalDue": "المبلغ المستحق",
+        "sadadReference": "مرجع سداد",
+        "dueDate": "تاريخ الاستحقاق",
         "statusUploaded": "بانتظار المراجعة",
         "statusVerified": "تم التحقق",
         "statusRejected": "مرفوض",
@@ -320,6 +330,8 @@
       "examLabel": "الاختبار (اختياري)",
       "examNone": "بدون اختبار",
       "validityMonthsLabel": "مدة الصلاحية (بالأشهر، اختياري)",
+      "contractorCategoryLabel": "فئة المقاول (اختياري)",
+      "contractorCategoryNone": "عام (لجميع الشركات)",
       "statusLabel": "الحالة",
       "submit": "حفظ",
       "submitting": "جارٍ الحفظ…",

@@ -1,14 +1,24 @@
 // employees module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, employees, jobRoles } from "@/db/schema";
 
-export async function listActiveJobRoles() {
+// Matches the validated prototype's EmployeeFormDialog.tsx job-role filter
+// exactly — asymmetric from the course filter: a company with NO category
+// set sees the FULL role list (no filtering at all, not just universal
+// roles); a company WITH a category sees ONLY exact-matching roles (no
+// fallback to roles that have no category of their own). See the
+// prototype's comment: "No category set yet on the company -> show the
+// full real list rather than nothing."
+export async function listActiveJobRoles(companyId: number) {
+  const [company] = await db.select({ contractorCategory: companies.contractorCategory }).from(companies).where(eq(companies.id, companyId));
+  const category = company?.contractorCategory ?? null;
+
   return db
     .select({ id: jobRoles.id, nameEn: jobRoles.nameEn, nameAr: jobRoles.nameAr })
     .from(jobRoles)
-    .where(eq(jobRoles.active, true))
+    .where(category ? and(eq(jobRoles.active, true), eq(jobRoles.contractorCategory, category)) : eq(jobRoles.active, true))
     .orderBy(asc(jobRoles.nameEn));
 }
 

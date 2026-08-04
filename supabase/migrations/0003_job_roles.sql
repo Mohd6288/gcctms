@@ -3,6 +3,11 @@ create table job_roles (
   code text not null unique,
   name_en text not null,
   name_ar text not null,
+  -- Matches the validated prototype's JobRole.contractorCategory exactly:
+  -- null = universal (shown regardless of the company's category); set =
+  -- only shown to companies with that exact category. See
+  -- employees/queries.ts's listActiveJobRoles().
+  contractor_category text check (contractor_category is null or contractor_category in ('Distribution', 'Transmission')),
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

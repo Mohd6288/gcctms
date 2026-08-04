@@ -34,6 +34,9 @@ export async function registerCompany(input: RegisterCompanyInput) {
         contactPhone: input.contactPhone,
         city: input.city,
         address: input.address,
+        sector: input.sector,
+        region: input.region,
+        contractorCategory: input.contractorCategory,
         ownerUserId: userId,
         status: "active",
       })

@@ -131,7 +131,12 @@ export async function submitRequest(context: AuthContext, requestId: number) {
     throw new Error("All employees must have a national ID document uploaded before submitting.");
   }
 
-  await db.update(trainingRequests).set({ status: "submitted" }).where(eq(trainingRequests.id, requestId));
+  // Matches the validated prototype's submitRequest(): resubmitting from
+  // info_requested clears the prior review note and every employee
+  // decision, so admin re-reviews with a clean slate. A no-op for the
+  // draft->submitted path since those fields are already unset there.
+  await db.update(requestItems).set({ decision: "pending", decisionReason: null, decidedBy: null, decidedAt: null }).where(eq(requestItems.requestId, requestId));
+  await db.update(trainingRequests).set({ status: "submitted", adminNote: null }).where(eq(trainingRequests.id, requestId));
   await writeAudit({
     userId: context.userId,
     entityType: "training_request",
@@ -204,19 +209,18 @@ async function resolvePrice(courseId: number, region: string | null): Promise<st
   return rows[0].price;
 }
 
-// Approval is a compound action: both submitted->approved and
-// approved->payment_pending happen for real (two persisted states, two
-// audit rows) EXCEPT when every employee ends up rejected — then the
-// request never actually reaches "approved" at all, it goes straight
-// submitted->rejected (matches roles-and-workflows.md: "if every employee
-// on a request ends up individually rejected, the whole request
-// auto-rejects instead of generating an invoice").
-export async function approveRequest(context: AuthContext, requestId: number) {
+// Matches the validated prototype's approveRequest(): submitted->payment_pending
+// is a single direct write (no persisted 'approved' intermediate state, one
+// audit row) EXCEPT when every employee ends up rejected — then the request
+// goes straight submitted->rejected instead of generating an invoice (matches
+// roles-and-workflows.md: "if every employee on a request ends up
+// individually rejected, the whole request auto-rejects").
+export async function approveRequest(context: AuthContext, requestId: number, unitPriceOverride?: number) {
   if (!authorize("review_requests", context)) throw new Error("Not authorized");
 
   const request = await getRequestOrThrow(requestId);
   if (request.status !== "submitted") {
-    throw new Error(`Illegal training_request transition: ${request.status} -> approved`);
+    throw new Error(`Illegal training_request transition: ${request.status} -> payment_pending`);
   }
 
   const requestDocs = await db
@@ -254,31 +258,30 @@ export async function approveRequest(context: AuthContext, requestId: number) {
     return { id: requestId, status: "rejected" as const };
   }
 
-  assertTransition("submitted", "approved");
-  await db.update(trainingRequests).set({ status: "approved" }).where(eq(trainingRequests.id, requestId));
-  await writeAudit({
-    userId: context.userId,
-    entityType: "training_request",
-    entityId: requestId,
-    action: "approve",
-    fromStatus: "submitted",
-    toStatus: "approved",
-  });
+  assertTransition("submitted", "payment_pending");
 
-  const unitPrice = await resolvePrice(request.courseId, request.preferredRegion);
+  const unitPrice = unitPriceOverride != null ? String(unitPriceOverride) : await resolvePrice(request.courseId, request.preferredRegion);
   const [course] = await db.select({ titleEn: courses.titleEn }).from(courses).where(eq(courses.id, request.courseId));
+
+  // Matches the validated prototype's Invoice: dueDate = issueDate + 14 days,
+  // and a SADAD reference generated once at approval and shown to the
+  // contractor as the literal payment instruction.
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+  const sadadInvoiceRef = `SADAD-${Math.floor(1000 + Math.random() * 8999)}-${Math.floor(1000 + Math.random() * 8999)}`;
 
   const [payment] = await db
     .insert(payments)
     .values({
       requestId,
+      sadadInvoiceRef,
+      dueDate: dueDate.toISOString().slice(0, 10),
       description: course?.titleEn ?? "Training course",
       qty: billable.length,
       unitPrice,
     })
     .returning({ totalAmount: payments.totalAmount });
 
-  assertTransition("approved", "payment_pending");
   await db
     .update(trainingRequests)
     .set({ status: "payment_pending", totalAmount: payment.totalAmount })
@@ -287,8 +290,8 @@ export async function approveRequest(context: AuthContext, requestId: number) {
     userId: context.userId,
     entityType: "training_request",
     entityId: requestId,
-    action: "invoice_generated",
-    fromStatus: "approved",
+    action: "approve",
+    fromStatus: "submitted",
     toStatus: "payment_pending",
   });
 
@@ -349,49 +352,29 @@ export async function rejectRequest(context: AuthContext, input: RejectRequestIn
   }
 }
 
-// Explicit platform_admin action only — never automatic (roles-and-workflows.md).
+// Explicit platform_admin action only — never automatic. Matches the
+// validated prototype: "closing" a request is never its own status, just
+// setting closedAt while status stays 'completed' (types/index.ts's
+// TrainingRequest.closedAt).
 export async function closeRequest(context: AuthContext, requestId: number) {
   if (!authorize("review_requests", context)) throw new Error("Not authorized");
   const request = await getRequestOrThrow(requestId);
-  assertTransition(request.status as RequestStatus, "closed");
+  if (request.status !== "completed") {
+    throw new Error(`Cannot close a training_request that isn't completed (current status: ${request.status})`);
+  }
 
-  await db.update(trainingRequests).set({ status: "closed", closedAt: new Date() }).where(eq(trainingRequests.id, requestId));
+  await db.update(trainingRequests).set({ closedAt: new Date() }).where(eq(trainingRequests.id, requestId));
   await writeAudit({
     userId: context.userId,
     entityType: "training_request",
     entityId: requestId,
     action: "close",
-    fromStatus: request.status,
-    toStatus: "closed",
+    fromStatus: "completed",
+    toStatus: "completed",
   });
 
   const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));
   if (company) {
     await queueNotification({ type: "request.closed", recipientEmail: company.contactEmail, data: { requestId } });
   }
-}
-
-// admin, or contractor while draft/submitted (NOT info_requested — only
-// admin can cancel out of that state, per roles-and-workflows.md).
-export async function cancelRequest(context: AuthContext, requestId: number) {
-  const request = await getRequestOrThrow(requestId);
-
-  if (context.role === "platform_admin") {
-    // blanket, any pre-approved state — checked by assertTransition below.
-  } else if (context.role === "contractor_manager" && context.companyId === request.companyId) {
-    if (request.status !== "draft" && request.status !== "submitted") throw new Error("Not authorized");
-  } else {
-    throw new Error("Not authorized");
-  }
-
-  assertTransition(request.status as RequestStatus, "cancelled");
-  await db.update(trainingRequests).set({ status: "cancelled" }).where(eq(trainingRequests.id, requestId));
-  await writeAudit({
-    userId: context.userId,
-    entityType: "training_request",
-    entityId: requestId,
-    action: "cancel",
-    fromStatus: request.status,
-    toStatus: "cancelled",
-  });
 }

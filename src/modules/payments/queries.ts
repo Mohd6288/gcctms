@@ -8,6 +8,8 @@ export async function getPaymentForRequest(requestId: number) {
   const [payment] = await db
     .select({
       id: payments.id,
+      sadadInvoiceRef: payments.sadadInvoiceRef,
+      dueDate: payments.dueDate,
       description: payments.description,
       qty: payments.qty,
       unitPrice: payments.unitPrice,

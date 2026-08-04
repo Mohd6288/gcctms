@@ -2,6 +2,7 @@
 
 import { getContext } from "@/modules/platform/auth/service";
 import {
+  ApproveRequestInput,
   CreateDraftRequestInput,
   RejectRequestInput,
   RequestMoreInfoInput,
@@ -12,7 +13,6 @@ import {
 } from "./schema";
 import {
   approveRequest,
-  cancelRequest,
   closeRequest,
   createDraftRequest,
   rejectRequest,
@@ -60,9 +60,10 @@ export async function verifyRequestDocumentAction(input: VerifyRequestDocumentIn
   return verifyRequestDocument(context, VerifyRequestDocumentInput.parse(input));
 }
 
-export async function approveRequestAction(requestId: number) {
+export async function approveRequestAction(input: ApproveRequestInput) {
   const context = await requireContext();
-  return approveRequest(context, requestId);
+  const parsed = ApproveRequestInput.parse(input);
+  return approveRequest(context, parsed.requestId, parsed.unitPrice);
 }
 
 export async function requestMoreInfoAction(input: RequestMoreInfoInput) {
@@ -78,9 +79,4 @@ export async function rejectRequestAction(input: RejectRequestInput) {
 export async function closeRequestAction(requestId: number) {
   const context = await requireContext();
   return closeRequest(context, requestId);
-}
-
-export async function cancelRequestAction(requestId: number) {
-  const context = await requireContext();
-  return cancelRequest(context, requestId);
 }

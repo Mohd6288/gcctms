@@ -1,23 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { assertTransition, canTransition, REQUEST_STATUSES, type RequestStatus } from "../../modules/requests/machine";
 
-// Transcribed independently from roles-and-workflows.md's Training request
-// state machine, mirroring the same discipline as tests/unit/authorize.test.ts
-// (an expected table separate from the map under test, so this catches
-// transcription drift in either direction).
+// Transcribed independently from the validated prototype's useStore.ts
+// (submitRequest/approveRequest/rejectRequest/requestInfo/scheduleClass),
+// mirroring the same discipline as tests/unit/authorize.test.ts (an expected
+// table separate from the map under test, so this catches transcription
+// drift in either direction).
 const LEGAL: ReadonlyArray<readonly [RequestStatus, RequestStatus]> = [
   ["draft", "submitted"],
-  ["draft", "cancelled"],
-  ["submitted", "approved"],
-  ["submitted", "rejected"],
   ["submitted", "info_requested"],
-  ["submitted", "cancelled"],
+  ["submitted", "rejected"],
+  ["submitted", "payment_pending"],
   ["info_requested", "submitted"],
-  ["info_requested", "cancelled"],
-  ["approved", "payment_pending"],
   ["payment_pending", "ready_for_scheduling"],
   ["ready_for_scheduling", "scheduled"],
-  ["completed", "closed"],
 ];
 
 describe("training request state machine", () => {
@@ -44,29 +40,27 @@ describe("training request state machine", () => {
     expect(canTransition("info_requested", "submitted")).toBe(true);
   });
 
-  it("closed is only reachable from completed, and is terminal", () => {
-    expect(canTransition("completed", "closed")).toBe(true);
-    for (const from of REQUEST_STATUSES) {
-      if (from === "completed") continue;
-      expect(canTransition(from, "closed")).toBe(false);
-    }
-    for (const to of REQUEST_STATUSES) {
-      expect(canTransition("closed", to)).toBe(false);
-    }
+  it("submitted -> payment_pending is a single direct transition (no persisted 'approved' state)", () => {
+    expect(canTransition("submitted", "payment_pending")).toBe(true);
   });
 
   it("scheduled -> completed is deliberately NOT a direct transition (derived elsewhere)", () => {
     expect(canTransition("scheduled", "completed")).toBe(false);
   });
 
-  it("rejected and cancelled are terminal (no outgoing transitions)", () => {
+  it("completed is terminal (closing a request just sets closed_at, not a status transition)", () => {
+    for (const to of REQUEST_STATUSES) {
+      expect(canTransition("completed", to)).toBe(false);
+    }
+  });
+
+  it("rejected is terminal (no outgoing transitions, no request-cancellation concept exists)", () => {
     for (const to of REQUEST_STATUSES) {
       expect(canTransition("rejected", to)).toBe(false);
-      expect(canTransition("cancelled", to)).toBe(false);
     }
   });
 
   it("assertTransition throws a clear error for an illegal transition", () => {
-    expect(() => assertTransition("draft", "approved")).toThrow("Illegal training_request transition: draft -> approved");
+    expect(() => assertTransition("draft", "rejected")).toThrow("Illegal training_request transition: draft -> rejected");
   });
 });

@@ -42,6 +42,16 @@ export const VerifyRequestDocumentInput = z.object({
 });
 export type VerifyRequestDocumentInput = z.infer<typeof VerifyRequestDocumentInput>;
 
+// unitPrice is optional: admin may override the resolved catalog/regional
+// price at approval time, matching the validated prototype's
+// approveRequest(requestId, unitPriceOverride) — AdminRequestDetail.tsx lets
+// admin type/edit it before approving rather than silently trusting pricing.
+export const ApproveRequestInput = z.object({
+  requestId: z.number().int().positive(),
+  unitPrice: z.coerce.number().positive().optional(),
+});
+export type ApproveRequestInput = z.infer<typeof ApproveRequestInput>;
+
 export const RequestMoreInfoInput = z.object({
   requestId: z.number().int().positive(),
   message: z.string().min(1),

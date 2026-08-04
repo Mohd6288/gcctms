@@ -25,11 +25,18 @@ export const courses = pgTable(
     minAttendancePct: integer("min_attendance_pct").notNull().default(90),
     examId: bigint("exam_id", { mode: "number" }).references(() => exams.id),
     validityMonths: integer("validity_months"),
+    contractorCategory: text("contractor_category"),
     active: boolean("active").notNull().default(true),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("courses_exam_id_idx").on(t.examId)]
+  (t) => [
+    index("courses_exam_id_idx").on(t.examId),
+    check(
+      "courses_contractor_category_check",
+      sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
+    ),
+  ]
 );
 
 export const courseJobRoles = pgTable(

@@ -26,6 +26,7 @@ export async function listCourses() {
       titleAr: courses.titleAr,
       durationHours: courses.durationHours,
       minAttendancePct: courses.minAttendancePct,
+      contractorCategory: courses.contractorCategory,
       active: courses.active,
     })
     .from(courses)

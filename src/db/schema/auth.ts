@@ -14,6 +14,9 @@ export const companies = pgTable(
     contactPhone: text("contact_phone").notNull(),
     city: text("city"),
     address: text("address"),
+    sector: text("sector"),
+    region: text("region"),
+    contractorCategory: text("contractor_category"),
     ownerUserId: uuid("owner_user_id").notNull(),
     status: text("status").notNull().default("active"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
@@ -23,18 +26,33 @@ export const companies = pgTable(
     index("companies_owner_user_id_idx").on(t.ownerUserId),
     index("companies_status_idx").on(t.status),
     check("companies_status_check", sql`${t.status} in ('pending', 'active', 'suspended')`),
+    check("companies_region_check", sql`${t.region} is null or ${t.region} in ('North', 'South', 'East', 'West', 'Central')`),
+    check(
+      "companies_contractor_category_check",
+      sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
+    ),
   ]
 );
 
-export const jobRoles = pgTable("job_roles", {
-  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-  code: text("code").notNull().unique(),
-  nameEn: text("name_en").notNull(),
-  nameAr: text("name_ar").notNull(),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
-});
+export const jobRoles = pgTable(
+  "job_roles",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    code: text("code").notNull().unique(),
+    nameEn: text("name_en").notNull(),
+    nameAr: text("name_ar").notNull(),
+    contractorCategory: text("contractor_category"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "job_roles_contractor_category_check",
+      sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
+    ),
+  ]
+);
 
 export const trainers = pgTable("trainers", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),

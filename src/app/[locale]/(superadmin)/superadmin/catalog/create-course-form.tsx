@@ -9,6 +9,10 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createCourseAction } from "@/modules/catalog/actions";
 
+const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
+const selectClassName =
+  "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
+
 export function CreateCourseForm() {
   const t = useTranslations("superadmin.catalog");
   const router = useRouter();
@@ -18,6 +22,7 @@ export function CreateCourseForm() {
   const [description, setDescription] = useState("");
   const [durationHours, setDurationHours] = useState("8");
   const [minAttendancePct, setMinAttendancePct] = useState("90");
+  const [contractorCategory, setContractorCategory] = useState<(typeof CONTRACTOR_CATEGORIES)[number] | "">("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,6 +38,7 @@ export function CreateCourseForm() {
         description: description || undefined,
         durationHours: Number(durationHours),
         minAttendancePct: Number(minAttendancePct),
+        contractorCategory: contractorCategory || undefined,
       });
       setCode("");
       setTitleEn("");
@@ -84,6 +90,22 @@ export function CreateCourseForm() {
               value={minAttendancePct}
               onChange={(e) => setMinAttendancePct(e.target.value)}
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorCategory">{t("contractorCategoryLabel")}</Label>
+            <select
+              id="contractorCategory"
+              className={selectClassName}
+              value={contractorCategory}
+              onChange={(e) => setContractorCategory(e.target.value as (typeof CONTRACTOR_CATEGORIES)[number] | "")}
+            >
+              <option value="">{t("contractorCategoryNone")}</option>
+              {CONTRACTOR_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button type="submit" disabled={loading}>

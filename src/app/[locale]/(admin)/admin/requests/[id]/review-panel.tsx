@@ -48,6 +48,7 @@ export function ReviewPanel({
   const [rejectReason, setRejectReason] = useState("");
   const [showInfoForm, setShowInfoForm] = useState(false);
   const [infoMessage, setInfoMessage] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
 
   const bothDocsVerified =
     requestDocs.find((d) => d.type === "registration_sheet")?.verifiedAt != null &&
@@ -83,7 +84,7 @@ export function ReviewPanel({
     setError(null);
     setLoading("approve");
     try {
-      await approveRequestAction(requestId);
+      await approveRequestAction({ requestId, unitPrice: unitPrice ? Number(unitPrice) : undefined });
       router.push("/admin/requests");
       router.refresh();
     } catch (err) {
@@ -202,6 +203,15 @@ export function ReviewPanel({
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         {!bothDocsVerified ? <p className="text-xs text-muted-foreground">{t("approveBlocked")}</p> : null}
         <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder={t("unitPriceLabel")}
+            value={unitPrice}
+            onChange={(e) => setUnitPrice(e.target.value)}
+            className="w-56"
+          />
           <Button type="button" disabled={!bothDocsVerified || loading === "approve"} onClick={handleApprove}>
             {t("approve")}
           </Button>

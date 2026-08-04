@@ -1,6 +1,6 @@
 // requests module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, courses, documents, employees, requestItems, trainingRequests } from "@/db/schema";
 
@@ -96,10 +96,19 @@ export async function getRequestLevelDocuments(requestId: number) {
     .where(eq(documents.requestId, requestId));
 }
 
-export async function listActiveCourses() {
+// Matches the validated prototype's Step1Info.tsx course filter exactly:
+// a course with no contractorCategory is universal (shown to every
+// company); a course WITH a category only shows to companies with that
+// exact category. A company with no category set sees only universal
+// courses.
+export async function listActiveCourses(companyId: number) {
+  const [company] = await db.select({ contractorCategory: companies.contractorCategory }).from(companies).where(eq(companies.id, companyId));
+  const category = company?.contractorCategory ?? null;
+  const categoryFilter = category ? or(isNull(courses.contractorCategory), eq(courses.contractorCategory, category)) : isNull(courses.contractorCategory);
+
   return db
     .select({ id: courses.id, titleEn: courses.titleEn, titleAr: courses.titleAr })
     .from(courses)
-    .where(eq(courses.active, true))
+    .where(and(eq(courses.active, true), categoryFilter))
     .orderBy(courses.titleEn);
 }

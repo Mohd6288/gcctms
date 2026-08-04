@@ -59,6 +59,8 @@ export default async function RequestDetailPage({
             requestId={requestId}
             payment={{
               id: payment.id,
+              sadadInvoiceRef: payment.sadadInvoiceRef,
+              dueDate: payment.dueDate,
               totalAmount: payment.totalAmount,
               status: payment.status as "uploaded" | "verified" | "rejected",
               documentId: payment.documentId,
@@ -71,7 +73,7 @@ export default async function RequestDetailPage({
   }
 
   const [courses, companyEmployees, employeeIdsWithNationalId] = await Promise.all([
-    listActiveCourses(),
+    listActiveCourses(context.companyId),
     listEmployeesForCompany(context.companyId),
     getCompanyEmployeeIdsWithNationalId(context.companyId),
   ]);

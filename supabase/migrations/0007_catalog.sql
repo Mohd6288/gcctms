@@ -20,6 +20,11 @@ create table courses (
   min_attendance_pct int not null default 90,
   exam_id bigint references exams (id) on delete restrict,
   validity_months int,
+  -- Matches the validated prototype's Course.contractorCategory exactly:
+  -- null = universal course (shown to every company); set = only shown to
+  -- companies with that exact category. See requests/queries.ts's
+  -- listActiveCourses().
+  contractor_category text check (contractor_category is null or contractor_category in ('Distribution', 'Transmission')),
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

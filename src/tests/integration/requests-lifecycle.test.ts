@@ -145,7 +145,7 @@ describe("training request lifecycle — real DB", () => {
     await db.execute(sql`delete from auth.users where id in (${ownerId}, ${adminId})`);
   });
 
-  it("full happy path: draft -> submitted -> approved -> payment_pending, with a real payment row", async () => {
+  it("full happy path: draft -> submitted -> payment_pending, with a real payment row", async () => {
     const draft = await createDraftRequest(contractorCtx, { courseId });
     await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeWithDocId] });
 
@@ -164,9 +164,26 @@ describe("training request lifecycle — real DB", () => {
     expect(payment.qty).toBe(1);
     expect(payment.unitPrice).toBe("500.00");
     expect(payment.totalAmount).toBe("575.00"); // 500 * 1.15 VAT
+    expect(payment.sadadInvoiceRef).toMatch(/^SADAD-\d{4}-\d{4}$/);
+    expect(payment.dueDate).not.toBeNull();
 
     const [request] = await db.select({ totalAmount: trainingRequests.totalAmount }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
     expect(request.totalAmount).toBe("575.00");
+  });
+
+  it("approveRequest honors an admin unit price override instead of resolving catalog pricing", async () => {
+    const draft = await createDraftRequest(contractorCtx, { courseId });
+    await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeWithDocId] });
+    await submitRequest(contractorCtx, draft.id);
+    await attachAndVerifyRequestDocs(draft.id);
+
+    const [item] = await db.select().from(requestItems).where(eq(requestItems.requestId, draft.id));
+    await setEmployeeDecision(adminCtx, { requestItemId: item.id, decision: "approved" });
+
+    await approveRequest(adminCtx, draft.id, 750);
+
+    const [payment] = await db.select().from(payments).where(eq(payments.requestId, draft.id));
+    expect(payment.unitPrice).toBe("750.00");
   });
 
   it("all employees rejected -> whole request auto-rejects, no payment row generated", async () => {
@@ -190,14 +207,26 @@ describe("training request lifecycle — real DB", () => {
     await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeWithDocId] });
     await submitRequest(contractorCtx, draft.id);
 
+    const [item] = await db.select().from(requestItems).where(eq(requestItems.requestId, draft.id));
+    await setEmployeeDecision(adminCtx, { requestItemId: item.id, decision: "rejected", decisionReason: "premature" });
+
     await requestMoreInfo(adminCtx, { requestId: draft.id, message: "Please clarify the training dates." });
-    const [afterInfoRequest] = await db.select({ status: trainingRequests.status }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
+    const [afterInfoRequest] = await db.select({ status: trainingRequests.status, adminNote: trainingRequests.adminNote }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
     expect(afterInfoRequest.status).toBe("info_requested");
+    expect(afterInfoRequest.adminNote).toBe("Please clarify the training dates.");
 
     await updateDraftRequest(contractorCtx, { requestId: draft.id, courseId, notes: "Updated per admin feedback" });
     const resubmitted = await submitRequest(contractorCtx, draft.id);
     expect(resubmitted.id).toBe(draft.id);
     expect(resubmitted.status).toBe("submitted");
+
+    // Matches the validated prototype's submitRequest(): resubmitting clears
+    // the prior review note and every employee decision for a fresh review.
+    const [afterResubmit] = await db.select({ adminNote: trainingRequests.adminNote }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
+    expect(afterResubmit.adminNote).toBeNull();
+    const [itemAfterResubmit] = await db.select({ decision: requestItems.decision, decisionReason: requestItems.decisionReason }).from(requestItems).where(eq(requestItems.id, item.id));
+    expect(itemAfterResubmit.decision).toBe("pending");
+    expect(itemAfterResubmit.decisionReason).toBeNull();
 
     const rows = await db.select({ id: trainingRequests.id }).from(trainingRequests).where(eq(trainingRequests.companyId, companyId));
     const matchingIds = rows.filter((r) => r.id === draft.id);
@@ -229,7 +258,7 @@ describe("training request lifecycle — real DB", () => {
 
   it("approveRequest rejects a request that isn't in submitted status", async () => {
     const draft = await createDraftRequest(contractorCtx, { courseId });
-    await expect(approveRequest(adminCtx, draft.id)).rejects.toThrow("Illegal training_request transition: draft -> approved");
+    await expect(approveRequest(adminCtx, draft.id)).rejects.toThrow("Illegal training_request transition: draft -> payment_pending");
   });
 
   it("submitRequest queues a notification job instead of sending inline", async () => {

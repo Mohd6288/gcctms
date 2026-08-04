@@ -36,6 +36,8 @@ describe("company self-registration unlocks request submission immediately", () 
       contactName: "New Contact",
       contactEmail: `fresh-${suffix}@example.com`,
       contactPhone: "0500000099",
+      sector: "Civil & Electrical Contracting",
+      region: "Central",
       password: "Correct-Horse-Battery-Staple-9",
     });
     userId = result.userId;

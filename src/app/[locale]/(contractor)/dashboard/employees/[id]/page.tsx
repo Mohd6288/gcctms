@@ -29,7 +29,7 @@ export default async function EmployeeDetailPage({
     return null;
   }
 
-  const [jobRoles, documents] = await Promise.all([listActiveJobRoles(), listDocumentsForEmployee(employee.id)]);
+  const [jobRoles, documents] = await Promise.all([listActiveJobRoles(context.companyId), listDocumentsForEmployee(employee.id)]);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-6">

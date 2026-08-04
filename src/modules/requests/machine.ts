@@ -1,18 +1,23 @@
 // requests module — explicit state-machine transition map (see roles-and-workflows.md).
 // Every transition writes audit_log and emits a domain event. Implemented from Phase 4 onward.
+//
+// Status set and transitions matched exactly to the validated prototype's
+// RequestStatus (types/index.ts) and useStore.ts's submitRequest/approveRequest/
+// rejectRequest/requestInfo/scheduleClass. Confirmed against the prototype's
+// CompanyRequestDetail.tsx: EDITABLE_STATUSES = {'info_requested'} — only an
+// info_requested request can be edited and resubmitted; a rejected request has
+// no resubmit path (terminal), and there is no cancel concept for requests at
+// all (only cancelClass, unrelated to requests).
 
 export const REQUEST_STATUSES = [
   "draft",
   "submitted",
-  "approved",
-  "rejected",
   "info_requested",
+  "rejected",
   "payment_pending",
   "ready_for_scheduling",
   "scheduled",
   "completed",
-  "closed",
-  "cancelled",
 ] as const;
 
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
@@ -25,23 +30,26 @@ export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 // change even legal," matching the note in database-schema.md's RLS
 // section: "RLS enforces WHO, the state machine enforces WHAT."
 //
+// submitted -> payment_pending is a single direct transition: the prototype
+// never persists a separate 'approved' state, it writes payment_pending
+// straight away (see requests/service.ts's approveRequest()).
+//
 // scheduled -> completed is deliberately ABSENT: it's derived (true only
 // once every billable employee's assigned class is itself completed — see
 // roles-and-workflows.md), never a direct settable transition. Phase 6/7
 // compute it separately; do not add it here.
+//
+// completed has no outgoing transition: "closing" a request is just setting
+// closed_at while status stays 'completed', not its own status (see
+// requests/service.ts's closeRequest()).
 const TRANSITIONS: ReadonlyArray<readonly [RequestStatus, RequestStatus]> = [
   ["draft", "submitted"],
-  ["draft", "cancelled"],
-  ["submitted", "approved"],
-  ["submitted", "rejected"],
   ["submitted", "info_requested"],
-  ["submitted", "cancelled"],
+  ["submitted", "rejected"],
+  ["submitted", "payment_pending"],
   ["info_requested", "submitted"],
-  ["info_requested", "cancelled"],
-  ["approved", "payment_pending"],
   ["payment_pending", "ready_for_scheduling"],
   ["ready_for_scheduling", "scheduled"],
-  ["completed", "closed"],
 ];
 
 export function canTransition(from: RequestStatus, to: RequestStatus): boolean {

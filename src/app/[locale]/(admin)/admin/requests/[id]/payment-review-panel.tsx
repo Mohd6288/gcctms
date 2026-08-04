@@ -10,6 +10,8 @@ import { rejectPaymentAction, verifyPaymentAction } from "@/modules/payments/act
 
 interface Payment {
   id: number;
+  sadadInvoiceRef: string | null;
+  dueDate: string | null;
   totalAmount: string | null;
   status: "uploaded" | "verified" | "rejected";
   documentId: number | null;
@@ -66,6 +68,16 @@ export function PaymentReviewPanel({ payment }: { payment: Payment }) {
         <p className="text-sm">
           <span className="font-medium">{t("totalDue")}:</span> {payment.totalAmount ?? "—"} SAR
         </p>
+        {payment.sadadInvoiceRef ? (
+          <p className="text-sm">
+            <span className="font-medium">{t("sadadReference")}:</span> {payment.sadadInvoiceRef}
+          </p>
+        ) : null}
+        {payment.dueDate ? (
+          <p className="text-sm">
+            <span className="font-medium">{t("dueDate")}:</span> {payment.dueDate}
+          </p>
+        ) : null}
         <p className="text-sm text-muted-foreground">{statusLabel}</p>
 
         {payment.documentId ? (

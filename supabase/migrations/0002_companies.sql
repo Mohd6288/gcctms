@@ -8,6 +8,15 @@ create table companies (
   contact_phone text not null,
   city text,
   address text,
+  -- sector/region/contractor_category: match the validated prototype's
+  -- Company type exactly. region feeds regional pricing suggestions;
+  -- contractor_category (optional) filters the course list in the request
+  -- wizard and the job-role list in the employee form — see
+  -- requests/queries.ts's listActiveCourses() and employees/queries.ts's
+  -- listActiveJobRoles().
+  sector text,
+  region text check (region is null or region in ('North', 'South', 'East', 'West', 'Central')),
+  contractor_category text check (contractor_category is null or contractor_category in ('Distribution', 'Transmission')),
   owner_user_id uuid not null references auth.users (id) on delete restrict,
   status text not null default 'active' check (status in ('pending', 'active', 'suspended')),
   created_at timestamptz not null default now(),

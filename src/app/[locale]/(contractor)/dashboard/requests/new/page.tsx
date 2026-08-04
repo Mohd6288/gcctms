@@ -26,7 +26,7 @@ export default async function NewRequestPage({
   }
 
   const [courses, companyEmployees, employeeIdsWithNationalId] = await Promise.all([
-    listActiveCourses(),
+    listActiveCourses(context.companyId),
     listEmployeesForCompany(context.companyId),
     getCompanyEmployeeIdsWithNationalId(context.companyId),
   ]);

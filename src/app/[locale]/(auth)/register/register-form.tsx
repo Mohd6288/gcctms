@@ -10,6 +10,9 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { registerCompanyAction } from "@/modules/companies/actions";
 
+const REGIONS = ["North", "South", "East", "West", "Central"] as const;
+const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
+
 const initialState = {
   name: "",
   crNumber: "",
@@ -19,8 +22,14 @@ const initialState = {
   contactPhone: "",
   city: "",
   address: "",
+  sector: "",
+  region: "Central" as (typeof REGIONS)[number],
+  contractorCategory: "" as (typeof CONTRACTOR_CATEGORIES)[number] | "",
   password: "",
 };
+
+const selectClassName =
+  "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
 
 export function RegisterForm() {
   const t = useTranslations("auth.register");
@@ -29,7 +38,7 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function update<K extends keyof typeof initialState>(key: K, value: string) {
+  function update<K extends keyof typeof initialState>(key: K, value: (typeof initialState)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -38,7 +47,7 @@ export function RegisterForm() {
     setError(null);
     setLoading(true);
     try {
-      await registerCompanyAction(form);
+      await registerCompanyAction({ ...form, contractorCategory: form.contractorCategory || undefined });
 
       // contractor_manager never needs MFA — straight to the dashboard.
       const supabase = createClient();
@@ -103,6 +112,36 @@ export function RegisterForm() {
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="address">{t("addressLabel")}</Label>
             <Input id="address" value={form.address} onChange={(e) => update("address", e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="sector">{t("sectorLabel")}</Label>
+            <Input id="sector" required value={form.sector} onChange={(e) => update("sector", e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="region">{t("regionLabel")}</Label>
+            <select id="region" required className={selectClassName} value={form.region} onChange={(e) => update("region", e.target.value as (typeof REGIONS)[number])}>
+              {REGIONS.map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="contractorCategory">{t("contractorCategoryLabel")}</Label>
+            <select
+              id="contractorCategory"
+              className={selectClassName}
+              value={form.contractorCategory}
+              onChange={(e) => update("contractorCategory", e.target.value as (typeof CONTRACTOR_CATEGORIES)[number] | "")}
+            >
+              <option value="">{t("contractorCategoryNone")}</option>
+              {CONTRACTOR_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="password">{t("passwordLabel")}</Label>

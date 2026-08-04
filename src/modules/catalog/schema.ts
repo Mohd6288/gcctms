@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
+const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 
+// contractorCategory: unset = universal course (shown to every company);
+// set = only shown to companies with that exact category — see
+// requests/queries.ts's listActiveCourses().
 export const CreateCourseInput = z.object({
   code: z.string().min(1),
   titleEn: z.string().min(1),
@@ -11,6 +15,7 @@ export const CreateCourseInput = z.object({
   minAttendancePct: z.number().int().min(1).max(100).default(90),
   examId: z.number().int().positive().optional(),
   validityMonths: z.number().int().positive().optional(),
+  contractorCategory: z.enum(CONTRACTOR_CATEGORIES).optional(),
 });
 export type CreateCourseInput = z.infer<typeof CreateCourseInput>;
 

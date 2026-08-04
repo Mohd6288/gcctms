@@ -31,7 +31,7 @@ export const trainingRequests = pgTable(
     index("training_requests_status_idx").on(t.status),
     check(
       "training_requests_status_check",
-      sql`${t.status} in ('draft', 'submitted', 'approved', 'rejected', 'info_requested', 'payment_pending', 'ready_for_scheduling', 'scheduled', 'completed', 'closed', 'cancelled')`
+      sql`${t.status} in ('draft', 'submitted', 'info_requested', 'rejected', 'payment_pending', 'ready_for_scheduling', 'scheduled', 'completed')`
     ),
   ]
 );
@@ -98,6 +98,7 @@ export const payments = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     requestId: bigint("request_id", { mode: "number" }).notNull().references(() => trainingRequests.id),
     sadadInvoiceRef: text("sadad_invoice_ref"),
+    dueDate: date("due_date"),
     description: text("description").notNull(),
     qty: integer("qty").notNull(),
     unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),

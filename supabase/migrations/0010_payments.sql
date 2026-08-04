@@ -4,6 +4,9 @@ create table payments (
   id bigint generated always as identity primary key,
   request_id bigint not null references training_requests (id) on delete restrict,
   sadad_invoice_ref text,
+  -- Matches the validated prototype's Invoice.dueDate: issueDate + 14 days,
+  -- set once at approval time (requests/service.ts's approveRequest()).
+  due_date date,
   description text not null,
   qty int not null,
   unit_price numeric(10, 2) not null,

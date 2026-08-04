@@ -45,6 +45,7 @@ export async function createCourse(context: AuthContext, input: CreateCourseInpu
       minAttendancePct: input.minAttendancePct,
       examId: input.examId,
       validityMonths: input.validityMonths,
+      contractorCategory: input.contractorCategory,
     })
     .returning({ id: courses.id });
   await writeAudit({ userId: context.userId, entityType: "course", entityId: course.id, action: "create" });
@@ -64,6 +65,7 @@ export async function updateCourse(context: AuthContext, input: UpdateCourseInpu
       minAttendancePct: input.minAttendancePct,
       examId: input.examId ?? null,
       validityMonths: input.validityMonths ?? null,
+      contractorCategory: input.contractorCategory ?? null,
       active: input.active,
     })
     .where(eq(courses.id, input.courseId));
