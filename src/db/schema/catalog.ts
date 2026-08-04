@@ -17,7 +17,11 @@ export const courses = pgTable(
   "courses",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    code: text("code").notNull().unique(),
+    // NOT globally unique — real GCC Lab source data has the same code appear
+    // twice, once per contractor_category (e.g. CSCC10, CTCT01), with
+    // different prerequisites/eligible roles/sometimes duration under each.
+    // See the two partial unique indexes below instead of a plain .unique().
+    code: text("code").notNull(),
     titleEn: text("title_en").notNull(),
     titleAr: text("title_ar").notNull(),
     description: text("description"),
@@ -36,6 +40,17 @@ export const courses = pgTable(
       "courses_contractor_category_check",
       sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
     ),
+    // A code can have at most one row per contractor_category, PLUS at most
+    // one category-agnostic (null) row. Two separate partial indexes because
+    // Postgres never treats two NULLs as equal in a unique constraint, so a
+    // plain unique(code, contractor_category) would silently allow duplicate
+    // null-category rows for the same code.
+    uniqueIndex("courses_code_category_key")
+      .on(t.code, t.contractorCategory)
+      .where(sql`${t.contractorCategory} is not null`),
+    uniqueIndex("courses_code_null_category_key")
+      .on(t.code)
+      .where(sql`${t.contractorCategory} is null`),
   ]
 );
 
