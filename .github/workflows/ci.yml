@@ -46,6 +46,12 @@ jobs:
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
+      # certification-gate.test.ts renders real certificate PDFs via headless
+      # Chromium (src/modules/platform/pdf/service.ts) — the binary isn't
+      # bundled with the playwright npm package, only fetched on demand.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
