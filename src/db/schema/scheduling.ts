@@ -20,6 +20,8 @@ export const classes = pgTable(
     sessions: jsonb("sessions").notNull().default([]),
     capacity: integer("capacity").notNull(),
     status: text("status").notNull().default("scheduled"),
+    cancelReason: text("cancel_reason"),
+    cancelledAt: timestamptz("cancelled_at"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },

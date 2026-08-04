@@ -13,7 +13,9 @@ export type NotificationType =
   | "request.closed"
   | "payment.uploaded"
   | "payment.verified"
-  | "payment.rejected";
+  | "payment.rejected"
+  | "class.scheduled"
+  | "class.cancelled";
 
 export interface QueueNotificationInput {
   type: NotificationType;
@@ -47,6 +49,17 @@ export async function notifyPlatformAdmins(type: NotificationType, data: Record<
   for (const recipientEmail of emails) {
     await queueNotification({ type, recipientEmail, data });
   }
+}
+
+// Trainers authenticate via auth.users like every other role, so their
+// email lives there too — no Drizzle schema for auth.users, read directly.
+export async function getTrainerEmail(trainerId: number): Promise<string | null> {
+  const rows = (await db.execute(sql`
+    select u.email as email from trainers t
+    join auth.users u on u.id = t.user_id
+    where t.id = ${trainerId}
+  `)) as unknown as Array<{ email: string | null }>;
+  return rows[0]?.email ?? null;
 }
 
 // Stub handler — proves the queue architecture (enqueue now, deliver async)

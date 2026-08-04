@@ -48,6 +48,11 @@ export const requestItems = pgTable(
     decisionReason: text("decision_reason"),
     decidedBy: uuid("decided_by"),
     decidedAt: timestamptz("decided_at"),
+    // Scheduling-board pooling step: assigned to a region before any
+    // specific class exists. "In the pool" = billable + ready_for_scheduling
+    // + no class_enrollments row yet for this item; see
+    // 0021_request_items_assigned_region.sql.
+    assignedRegion: text("assigned_region"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -58,6 +63,10 @@ export const requestItems = pgTable(
     index("request_items_status_idx").on(t.status),
     check("request_items_status_check", sql`${t.status} in ('pending', 'enrolled', 'completed', 'failed', 'withdrawn')`),
     check("request_items_decision_check", sql`${t.decision} in ('pending', 'approved', 'rejected')`),
+    check(
+      "request_items_assigned_region_check",
+      sql`${t.assignedRegion} is null or ${t.assignedRegion} in ('North', 'South', 'East', 'West', 'Central')`
+    ),
   ]
 );
 
