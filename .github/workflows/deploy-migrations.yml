@@ -1,0 +1,47 @@
+name: Deploy migrations
+
+# Manually triggered, not branch-triggered — this repo works on a single
+# main branch (see docs/residency.md), so "which environment gets this
+# commit's migrations" is a decision made by whoever runs this, not by
+# which branch they pushed to.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target Supabase project
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+
+jobs:
+  deploy-migrations:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link ${{ inputs.environment }} project
+        run: supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}" --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: Push migrations
+        run: supabase db push --yes
+
+      # Confirms the deployed schema didn't lose RLS coverage along the way
+      # — same check CI runs locally, now against the real project.
+      - name: RLS check against the deployed project
+        run: npm run rls-check
+        env:
+          DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres

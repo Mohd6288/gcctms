@@ -4,11 +4,11 @@
 
 **Default: Vercel + Supabase**, per `references/architecture.md`'s Track B recommendation — Next.js App Router deployed on Vercel (SOC 2 Type II + ISO 27001), Supabase Postgres + Auth + Storage (SOC 2 Type II + ISO 27001, HIPAA-capable). This is the primary track for this build.
 
-## Region — not yet finalized
+## Region — decided (Phase 10)
 
-No live Supabase project has been provisioned yet (Phase 0 only stands up **local** Supabase via `supabase start`, which is region-agnostic — see `supabase/config.toml`). The region is chosen **once, at Supabase project creation**, and data + backups stay in that region for the life of the project (changing region later means a new project + migration, not a config flip).
+**Confirmed with the business: no PDPL/SEC in-Kingdom residency mandate.** Managed Vercel + Supabase, region chosen for lowest latency to Saudi Arabia, applies to all three environments (dev/staging/prod) — Supabase has no Middle East region in its managed offering (`supabase projects create --region` choices: `ap-east-1, ap-northeast-1, ap-northeast-2, ap-south-1, ap-southeast-1, ap-southeast-2, ca-central-1, eu-central-1, eu-central-2, eu-north-1, eu-west-1, eu-west-2, eu-west-3, sa-east-1, us-east-1, us-east-2, us-west-1, us-west-2`), so the residency variant below doesn't apply.
 
-**Action needed before Phase 1 creates a real dev Supabase project**: confirm whether PDPL (Saudi Personal Data Protection Law) or SEC contractual terms mandate in-Kingdom / in-region data residency for this system, given it processes contractor Iqama numbers (`employees.national_id_hash`/`national_id_enc`) and SEC-facility-related records. If yes → see the residency variant below. If no → default to a Vercel-adjacent Supabase region (e.g. closest to Saudi Arabia with acceptable latency) and record the specific region here once chosen.
+**Region: `eu-central-1` (Frankfurt)** — closer to Saudi Arabia than the only other plausible candidate (`ap-south-1`/Mumbai) via standard European backbone routing, and the conventional default for MENA-adjacent deployments. Used for dev, staging, and prod. The region is chosen **once, at Supabase project creation**, and data + backups stay there for the life of the project (changing region later means a new project + full re-migration, not a config flip) — so staging/prod must reuse this same region, not be re-decided later.
 
 ## Residency variant (if PDPL/in-Kingdom is mandated)
 
@@ -16,16 +16,22 @@ Per `architecture.md`: **AWS in a Middle East region** — Bahrain (`me-south-1`
 
 ## Environments
 
-Three Supabase projects (dev / staging / prod), Git-branch-driven:
-- `dev` branch → Vercel preview deployments + dev Supabase project
-- `staging` branch → staging Vercel environment + staging Supabase project
-- `main` branch → production Vercel deployment + prod Supabase project
+Three Supabase projects (dev / staging / prod) — **not** Git-branch-driven, revised in Phase 10 from the original Phase 0 plan. All work happens on a single `main` branch in practice (no `dev`/`staging` branches have ever existed in this repo), so environment promotion is a deliberate, manually-triggered action rather than implicit in which branch you pushed to:
 
-Migrations are applied by CI to dev → staging → prod, in that order, never hand-edited on a remote project (see `database-schema.md`'s Migration rules).
+```
+gh workflow run deploy-migrations.yml -f environment=dev
+gh workflow run deploy-migrations.yml -f environment=staging
+gh workflow run deploy-migrations.yml -f environment=prod
+```
+
+Each run links to that environment's Supabase project (via a GitHub Environment named `dev`/`staging`/`prod`, holding that project's `SUPABASE_PROJECT_REF` var + `SUPABASE_DB_PASSWORD` secret) and pushes the current migration chain — never hand-edited on a remote project (see `database-schema.md`'s Migration rules). Vercel deployment is separate: connect the GitHub repo in the Vercel dashboard once, and every push to `main` deploys to production automatically via Vercel's own Git integration — no custom deploy workflow needed for the app itself, only for Supabase migrations, which Vercel doesn't know how to run.
 
 ## Status
 
 - [x] Framework/platform decision (Vercel + Supabase) — Phase 0
-- [ ] PDPL/in-Kingdom requirement confirmed with the business — **blocks the next item**
-- [ ] Supabase region chosen and dev project created — Phase 1 kickoff
-- [ ] Staging + prod Supabase projects created — Phase 10
+- [x] PDPL/in-Kingdom requirement confirmed with the business — no mandate
+- [x] Supabase region chosen (`eu-central-1`) — Phase 10
+- [x] Dev Supabase project created (`gcctms-dev`) — Phase 10
+- [x] Staging Supabase project created (`gcctms-staging`) — Phase 10
+- [ ] Prod Supabase project — deferred to Phase 11 (launch), stays within the free-tier 2-project cap until then
+- [ ] Vercel project connected to the repo, env vars set per environment — Phase 10

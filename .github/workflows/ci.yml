@@ -2,8 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, dev, staging]
+    branches: [main]
   pull_request:
+
+# Cancel a still-running CI run for the same branch/PR when a new push
+# supersedes it — avoids burning Actions minutes on stale commits.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -27,6 +36,12 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Non-blocking for now: 3 known high-severity advisories (postcss,
+      # sharp, drizzle-kit) need a deliberate `next` upgrade to clear, not a
+      # surprise CI break — tracked for Phase 11's security review instead.
+      - name: Audit dependencies (visibility only, does not fail the build)
+        run: npm audit --audit-level=high || true
 
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
