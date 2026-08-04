@@ -17,7 +17,6 @@ export default async function ContractorDashboardPage({
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-      <p className="text-sm text-muted-foreground">Certificates land in a later phase.</p>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild variant="outline">
           <Link href="/dashboard/employees">Manage employees</Link>
@@ -27,6 +26,9 @@ export default async function ContractorDashboardPage({
         </Button>
         <Button asChild variant="outline">
           <Link href="/dashboard/payments">Payments</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/dashboard/certificates">Certificates</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/dashboard/profile">Company profile</Link>

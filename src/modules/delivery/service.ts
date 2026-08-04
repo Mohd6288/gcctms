@@ -3,6 +3,7 @@ import "server-only";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { attendance, classEnrollments, classes, courses, examResults, requestItems, trainingRequests } from "@/db/schema";
+import { evaluateClassEligibility } from "@/modules/certification/service";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { notifyPlatformAdmins } from "@/modules/platform/notifications/service";
@@ -129,6 +130,11 @@ export async function submitResults(context: AuthContext, classId: number) {
   for (const requestId of requestIds) {
     await maybeMarkRequestCompleted(requestId);
   }
+
+  // Phase 8's eligibility gate — evaluated now that every enrollment's real
+  // attendance_pct/exam result exist, not via any event bus (this codebase
+  // doesn't have one; every module just queries state directly).
+  await evaluateClassEligibility(classId);
 
   await notifyPlatformAdmins("class.results_submitted", { classId, processed: enrollments.length });
   return { processed: enrollments.length };

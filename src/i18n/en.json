@@ -7,6 +7,20 @@
     "registerCta": "Register your company",
     "languageSwitch": "العربية"
   },
+  "verify": {
+    "validTitle": "Certificate verified",
+    "holder": "Holder",
+    "course": "Course",
+    "issued": "Issued",
+    "expires": "Expires",
+    "expiredTitle": "Certificate expired",
+    "expiredBody": "This certificate expired on {date}.",
+    "revokedTitle": "Certificate revoked",
+    "revokedBody": "This certificate has been revoked and is no longer valid.",
+    "notFoundTitle": "Certificate not found",
+    "notFoundBody": "No certificate matches this serial number. Check the QR code and try again.",
+    "backToSite": "Back to GCC Lab TMS"
+  },
   "auth": {
     "signIn": {
       "title": "Sign in",
@@ -220,6 +234,16 @@
       "verified": "Verified",
       "pending": "Pending",
       "contractorCategory": "Contractor Category"
+    },
+    "certificates": {
+      "title": "Certificates",
+      "tableSerial": "Serial",
+      "tableEmployee": "Employee",
+      "tableCourse": "Course",
+      "tableIssued": "Issued",
+      "tableExpires": "Expires",
+      "download": "Download",
+      "empty": "No certificates issued yet."
     }
   },
   "admin": {
@@ -395,7 +419,10 @@
         "waitlistTitle": "Waitlist ({count})",
         "availableTitle": "Available in {region} region",
         "enroll": "Enroll",
-        "remove": "Remove"
+        "remove": "Remove",
+        "pendingCertsTitle": "Pending Certificate Releases ({count})",
+        "releaseAll": "Release All",
+        "release": "Release"
       }
     },
     "scheduling": {

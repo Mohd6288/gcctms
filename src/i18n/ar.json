@@ -7,6 +7,20 @@
     "registerCta": "تسجيل شركتك",
     "languageSwitch": "English"
   },
+  "verify": {
+    "validTitle": "تم التحقق من الشهادة",
+    "holder": "الحامل",
+    "course": "الدورة",
+    "issued": "تاريخ الإصدار",
+    "expires": "تاريخ الانتهاء",
+    "expiredTitle": "انتهت صلاحية الشهادة",
+    "expiredBody": "انتهت صلاحية هذه الشهادة بتاريخ {date}.",
+    "revokedTitle": "تم إلغاء الشهادة",
+    "revokedBody": "تم إلغاء هذه الشهادة ولم تعد سارية.",
+    "notFoundTitle": "الشهادة غير موجودة",
+    "notFoundBody": "لا توجد شهادة مطابقة لهذا الرقم التسلسلي. تحقق من رمز QR وحاول مرة أخرى.",
+    "backToSite": "العودة إلى منصة GCC Lab"
+  },
   "auth": {
     "signIn": {
       "title": "تسجيل الدخول",
@@ -220,6 +234,16 @@
       "verified": "تم التحقق",
       "pending": "قيد الانتظار",
       "contractorCategory": "فئة المقاول"
+    },
+    "certificates": {
+      "title": "الشهادات",
+      "tableSerial": "الرقم التسلسلي",
+      "tableEmployee": "الموظف",
+      "tableCourse": "الدورة",
+      "tableIssued": "تاريخ الإصدار",
+      "tableExpires": "تاريخ الانتهاء",
+      "download": "تنزيل",
+      "empty": "لا توجد شهادات صادرة بعد."
     }
   },
   "admin": {
@@ -395,7 +419,10 @@
         "waitlistTitle": "قائمة الانتظار ({count})",
         "availableTitle": "متاحون في منطقة {region}",
         "enroll": "تسجيل",
-        "remove": "إزالة"
+        "remove": "إزالة",
+        "pendingCertsTitle": "شهادات بانتظار الإصدار ({count})",
+        "releaseAll": "إصدار الكل",
+        "release": "إصدار"
       }
     },
     "scheduling": {

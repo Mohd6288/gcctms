@@ -3,6 +3,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
+import { listPendingApprovalCertificatesForClass } from "@/modules/certification/queries";
 import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems } from "@/modules/scheduling/queries";
 import { ClassDetail } from "./class-detail";
 
@@ -28,12 +29,13 @@ export default async function AdminClassDetailPage({
     return null;
   }
 
-  const [enrollments, trainers, centers, pooled, activeIds] = await Promise.all([
+  const [enrollments, trainers, centers, pooled, activeIds, pendingCertificates] = await Promise.all([
     listEnrollmentsForClass(classId),
     listTrainers(),
     listTrainingCenters(),
     listSchedulableRequestItems(),
     listActiveEnrollmentRequestItemIds(),
+    listPendingApprovalCertificatesForClass(classId),
   ]);
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
@@ -53,6 +55,7 @@ export default async function AdminClassDetailPage({
         trainers={trainers.filter((tr) => tr.active)}
         centers={centers.filter((c) => c.active)}
         availablePool={availablePool}
+        pendingCertificates={pendingCertificates}
         locale={locale}
       />
     </div>

@@ -1,6 +1,6 @@
 // catalog module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   certificates,
@@ -50,6 +50,30 @@ export async function listCoursePrerequisiteIds(courseId: number): Promise<Set<n
     .from(coursePrerequisites)
     .where(eq(coursePrerequisites.courseId, courseId));
   return new Set(rows.map((r) => r.prerequisiteCourseId));
+}
+
+// OR-semantics: satisfied if the employee holds a valid (issued,
+// non-expired) certificate for ANY ONE listed prerequisite. Used by both
+// the request-submission guard (bulk, see requests/service.ts) and the
+// certificate eligibility gate (single-employee, see
+// certification/service.ts) — this is the single-employee shape.
+export async function employeeSatisfiesPrerequisites(employeeId: number, courseId: number): Promise<boolean> {
+  const prerequisiteCourseIds = await listCoursePrerequisiteIds(courseId);
+  if (prerequisiteCourseIds.size === 0) return true;
+
+  const [valid] = await db
+    .select({ id: certificates.id })
+    .from(certificates)
+    .where(
+      and(
+        eq(certificates.employeeId, employeeId),
+        inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
+        eq(certificates.status, "issued"),
+        gte(certificates.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+  return Boolean(valid);
 }
 
 export async function listAllJobRoles() {

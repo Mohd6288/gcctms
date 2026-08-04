@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
+import { approveAllPendingForClassAction, approveCertificateAction } from "@/modules/certification/actions";
 import {
   cancelClassAction,
   enrollRequestItemAction,
@@ -57,6 +58,12 @@ interface PooledItem {
   employeeFullNameAr: string;
   companyName: string;
 }
+interface PendingCertificate {
+  id: number;
+  employeeId: number;
+  employeeFullNameEn: string;
+  employeeFullNameAr: string;
+}
 
 export function ClassDetail({
   cls,
@@ -64,6 +71,7 @@ export function ClassDetail({
   trainers,
   centers,
   availablePool,
+  pendingCertificates,
   locale,
 }: {
   cls: ClassData;
@@ -71,6 +79,7 @@ export function ClassDetail({
   trainers: TrainerOption[];
   centers: CenterOption[];
   availablePool: PooledItem[];
+  pendingCertificates: PendingCertificate[];
   locale: string;
 }) {
   const t = useTranslations("admin.classes.detail");
@@ -306,6 +315,29 @@ export function ClassDetail({
                     onClick={() => run(`enroll-${p.requestItemId}`, () => enrollRequestItemAction({ requestItemId: p.requestItemId, classId: cls.id }))}
                   >
                     {t("enroll")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {pendingCertificates.length > 0 ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{t("pendingCertsTitle", { count: pendingCertificates.length })}</CardTitle>
+            <Button type="button" size="sm" disabled={loading === "release-all"} onClick={() => run("release-all", () => approveAllPendingForClassAction(cls.id))}>
+              {t("releaseAll")}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {pendingCertificates.map((c) => (
+                <li key={c.id} className="flex items-center justify-between rounded-lg border border-border p-2 text-sm">
+                  <span>{locale === "ar" ? c.employeeFullNameAr : c.employeeFullNameEn}</span>
+                  <Button type="button" size="sm" variant="outline" disabled={loading === `release-${c.id}`} onClick={() => run(`release-${c.id}`, () => approveCertificateAction(c.id))}>
+                    {t("release")}
                   </Button>
                 </li>
               ))}
