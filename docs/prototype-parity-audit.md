@@ -1,0 +1,29 @@
+# Prototype Parity Audit
+
+Every gcctms route paired against its exact source in `/home/mk/tms-prototype` (route table: `src/App.tsx`), per the reconciliation plan. For each divergence: **kept** (kept gcctms's stronger/different behavior, intentional), **fixed** (changed to match the prototype), or **deferred** (correctly not built yet, later phase).
+
+This supersedes ad-hoc git-log archaeology as the record of intentional deviations — see also the "Phase 5.5: correct workflow to match the validated prototype exactly" commit, which already logged two: payment rejection/re-upload support, and Iqama encryption at rest (both **kept**, both are deliberate hardenings the corrected skill also calls for).
+
+## Findings from this pass
+
+| # | Route(s) | Prototype counterpart | Resolution |
+|---|---|---|---|
+| 1 | `admin/employees` (cross-company employee browser) | None — the prototype only shows a company's roster via `AdminCompanyDetail.tsx`, not a standalone cross-company page | **Kept.** Real, live-store-backed, genuinely useful admin operational tool; logging as an intentional addition rather than removing it or forcing it into the company-detail page. |
+| 2 | `admin/companies/[id]` | `AdminCompanyDetail.tsx` + `EditCompanyDialog.tsx` | **Fixed.** Was missing entirely — `companies.cr_verified` had no reachable UI anywhere. Built the detail + edit page (migration `0020_companies_cr_verified.sql`, `updateCompany` service, `admin/companies/[id]/*`). |
+| 3 | `admin/payments/[id]` | `AdminPaymentDetail.tsx` | **Kept as-is.** Functionally covered: `admin/payments/page.tsx` lists everything awaiting verification and links into `admin/requests/[id]`'s `payment-review-panel.tsx`, which already does real verify **and** reject/re-upload (a deliberate hardening beyond the prototype's verify-only screen). A separate `/admin/payments/[id]` route would just duplicate that panel under a second URL — no functional gap, not built. |
+| 4a | `dashboard/payments` (contractor) | `CompanyPayments.tsx` | **Fixed.** Built, mirroring `admin/payments/page.tsx`'s pattern; links into the owning request's existing `payment-panel.tsx` rather than a separate detail route, same reasoning as #3. |
+| 4b | `dashboard/certificates` (contractor) | `CompanyCertificates.tsx` | **Deferred.** Correctly absent — Phase 8 (certificate engine) isn't built yet; `src/modules/certification/*` are still stubs. |
+| 4c | `dashboard/profile` (contractor) | `CompanyProfile.tsx` | **Fixed.** Built, sharing the same `updateCompany` service as #2 with the restricted field set (CR number and region read-only, matching the prototype's split). |
+| 4d | `dashboard/training` (contractor) | `CompanyTraining.tsx` | **Deferred.** Correctly absent — depends on Phase 6 (scheduling) producing real class-enrollment data; `src/modules/scheduling/*` are still stubs. Revisit once Phase 6 lands. |
+| 5 | `dashboard/employees/[id]` (page-based CRUD) | `CompanyEmployees.tsx` + `EmployeeFormDialog.tsx` (dialog-based) | **Kept.** gcctms's employee detail page has real extra value the prototype's dialog doesn't — `document-upload.tsx` lives there. Not a regression; a reasonable structural difference given the added capability. |
+| 6 | `superadmin/catalog` + separate `centers`/`exams`/`trainers` pages | `SuperAdminCourses.tsx` (one consolidated, toast-only stub screen) | **Kept.** The skill already calls for building this catalog CRUD for real rather than porting the prototype's stub; splitting it into separate pages per entity is a reasonable, still-functionally-equivalent information-architecture choice, not a workflow drift. |
+
+## Other findings surfaced along the way (not part of the original 6, logged for follow-up)
+
+- **`employees.job_role_id` is `NOT NULL` with no free-text fallback.** The corrected skill (and real prototype seed data — some employees have job titles like "Welder" absent from either Distribution/Transmission matrix) calls for a curated-list-plus-free-text-fallback pattern (`job_role_id` nullable + `job_title_other`). Not yet built. **Follow-up, not fixed in this pass** — scope it into the employees module next time it's touched; low urgency since every currently-seeded job role a real form would offer comes from the curated list.
+- **No persistent navigation shell exists yet** (`(contractor)/layout.tsx`, `(admin)/admin/layout.tsx`, etc. just role-gate — no equivalent of the prototype's `Sidebar`/`Topbar`/`nav-config.ts`). Pages are currently only discoverable via direct links from each section's own quick-links (e.g. the dashboard home page). Not one of the 6 flagged divergences and out of scope for this audit pass, but worth flagging as a real usability gap before this ships — a future phase should add a real persistent nav shell rather than leaving discoverability to ad-hoc in-page links.
+- **`courses.code` uniqueness bug** and **missing `course_prerequisites` system** — both found and fixed earlier in this same reconciliation pass (see git history: "Fix courses.code uniqueness..." and "Add course_prerequisites and enforce job-role/prerequisite guards..."). Referenced here only for a single point-in-time record of everything this reconciliation pass touched.
+
+## Method
+
+For each gcctms route: opened the paired prototype source file(s) side by side and checked (a) fields present/absent, (b) status transitions the UI exposes vs. hides, (c) validation/guards shown, (d) navigation entry points. A divergence was **kept** if it matched the skill's explicit "prototype is wrong, strengthen it" list (prerequisite/job-role guards, teacher-conflict blocking, payment reject/re-upload, draft resume, certificate QR/bilingual/masked-verify, cr_verified evidence deferral) or an already-logged Phase 5.5 intentional deviation; **fixed** otherwise, per the user's explicit priority on exact workflow fidelity to the prototype.
