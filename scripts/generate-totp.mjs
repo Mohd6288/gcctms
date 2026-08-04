@@ -1,13 +1,28 @@
 #!/usr/bin/env node
 // Generates the current valid 6-digit TOTP code from a base32 secret — for
 // local manual testing without a phone authenticator app. Grab the secret
-// from the "Can't scan? Enter this code manually" text on /mfa/enroll.
+// once from the "Can't scan? Enter this code manually" text on /mfa/enroll,
+// save it as DEV_TOTP_SECRET in .env.local, and every future login is just
+// `npm run totp` (defaults to --watch) — no more re-pasting the secret.
 // Same RFC 6238 algorithm as tests/integration/mfa-enforcement.test.ts.
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-const secret = process.argv[2];
+function readDevTotpSecretFromEnvLocal() {
+  const path = join(dirname(fileURLToPath(import.meta.url)), "..", ".env.local");
+  try {
+    const match = readFileSync(path, "utf8").match(/^DEV_TOTP_SECRET=(.+)$/m);
+    return match?.[1]?.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+const secret = process.argv[2] ?? process.env.DEV_TOTP_SECRET ?? readDevTotpSecretFromEnvLocal();
 if (!secret) {
-  console.error("Usage: node scripts/generate-totp.mjs <base32-secret>");
+  console.error("Usage: node scripts/generate-totp.mjs <base32-secret>\nOr save it once: add DEV_TOTP_SECRET=<base32-secret> to .env.local, then just run `npm run totp`.");
   process.exit(1);
 }
 
@@ -44,11 +59,11 @@ function printCurrentCode() {
   process.stdout.write(`\r${code}  (valid for ~${secondsLeft.toString().padStart(2, " ")}s)   `);
 }
 
-if (process.argv.includes("--watch")) {
+if (process.argv.includes("--once")) {
+  printCurrentCode();
+  console.log("");
+} else {
   console.log("Watching — leave this running, copy whichever code is current right before you submit. Ctrl+C to stop.\n");
   setInterval(printCurrentCode, 1000);
   printCurrentCode();
-} else {
-  printCurrentCode();
-  console.log("\n\nTip: run with --watch to keep this refreshing so you always grab a fresh one.");
 }
