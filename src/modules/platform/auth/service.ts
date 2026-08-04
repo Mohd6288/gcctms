@@ -69,13 +69,23 @@ export async function requireRole(locale: Locale, allowed: Role | readonly Role[
     // A verified factor exists but this session hasn't been challenged yet
     // -> /mfa/challenge. No verified factor at all (never enrolled) ->
     // /mfa/enroll, which /mfa/challenge itself cannot recover from.
-    const supabase = await createClient();
-    const { data } = await supabase.auth.mfa.listFactors();
-    const hasVerifiedTotp = data?.totp.some((f) => f.status === "verified") ?? false;
+    const hasVerifiedTotp = await hasVerifiedTotpFactor();
     redirectTo(hasVerifiedTotp ? "/mfa/challenge" : "/mfa/enroll", locale);
   }
 
   return context;
+}
+
+// Whether the current session's user already has a verified TOTP factor.
+// /mfa/enroll and /mfa/challenge each need this to redirect to the OTHER
+// page if landed on directly (bookmark, back button, stale link) — Supabase
+// rejects a second enroll attempt once a factor is verified (factor-name
+// conflict), and a challenge against zero verified factors has nothing to
+// challenge.
+export async function hasVerifiedTotpFactor(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.mfa.listFactors();
+  return data?.totp.some((f) => f.status === "verified") ?? false;
 }
 
 // Non-contractor accounts (super_admin/platform_admin/trainer) — the roster

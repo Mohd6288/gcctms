@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { getContext } from "@/modules/platform/auth/service";
+import { getContext, hasVerifiedTotpFactor } from "@/modules/platform/auth/service";
 import { MfaChallengeForm } from "./mfa-challenge-form";
 
 export function generateStaticParams() {
@@ -19,6 +19,12 @@ export default async function MfaChallengePage({
   const context = await getContext();
   if (!context) {
     redirect({ href: "/sign-in", locale });
+  }
+
+  // Nothing to challenge without a verified factor yet — send to enroll
+  // instead of rendering a form that can never succeed.
+  if (!(await hasVerifiedTotpFactor())) {
+    redirect({ href: "/mfa/enroll", locale });
   }
 
   return (
