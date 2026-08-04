@@ -558,5 +558,38 @@
       "genericError": "تعذّر حفظ بيانات المدرب. يرجى المحاولة مرة أخرى.",
       "successTempPassword": "كلمة مرور مؤقتة (شاركها مع المدرب الآن — لن تظهر مرة أخرى):"
     }
+  },
+  "trainer": {
+    "dashboard": {
+      "title": "فصولي",
+      "empty": "لا توجد فصول قادمة.",
+      "viewAll": "عرض جميع الفصول"
+    },
+    "classes": {
+      "title": "فصولي",
+      "tableCourse": "الدورة",
+      "tableDates": "التواريخ",
+      "tableStatus": "الحالة",
+      "statusScheduled": "مجدول",
+      "statusInProgress": "جارٍ",
+      "statusCompleted": "مكتمل",
+      "empty": "لا توجد فصول مسندة بعد."
+    },
+    "classDetail": {
+      "backToList": "العودة إلى فصولي",
+      "attirePolicy": "يُلغى تسجيل المتدرب إذا تجاوز غيابه 10% من الجلسات، أو إذا حضر دون معدات السلامة المطلوبة — علِّم تلك الجلسة كغياب (✕) في الحالتين.",
+      "notStarted": "لم يبدأ هذا الفصل بعد. يمكن تسجيل الحضور والنتائج بمجرد أن يصبح جارياً.",
+      "alreadySubmitted": "تم إرسال نتائج هذا الفصل بالفعل.",
+      "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+      "rosterTitle": "القائمة ({count})",
+      "rosterEmpty": "لا يوجد مسجَّلون في هذا الفصل.",
+      "tableEmployee": "الموظف",
+      "tableAttendance": "الحضور",
+      "tableResult": "النتيجة",
+      "pass": "ناجح",
+      "fail": "راسب",
+      "submit": "إرسال النتائج",
+      "submitting": "جارٍ الإرسال…"
+    }
   }
 }

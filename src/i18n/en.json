@@ -558,5 +558,38 @@
       "genericError": "Could not save trainer. Please try again.",
       "successTempPassword": "Temporary password (share this with the trainer once — it won't be shown again):"
     }
+  },
+  "trainer": {
+    "dashboard": {
+      "title": "My Classes",
+      "empty": "No upcoming classes.",
+      "viewAll": "View all classes"
+    },
+    "classes": {
+      "title": "My Classes",
+      "tableCourse": "Course",
+      "tableDates": "Dates",
+      "tableStatus": "Status",
+      "statusScheduled": "Scheduled",
+      "statusInProgress": "In progress",
+      "statusCompleted": "Completed",
+      "empty": "No classes assigned yet."
+    },
+    "classDetail": {
+      "backToList": "Back to my classes",
+      "attirePolicy": "Enrollment is cancelled if a trainee's absence exceeds 10% of sessions, or if they attend without required safety attire — mark that session absent (✕) either way.",
+      "notStarted": "This class hasn't started yet. Attendance and results can be recorded once it's in progress.",
+      "alreadySubmitted": "Results were already submitted for this class.",
+      "genericError": "Something went wrong. Please try again.",
+      "rosterTitle": "Roster ({count})",
+      "rosterEmpty": "No one enrolled in this class.",
+      "tableEmployee": "Employee",
+      "tableAttendance": "Attendance",
+      "tableResult": "Result",
+      "pass": "Pass",
+      "fail": "Fail",
+      "submit": "Submit Results",
+      "submitting": "Submitting…"
+    }
   }
 }
