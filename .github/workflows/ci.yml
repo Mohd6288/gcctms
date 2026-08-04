@@ -37,11 +37,14 @@ jobs:
 
       - run: npm ci
 
-      # Non-blocking for now: 3 known high-severity advisories (postcss,
-      # sharp, drizzle-kit) need a deliberate `next` upgrade to clear, not a
-      # surprise CI break — tracked for Phase 11's security review instead.
-      - name: Audit dependencies (visibility only, does not fail the build)
-        run: npm audit --audit-level=high || true
+      # Real gate as of Phase 11: the 3 high-severity advisories flagged in
+      # Phase 10 (postcss, sharp) are cleared by the `next` 16.3.0 bump.
+      # drizzle-kit's moderate esbuild advisory stays unaddressed on purpose
+      # — it's a dev-only tool (db:generate/db:studio) never shipped to
+      # users, and the fix is a breaking drizzle-kit downgrade; not worth
+      # forcing at --audit-level=high.
+      - name: Audit dependencies (fails on high/critical advisories)
+        run: npm audit --audit-level=high
 
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
