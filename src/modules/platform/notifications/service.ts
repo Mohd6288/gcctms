@@ -15,7 +15,8 @@ export type NotificationType =
   | "payment.verified"
   | "payment.rejected"
   | "class.scheduled"
-  | "class.cancelled";
+  | "class.cancelled"
+  | "class.results_submitted";
 
 export interface QueueNotificationInput {
   type: NotificationType;
