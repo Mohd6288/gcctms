@@ -1,3 +1,4 @@
-// reporting module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
-// Implemented starting Phase 1 (schema) / Phase 3+ (this module's own phase) per tms-react-builder skill.
-export {}
+// reporting module — no business logic beyond queries.ts's aggregation and
+// period.ts's date math; nothing here mutates state, so there's no
+// service.ts content to add.
+export {};
