@@ -1,6 +1,6 @@
 // companies module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { companies } from "@/db/schema";
 
@@ -22,4 +22,9 @@ export async function listCompanies() {
     })
     .from(companies)
     .orderBy(desc(companies.createdAt));
+}
+
+export async function getCompanyById(companyId: number) {
+  const [company] = await db.select().from(companies).where(eq(companies.id, companyId));
+  return company ?? null;
 }

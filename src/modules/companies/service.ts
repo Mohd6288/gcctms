@@ -1,10 +1,12 @@
 // companies module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, profiles } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
-import type { RegisterCompanyInput } from "./schema";
+import type { RegisterCompanyInput, UpdateCompanyInput } from "./schema";
 
 // Self-registration: sets status = 'active' immediately, no manual CR
 // verification step — deliberately deferred, see roles-and-workflows.md's
@@ -70,4 +72,36 @@ export async function registerCompany(input: RegisterCompanyInput) {
     }
     throw err;
   }
+}
+
+// Shared by the contractor's own profile edit and the admin company-detail
+// edit — CR number, verification, region, and contractor category are
+// admin-only (matches the validated prototype's EditCompanyDialog vs. the
+// contractor's own read-only CompanyProfile.tsx fields); silently ignored
+// rather than rejected if a non-admin caller sends them, since neither UI
+// exposes them to a contractor in the first place.
+export async function updateCompany(context: AuthContext, input: UpdateCompanyInput) {
+  if (!authorize("manage_companies", context)) throw new Error("Not authorized");
+  if (context.role === "contractor_manager" && context.companyId !== input.companyId) {
+    throw new Error("Not authorized");
+  }
+
+  const isAdmin = context.role === "platform_admin" || context.role === "super_admin";
+  const set: Partial<typeof companies.$inferInsert> = {
+    name: input.name,
+    sector: input.sector,
+    city: input.city,
+    contactName: input.contactName,
+    contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+  };
+  if (isAdmin) {
+    if (input.crNumber !== undefined) set.crNumber = input.crNumber;
+    if (input.crVerified !== undefined) set.crVerified = input.crVerified;
+    if (input.region !== undefined) set.region = input.region;
+    if (input.contractorCategory !== undefined) set.contractorCategory = input.contractorCategory;
+  }
+
+  await db.update(companies).set(set).where(eq(companies.id, input.companyId));
+  await writeAudit({ userId: context.userId, entityType: "company", entityId: input.companyId, action: "update" });
 }

@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listCompanies } from "@/modules/companies/queries";
@@ -50,7 +51,11 @@ export default async function AdminCompaniesPage({
             ) : (
               companies.map((company) => (
                 <tr key={company.id} className="border-b border-border last:border-0">
-                  <td className="p-3">{company.name}</td>
+                  <td className="p-3">
+                    <Link href={`/admin/companies/${company.id}`} className="text-primary hover:underline">
+                      {company.name}
+                    </Link>
+                  </td>
                   <td className="p-3">{company.crNumber}</td>
                   <td className="p-3">
                     {company.contactName} · {company.contactEmail}

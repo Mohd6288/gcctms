@@ -19,6 +19,9 @@ export const companies = pgTable(
     contractorCategory: text("contractor_category"),
     ownerUserId: uuid("owner_user_id").notNull(),
     status: text("status").notNull().default("active"),
+    // A plain admin-flipped boolean, no attached evidence — see
+    // 0020_companies_cr_verified.sql for the distinction from `status`.
+    crVerified: boolean("cr_verified").notNull().default(true),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },

@@ -26,6 +26,29 @@ export async function getPaymentForRequest(requestId: number) {
   return payment ?? null;
 }
 
+// Contractor's own payments across all their requests — mirrors the
+// validated prototype's CompanyPayments.tsx list (no separate detail route;
+// the "view" link goes to the owning request, where PaymentPanel already
+// lives — see requests/[id]/payment-panel.tsx).
+export async function listPaymentsForCompany(companyId: number) {
+  return db
+    .select({
+      id: payments.id,
+      requestId: payments.requestId,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      totalAmount: payments.totalAmount,
+      status: payments.status,
+      dueDate: payments.dueDate,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .innerJoin(trainingRequests, eq(payments.requestId, trainingRequests.id))
+    .innerJoin(courses, eq(trainingRequests.courseId, courses.id))
+    .where(eq(trainingRequests.companyId, companyId))
+    .orderBy(desc(payments.createdAt));
+}
+
 // Admin verification queue — only payments with an actual receipt attached
 // and still awaiting review (status "uploaded" + document_id set; an
 // "uploaded" payment with no document yet has nothing to review).

@@ -29,3 +29,23 @@ export const RegisterCompanyInput = z.object({
 });
 
 export type RegisterCompanyInput = z.infer<typeof RegisterCompanyInput>;
+
+// Shared by the contractor's own profile edit and the admin company-detail
+// edit dialog — service.ts applies crNumber/crVerified/region/
+// contractorCategory only for admin roles, matching the validated
+// prototype's split between CompanyProfile.tsx (self-service, those four
+// fields read-only) and EditCompanyDialog.tsx (admin-only, all editable).
+export const UpdateCompanyInput = z.object({
+  companyId: z.number().int().positive(),
+  name: z.string().min(1),
+  sector: z.string().min(1),
+  city: z.string().min(1),
+  contactName: z.string().min(1),
+  contactEmail: z.string().email(),
+  contactPhone: z.string().min(1),
+  crNumber: z.string().min(1).optional(),
+  crVerified: z.boolean().optional(),
+  region: z.enum(REGIONS).optional(),
+  contractorCategory: z.enum(CONTRACTOR_CATEGORIES).optional(),
+});
+export type UpdateCompanyInput = z.infer<typeof UpdateCompanyInput>;
