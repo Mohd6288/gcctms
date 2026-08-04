@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { courseJobRoles, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
+import { courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -13,6 +13,7 @@ import type {
   CreatePricingInput,
   CreateTrainerInput,
   CreateTrainingCenterInput,
+  SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
   UpdateCourseInput,
   UpdateExamInput,
@@ -99,6 +100,35 @@ export async function setCourseJobRoles(context: AuthContext, input: SetCourseJo
     await db.insert(courseJobRoles).values(toAdd.map((jobRoleId) => ({ courseId: input.courseId, jobRoleId })));
   }
   await writeAudit({ userId: context.userId, entityType: "course", entityId: input.courseId, action: "set_job_roles" });
+}
+
+// OR-semantics prerequisite chain for the certificate gate — see
+// roles-and-workflows.md and requests/service.ts's submitRequest guard.
+export async function setCoursePrerequisites(context: AuthContext, input: SetCoursePrerequisitesInput) {
+  requireCatalogAccess(context);
+
+  const existing = await db
+    .select({ id: coursePrerequisites.id, prerequisiteCourseId: coursePrerequisites.prerequisiteCourseId })
+    .from(coursePrerequisites)
+    .where(eq(coursePrerequisites.courseId, input.courseId));
+  const existingIds = new Set(existing.map((e) => e.prerequisiteCourseId));
+  const wantedIds = new Set(input.prerequisiteCourseIds);
+
+  const toRemove = existing.filter((e) => !wantedIds.has(e.prerequisiteCourseId));
+  const toAdd = input.prerequisiteCourseIds.filter((id) => !existingIds.has(id));
+
+  if (toRemove.length > 0) {
+    await db.delete(coursePrerequisites).where(
+      inArray(
+        coursePrerequisites.id,
+        toRemove.map((r) => r.id)
+      )
+    );
+  }
+  if (toAdd.length > 0) {
+    await db.insert(coursePrerequisites).values(toAdd.map((prerequisiteCourseId) => ({ courseId: input.courseId, prerequisiteCourseId })));
+  }
+  await writeAudit({ userId: context.userId, entityType: "course", entityId: input.courseId, action: "set_prerequisites" });
 }
 
 export async function createExam(context: AuthContext, input: CreateExamInput) {

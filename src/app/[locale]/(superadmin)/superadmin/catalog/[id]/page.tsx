@@ -2,7 +2,14 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { getCourseById, listAllJobRoles, listCourseJobRoleIds, listPricingForCourse } from "@/modules/catalog/queries";
+import {
+  getCourseById,
+  listAllJobRoles,
+  listCourseJobRoleIds,
+  listCoursePrerequisiteIds,
+  listCourses,
+  listPricingForCourse,
+} from "@/modules/catalog/queries";
 import { CourseDetail } from "./course-detail";
 
 export function generateStaticParams() {
@@ -27,9 +34,11 @@ export default async function CourseDetailPage({
     return null;
   }
 
-  const [jobRoles, selectedJobRoleIds, pricingRows] = await Promise.all([
+  const [jobRoles, selectedJobRoleIds, allCourses, selectedPrerequisiteCourseIds, pricingRows] = await Promise.all([
     listAllJobRoles(),
     listCourseJobRoleIds(courseId),
+    listCourses(),
+    listCoursePrerequisiteIds(courseId),
     listPricingForCourse(courseId),
   ]);
 
@@ -44,6 +53,8 @@ export default async function CourseDetailPage({
         course={course}
         jobRoles={jobRoles}
         initialSelectedJobRoleIds={Array.from(selectedJobRoleIds)}
+        otherCourses={allCourses.filter((c) => c.id !== courseId)}
+        initialSelectedPrerequisiteCourseIds={Array.from(selectedPrerequisiteCourseIds)}
         pricingRows={pricingRows}
         locale={locale}
       />

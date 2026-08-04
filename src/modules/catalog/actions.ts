@@ -7,6 +7,7 @@ import {
   CreatePricingInput,
   CreateTrainerInput,
   CreateTrainingCenterInput,
+  SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
   UpdateCourseInput,
   UpdateExamInput,
@@ -20,6 +21,7 @@ import {
   createTrainer,
   createTrainingCenter,
   endPricing,
+  setCoursePrerequisites,
   setCourseJobRoles,
   updateCourse,
   updateExam,
@@ -46,6 +48,11 @@ export async function updateCourseAction(input: UpdateCourseInput) {
 export async function setCourseJobRolesAction(input: SetCourseJobRolesInput) {
   const context = await requireContext();
   return setCourseJobRoles(context, SetCourseJobRolesInput.parse(input));
+}
+
+export async function setCoursePrerequisitesAction(input: SetCoursePrerequisitesInput) {
+  const context = await requireContext();
+  return setCoursePrerequisites(context, SetCoursePrerequisitesInput.parse(input));
 }
 
 export async function createExamAction(input: CreateExamInput) {

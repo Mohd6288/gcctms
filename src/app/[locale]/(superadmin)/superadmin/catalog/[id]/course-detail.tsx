@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
-import { createPricingAction, setCourseJobRolesAction, updateCourseAction } from "@/modules/catalog/actions";
+import { createPricingAction, setCoursePrerequisitesAction, setCourseJobRolesAction, updateCourseAction } from "@/modules/catalog/actions";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
@@ -32,6 +32,13 @@ interface JobRoleOption {
   nameAr: string;
 }
 
+interface CourseOption {
+  id: number;
+  code: string;
+  titleEn: string;
+  titleAr: string;
+}
+
 interface PricingRow {
   id: number;
   region: string | null;
@@ -44,12 +51,16 @@ export function CourseDetail({
   course,
   jobRoles,
   initialSelectedJobRoleIds,
+  otherCourses,
+  initialSelectedPrerequisiteCourseIds,
   pricingRows,
   locale,
 }: {
   course: CourseData;
   jobRoles: JobRoleOption[];
   initialSelectedJobRoleIds: number[];
+  otherCourses: CourseOption[];
+  initialSelectedPrerequisiteCourseIds: number[];
   pricingRows: PricingRow[];
   locale: string;
 }) {
@@ -70,6 +81,9 @@ export function CourseDetail({
   const [loading, setLoading] = useState<string | null>(null);
 
   const [selectedJobRoleIds, setSelectedJobRoleIds] = useState<Set<number>>(new Set(initialSelectedJobRoleIds));
+  const [selectedPrerequisiteCourseIds, setSelectedPrerequisiteCourseIds] = useState<Set<number>>(
+    new Set(initialSelectedPrerequisiteCourseIds)
+  );
 
   const [region, setRegion] = useState("");
   const [price, setPrice] = useState("");
@@ -112,6 +126,28 @@ export function CourseDetail({
     setLoading("jobRoles");
     try {
       await setCourseJobRolesAction({ courseId: course.id, jobRoleIds: Array.from(selectedJobRoleIds) });
+      router.refresh();
+    } catch {
+      setError(t("genericError"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  function togglePrerequisite(id: number) {
+    setSelectedPrerequisiteCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleSavePrerequisites() {
+    setError(null);
+    setLoading("prerequisites");
+    try {
+      await setCoursePrerequisitesAction({ courseId: course.id, prerequisiteCourseIds: Array.from(selectedPrerequisiteCourseIds) });
       router.refresh();
     } catch {
       setError(t("genericError"));
@@ -222,6 +258,37 @@ export function CourseDetail({
           </ul>
           <Button type="button" variant="outline" disabled={loading === "jobRoles"} onClick={handleSaveJobRoles}>
             {t("saveJobRoles")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("prerequisitesTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">{t("prerequisitesHint")}</p>
+          {otherCourses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("prerequisitesEmpty")}</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {otherCourses.map((c) => (
+                <li key={c.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`prereq-${c.id}`}
+                    checked={selectedPrerequisiteCourseIds.has(c.id)}
+                    onChange={() => togglePrerequisite(c.id)}
+                  />
+                  <label htmlFor={`prereq-${c.id}`} className="text-sm">
+                    {c.code} — {locale === "ar" ? c.titleAr : c.titleEn}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button type="button" variant="outline" disabled={loading === "prerequisites"} onClick={handleSavePrerequisites}>
+            {t("savePrerequisites")}
           </Button>
         </CardContent>
       </Card>

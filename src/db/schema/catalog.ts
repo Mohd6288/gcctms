@@ -68,6 +68,24 @@ export const courseJobRoles = pgTable(
   ]
 );
 
+// OR-semantics: an employee satisfies course_id's prerequisite gate by
+// holding a valid certificate for ANY ONE listed prerequisite_course_id, not
+// all of them. Zero rows for a course = no prerequisite gate.
+export const coursePrerequisites = pgTable(
+  "course_prerequisites",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    courseId: bigint("course_id", { mode: "number" }).notNull().references(() => courses.id),
+    prerequisiteCourseId: bigint("prerequisite_course_id", { mode: "number" }).notNull().references(() => courses.id),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("course_prerequisites_pair_key").on(t.courseId, t.prerequisiteCourseId),
+    index("course_prerequisites_prerequisite_course_id_idx").on(t.prerequisiteCourseId),
+    check("course_prerequisites_not_self", sql`${t.courseId} <> ${t.prerequisiteCourseId}`),
+  ]
+);
+
 export const trainingCenters = pgTable("training_centers", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),

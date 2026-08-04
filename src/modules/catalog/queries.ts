@@ -7,6 +7,7 @@ import {
   classes,
   companies,
   courseJobRoles,
+  coursePrerequisites,
   courses,
   employees,
   exams,
@@ -41,6 +42,14 @@ export async function getCourseById(courseId: number) {
 export async function listCourseJobRoleIds(courseId: number): Promise<Set<number>> {
   const rows = await db.select({ jobRoleId: courseJobRoles.jobRoleId }).from(courseJobRoles).where(eq(courseJobRoles.courseId, courseId));
   return new Set(rows.map((r) => r.jobRoleId));
+}
+
+export async function listCoursePrerequisiteIds(courseId: number): Promise<Set<number>> {
+  const rows = await db
+    .select({ prerequisiteCourseId: coursePrerequisites.prerequisiteCourseId })
+    .from(coursePrerequisites)
+    .where(eq(coursePrerequisites.courseId, courseId));
+  return new Set(rows.map((r) => r.prerequisiteCourseId));
 }
 
 export async function listAllJobRoles() {

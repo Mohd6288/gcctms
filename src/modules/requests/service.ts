@@ -1,8 +1,9 @@
 // requests module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, courses, documents, payments, requestItems, trainingRequests } from "@/db/schema";
+import { certificates, companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
+import { listCourseJobRoleIds, listCoursePrerequisiteIds } from "@/modules/catalog/queries";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
@@ -126,9 +127,47 @@ export async function submitRequest(context: AuthContext, requestId: number) {
     .from(documents)
     .where(and(inArray(documents.employeeId, employeeIds), eq(documents.type, "national_id")));
   const employeesWithDocs = new Set(docs.map((d) => d.employeeId));
-  const missing = employeeIds.filter((id) => !employeesWithDocs.has(id));
-  if (missing.length > 0) {
+  const missingDocs = employeeIds.filter((id) => !employeesWithDocs.has(id));
+  if (missingDocs.length > 0) {
     throw new Error("All employees must have a national ID document uploaded before submitting.");
+  }
+
+  // Job-role eligibility: the validated prototype only ever shows this as a
+  // non-blocking warning badge in the wizard — this is a deliberate
+  // strengthening to a real submission guard, per roles-and-workflows.md.
+  // course_job_roles with 0 rows for a course = unrestricted (every job role
+  // eligible), matching isJobRoleEligible()'s semantics.
+  const eligibleRoleIds = await listCourseJobRoleIds(request.courseId);
+  if (eligibleRoleIds.size > 0) {
+    const employeeRoles = await db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds));
+    const ineligible = employeeRoles.filter((e) => !eligibleRoleIds.has(e.jobRoleId));
+    if (ineligible.length > 0) {
+      throw new Error("All employees must hold a job role eligible for this course before submitting.");
+    }
+  }
+
+  // Prerequisites: OR-semantics — an employee satisfies the gate by holding a
+  // valid (issued, non-expired) certificate for ANY ONE listed prerequisite
+  // course. Also a deliberate strengthening over the validated prototype's
+  // advisory-only wizard badge — see roles-and-workflows.md.
+  const prerequisiteCourseIds = await listCoursePrerequisiteIds(request.courseId);
+  if (prerequisiteCourseIds.size > 0) {
+    const validCerts = await db
+      .select({ employeeId: certificates.employeeId })
+      .from(certificates)
+      .where(
+        and(
+          inArray(certificates.employeeId, employeeIds),
+          inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
+          eq(certificates.status, "issued"),
+          gte(certificates.expiresAt, new Date())
+        )
+      );
+    const satisfied = new Set(validCerts.map((c) => c.employeeId));
+    const missingPrerequisites = employeeIds.filter((id) => !satisfied.has(id));
+    if (missingPrerequisites.length > 0) {
+      throw new Error("All employees must satisfy this course's prerequisites before submitting.");
+    }
   }
 
   // Matches the validated prototype's submitRequest(): resubmitting from

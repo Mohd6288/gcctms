@@ -31,6 +31,12 @@ export const SetCourseJobRolesInput = z.object({
 });
 export type SetCourseJobRolesInput = z.infer<typeof SetCourseJobRolesInput>;
 
+export const SetCoursePrerequisitesInput = z.object({
+  courseId: z.number().int().positive(),
+  prerequisiteCourseIds: z.array(z.number().int().positive()),
+});
+export type SetCoursePrerequisitesInput = z.infer<typeof SetCoursePrerequisitesInput>;
+
 export const CreateExamInput = z.object({
   code: z.string().min(1),
   title: z.string().min(1),
