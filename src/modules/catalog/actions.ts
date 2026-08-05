@@ -1,6 +1,10 @@
 "use server";
 
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "@/db";
+import { employees } from "@/db/schema";
 import { getContext } from "@/modules/platform/auth/service";
+import { getEmployeeEligibilitySnapshot } from "./queries";
 import {
   CreateCourseInput,
   CreateExamInput,
@@ -93,4 +97,21 @@ export async function createTrainerAction(input: CreateTrainerInput) {
 export async function updateTrainerAction(input: UpdateTrainerInput) {
   const context = await requireContext();
   return updateTrainer(context, UpdateTrainerInput.parse(input));
+}
+
+// Read-only, advisory info for the request wizard's employee table — scoped
+// to the caller's own company so it can't be used to probe another
+// company's roster.
+export async function getEmployeeEligibilitySnapshotAction(courseId: number, employeeIds: number[]) {
+  const context = await requireContext();
+  if (!context.companyId || employeeIds.length === 0) return [];
+
+  const owned = await db
+    .select({ id: employees.id })
+    .from(employees)
+    .where(and(inArray(employees.id, employeeIds), eq(employees.companyId, context.companyId)));
+  const ownedIds = owned.map((e) => e.id);
+
+  const snapshot = await getEmployeeEligibilitySnapshot(courseId, ownedIds);
+  return Array.from(snapshot.entries()).map(([employeeId, info]) => ({ employeeId, ...info }));
 }

@@ -3,7 +3,7 @@ import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses, getRequestById, getRequestItems, getRequestLevelDocuments } from "@/modules/requests/queries";
-import { listEmployeesForCompany } from "@/modules/employees/queries";
+import { listActiveJobRoles, listEmployeesForCompany } from "@/modules/employees/queries";
 import { getCompanyEmployeeIdsWithNationalId } from "@/modules/platform/storage/queries";
 import { getPaymentForRequest } from "@/modules/payments/queries";
 import { RequestWizard } from "./request-wizard";
@@ -72,10 +72,11 @@ export default async function RequestDetailPage({
     );
   }
 
-  const [courses, companyEmployees, employeeIdsWithNationalId] = await Promise.all([
+  const [courses, companyEmployees, employeeIdsWithNationalId, jobRoles] = await Promise.all([
     listActiveCourses(context.companyId),
     listEmployeesForCompany(context.companyId),
     getCompanyEmployeeIdsWithNationalId(context.companyId),
+    listActiveJobRoles(context.companyId),
   ]);
 
   return (
@@ -105,6 +106,7 @@ export default async function RequestDetailPage({
             d.type === "registration_sheet" || d.type === "hrbl_request_form"
           )
           .map((d) => ({ id: d.id, type: d.type, originalName: d.originalName, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
+        jobRoles={jobRoles}
         locale={locale}
       />
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createDraftRequestAction, submitRequestAction, syncRequestItemsAction, updateDraftRequestAction } from "@/modules/requests/actions";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
+import { getEmployeeEligibilitySnapshotAction } from "@/modules/catalog/actions";
+import { AddEmployeePanel } from "./add-employee-panel";
+import { ImportEmployeesPanel } from "./import-employees-panel";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const TRAINING_TYPES = ["on_site", "training_center", "virtual_theory_onsite_practical"] as const;
@@ -35,6 +38,19 @@ interface RequestDocInfo {
   verifiedAt: string | null;
 }
 
+interface JobRoleOption {
+  id: number;
+  nameEn: string;
+  nameAr: string;
+}
+
+interface EligibilityInfo {
+  jobRoleEligible: boolean;
+  hasRoleRestriction: boolean;
+  missingPrerequisites: boolean;
+  hasPrerequisiteRequirement: boolean;
+}
+
 interface RequestWizardFields {
   courseId: number | null;
   preferredRegion: string | null;
@@ -53,6 +69,7 @@ export function RequestWizard({
   companyEmployees,
   initialSelectedEmployeeIds,
   initialRequestDocs,
+  jobRoles,
   locale,
 }: {
   requestId: number | null;
@@ -62,6 +79,7 @@ export function RequestWizard({
   companyEmployees: EmployeeOption[];
   initialSelectedEmployeeIds: number[];
   initialRequestDocs: RequestDocInfo[];
+  jobRoles: JobRoleOption[];
   locale: string;
 }) {
   const t = useTranslations("contractor.requests.wizard");
@@ -86,6 +104,26 @@ export function RequestWizard({
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(new Set(initialSelectedEmployeeIds));
   const [requestDocs, setRequestDocs] = useState<RequestDocInfo[]>(initialRequestDocs);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [eligibility, setEligibility] = useState<Map<number, EligibilityInfo>>(new Map());
+
+  // Advisory-only badges (never block adding an employee or submitting —
+  // matches the validated prototype's Step2Employees.tsx exactly).
+  useEffect(() => {
+    // Stale badges just stop being fetched (not actively cleared) once these
+    // conditions no longer hold — they naturally get overwritten next time
+    // step 2 is reached with a course and at least one employee selected.
+    if (step !== 2 || !courseId || selectedEmployeeIds.size === 0) return;
+    let cancelled = false;
+    getEmployeeEligibilitySnapshotAction(courseId, Array.from(selectedEmployeeIds)).then((rows) => {
+      if (cancelled) return;
+      setEligibility(new Map(rows.map((r) => [r.employeeId, r])));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, courseId, selectedEmployeeIds]);
 
   function toggleEmployee(id: number) {
     setSelectedEmployeeIds((prev) => {
@@ -272,23 +310,99 @@ export function RequestWizard({
         {step === 2 ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">{t("employeesHint")}</p>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowImport(false);
+                  setShowAddEmployee((v) => !v);
+                }}
+              >
+                {t("addEmployeeButton")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowAddEmployee(false);
+                  setShowImport((v) => !v);
+                }}
+              >
+                {t("importButton")}
+              </Button>
+            </div>
+
+            {showAddEmployee ? (
+              <AddEmployeePanel
+                companyId={companyId}
+                jobRoles={jobRoles}
+                locale={locale}
+                onClose={() => setShowAddEmployee(false)}
+                onCreated={(employee) => {
+                  setSelectedEmployeeIds((prev) => new Set(prev).add(employee.id));
+                  setShowAddEmployee(false);
+                  router.refresh();
+                }}
+              />
+            ) : null}
+
+            {showImport ? (
+              <ImportEmployeesPanel
+                companyId={companyId}
+                onClose={() => setShowImport(false)}
+                onImported={(created) => {
+                  setSelectedEmployeeIds((prev) => {
+                    const next = new Set(prev);
+                    created.forEach((c) => next.add(c.id));
+                    return next;
+                  });
+                  router.refresh();
+                }}
+              />
+            ) : null}
+
             {companyEmployees.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noEmployees")}</p>
             ) : (
               <ul className="flex flex-col gap-2">
-                {companyEmployees.map((employee) => (
-                  <li key={employee.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`employee-${employee.id}`}
-                      checked={selectedEmployeeIds.has(employee.id)}
-                      onChange={() => toggleEmployee(employee.id)}
-                    />
-                    <label htmlFor={`employee-${employee.id}`} className="text-sm">
-                      {locale === "ar" ? employee.fullNameAr : employee.fullNameEn}
-                    </label>
-                  </li>
-                ))}
+                {companyEmployees.map((employee) => {
+                  const info = eligibility.get(employee.id);
+                  return (
+                    <li key={employee.id} className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`employee-${employee.id}`}
+                        checked={selectedEmployeeIds.has(employee.id)}
+                        onChange={() => toggleEmployee(employee.id)}
+                      />
+                      <label htmlFor={`employee-${employee.id}`} className="text-sm">
+                        {locale === "ar" ? employee.fullNameAr : employee.fullNameEn}
+                      </label>
+                      {info?.hasRoleRestriction ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            info.jobRoleEligible ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {info.jobRoleEligible ? t("badgeEligible") : t("badgeRoleNotEligible")}
+                        </span>
+                      ) : null}
+                      {info?.hasPrerequisiteRequirement ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            info.missingPrerequisites ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {info.missingPrerequisites ? t("badgeMissingPrerequisite") : t("badgeEligible")}
+                        </span>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

@@ -76,6 +76,53 @@ export async function employeeSatisfiesPrerequisites(employeeId: number, courseI
   return Boolean(valid);
 }
 
+// Advisory-only snapshot for the request wizard's employee table (matches
+// the validated prototype's Step2Employees.tsx badges exactly — never
+// blocks adding an employee or submitting, just informs). One query for the
+// role-restriction set, one for prerequisite ids, one for the employees'
+// own job roles, then a per-employee prerequisite certificate check.
+export async function getEmployeeEligibilitySnapshot(courseId: number, employeeIds: number[]) {
+  if (employeeIds.length === 0) return new Map<number, { jobRoleEligible: boolean; hasRoleRestriction: boolean; missingPrerequisites: boolean; hasPrerequisiteRequirement: boolean }>();
+
+  const [eligibleJobRoleIds, prerequisiteCourseIds, employeeRoles] = await Promise.all([
+    listCourseJobRoleIds(courseId),
+    listCoursePrerequisiteIds(courseId),
+    db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds)),
+  ]);
+
+  const hasRoleRestriction = eligibleJobRoleIds.size > 0;
+  const hasPrerequisiteRequirement = prerequisiteCourseIds.size > 0;
+
+  const satisfiedIds = hasPrerequisiteRequirement
+    ? new Set(
+        (
+          await db
+            .select({ employeeId: certificates.employeeId })
+            .from(certificates)
+            .where(
+              and(
+                inArray(certificates.employeeId, employeeIds),
+                inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
+                eq(certificates.status, "issued"),
+                gte(certificates.expiresAt, new Date())
+              )
+            )
+        ).map((r) => r.employeeId)
+      )
+    : new Set<number>();
+
+  const result = new Map<number, { jobRoleEligible: boolean; hasRoleRestriction: boolean; missingPrerequisites: boolean; hasPrerequisiteRequirement: boolean }>();
+  for (const { id, jobRoleId } of employeeRoles) {
+    result.set(id, {
+      hasRoleRestriction,
+      jobRoleEligible: !hasRoleRestriction || eligibleJobRoleIds.has(jobRoleId),
+      hasPrerequisiteRequirement,
+      missingPrerequisites: hasPrerequisiteRequirement && !satisfiedIds.has(id),
+    });
+  }
+  return result;
+}
+
 export async function listAllJobRoles() {
   return db.select({ id: jobRoles.id, nameEn: jobRoles.nameEn, nameAr: jobRoles.nameAr }).from(jobRoles).orderBy(asc(jobRoles.nameEn));
 }

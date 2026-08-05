@@ -1,12 +1,12 @@
 // employees module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { employees } from "@/db/schema";
+import { companies, employees, jobRoles } from "@/db/schema";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { encryptNationalId, hashNationalId } from "@/modules/platform/security/national-id";
-import type { CreateEmployeeInput, UpdateEmployeeInput } from "./schema";
+import type { CreateEmployeeInput, ImportEmployeeRow, UpdateEmployeeInput } from "./schema";
 
 // Mirrors employees' actual RLS policies exactly (0006_employees.sql):
 // platform_admin has a blanket policy, contractor_manager is scoped to its
@@ -98,4 +98,76 @@ export async function updateEmployee(context: AuthContext, input: UpdateEmployee
     entityId: input.employeeId,
     action: "update",
   });
+}
+
+// Bulk-creates employees parsed from an uploaded Registration Sheet or HRBL
+// request form. jobTitleText is free text from the sheet — resolved against
+// the company's real job roles by exact, case-insensitive match, scoped to
+// its contractor_category like listActiveJobRoles (unscoped if the company
+// has none set). A row that can't be resolved, fails Iqama validation, or
+// collides with an existing/already-imported-in-this-batch Iqama is skipped
+// with a reason rather than failing the whole import — matches the
+// validated prototype's per-row skip-count UI. English/Arabic name aren't
+// distinguished in the source sheet (one "Name" column) — both fields get
+// the same raw value; the contractor can split them via Edit Employee.
+export async function importEmployees(context: AuthContext, companyId: number, rows: ImportEmployeeRow[]) {
+  if (!authorize("manage_employees", context)) throw new Error("Not authorized");
+  assertCanTouchCompany(context, companyId);
+
+  const [company] = await db.select({ contractorCategory: companies.contractorCategory }).from(companies).where(eq(companies.id, companyId));
+  const category = company?.contractorCategory ?? null;
+  const roleRows = await db
+    .select({ id: jobRoles.id, nameEn: jobRoles.nameEn })
+    .from(jobRoles)
+    .where(category ? and(eq(jobRoles.active, true), eq(jobRoles.contractorCategory, category)) : eq(jobRoles.active, true));
+  const roleIdByLowerName = new Map(roleRows.map((r) => [r.nameEn.toLowerCase(), r.id]));
+
+  const created: { id: number; fullName: string }[] = [];
+  const skipped: { row: number; reason: string }[] = [];
+  const seenIqamaThisBatch = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!/^\d{10}$/.test(row.nationalId)) {
+      skipped.push({ row: i + 1, reason: "Invalid Iqama number" });
+      continue;
+    }
+    if (seenIqamaThisBatch.has(row.nationalId)) {
+      skipped.push({ row: i + 1, reason: "Duplicate Iqama number in this file" });
+      continue;
+    }
+    const jobRoleId = row.jobTitleText ? roleIdByLowerName.get(row.jobTitleText.trim().toLowerCase()) : undefined;
+    if (!jobRoleId) {
+      skipped.push({ row: i + 1, reason: "Could not match job title — add manually via Edit Employee" });
+      continue;
+    }
+
+    try {
+      const [employee] = await db
+        .insert(employees)
+        .values({
+          companyId,
+          fullNameEn: row.fullName,
+          fullNameAr: row.fullName,
+          nationalIdEnc: encryptNationalId(row.nationalId),
+          nationalIdHash: hashNationalId(row.nationalId),
+          jobRoleId,
+          email: row.email || null,
+          phone: row.phone || null,
+          nationality: row.nationality || null,
+          activity: row.activity || null,
+          contractorArea: row.contractorArea || null,
+          contractorCity: row.contractorCity || null,
+        })
+        .returning({ id: employees.id });
+      seenIqamaThisBatch.add(row.nationalId);
+      created.push({ id: employee.id, fullName: row.fullName });
+      await writeAudit({ userId: context.userId, entityType: "employee", entityId: employee.id, action: "create" });
+    } catch (err) {
+      const pgCode = (err as { cause?: { code?: string } })?.cause?.code;
+      skipped.push({ row: i + 1, reason: pgCode === "23505" ? "This Iqama is already registered" : "Could not save this row" });
+    }
+  }
+
+  return { created, skipped };
 }

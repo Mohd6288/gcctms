@@ -1,8 +1,8 @@
 "use server";
 
 import { getContext } from "@/modules/platform/auth/service";
-import { CreateEmployeeInput, UpdateEmployeeInput } from "./schema";
-import { createEmployee, updateEmployee } from "./service";
+import { CreateEmployeeInput, ImportEmployeesInput, UpdateEmployeeInput } from "./schema";
+import { createEmployee, importEmployees, updateEmployee } from "./service";
 
 export async function createEmployeeAction(input: CreateEmployeeInput) {
   const context = await getContext();
@@ -14,4 +14,11 @@ export async function updateEmployeeAction(input: UpdateEmployeeInput) {
   const context = await getContext();
   if (!context) throw new Error("Not authorized");
   return updateEmployee(context, UpdateEmployeeInput.parse(input));
+}
+
+export async function importEmployeesAction(input: ImportEmployeesInput) {
+  const context = await getContext();
+  if (!context) throw new Error("Not authorized");
+  const parsed = ImportEmployeesInput.parse(input);
+  return importEmployees(context, parsed.companyId, parsed.rows);
 }
