@@ -65,14 +65,11 @@ export function MfaEnrollForm() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {qrCodeSvg ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={`data:image/svg+xml;utf-8,${encodeURIComponent(qrCodeSvg)}`}
-            alt=""
-            width={200}
-            height={200}
-            className="mx-auto"
-          />
+          // Inline SVG, not a data: URI img src — some mobile/in-app
+          // browsers refuse or mis-render data: URI images depending on
+          // security policy; the markup comes straight from Supabase's own
+          // API response, not user input, so this is safe.
+          <div className="mx-auto h-[200px] w-[200px]" dangerouslySetInnerHTML={{ __html: qrCodeSvg }} />
         ) : null}
         {secret ? (
           <p className="text-center text-xs text-muted-foreground">
