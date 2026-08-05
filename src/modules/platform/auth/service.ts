@@ -32,19 +32,8 @@ function redirectTo(href: string, locale: Locale): never {
 // no profile has been provisioned yet (no user_role claim).
 export async function getContext(): Promise<AuthContext | null> {
   const supabase = await createClient();
-  let data, error;
-  try {
-    const result = await supabase.auth.getClaims();
-    data = result.data;
-    error = result.error;
-  } catch (thrown) {
-    console.error("[getContext DEBUG] getClaims THREW:", thrown instanceof Error ? thrown.stack : thrown);
-    return null;
-  }
-  if (error || !data) {
-    console.error("[getContext DEBUG] getClaims failed, raw:", JSON.stringify({ data, error }));
-    return null;
-  }
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data) return null;
 
   const claims = data.claims as Record<string, unknown>;
   const role = claims.user_role;
@@ -75,19 +64,16 @@ async function getSessionEmail(): Promise<string | null> {
 export async function requireRole(locale: Locale, allowed: Role | readonly Role[]): Promise<AuthContext> {
   const context = await getContext();
   if (!context) {
-    console.error("[requireRole DEBUG] no context — getContext() returned null");
     redirectTo("/sign-in", locale);
   }
 
   const allowedRoles = Array.isArray(allowed) ? allowed : [allowed];
   if (!allowedRoles.includes(context.role)) {
-    console.error(`[requireRole DEBUG] wrong role — context.role=${context.role}, allowed=${allowedRoles.join(",")}`);
     redirectTo(roleHomePath(context.role), locale);
   }
 
   if (mfaRequiredFor(context.role) && context.aal !== "aal2") {
     const email = await getSessionEmail();
-    console.error(`[requireRole DEBUG] mfa branch — role=${context.role}, aal=${context.aal}, email=${email}, bypass=${email ? isMfaBypassEmail(email) : "n/a"}`);
     if (email && isMfaBypassEmail(email)) {
       return context;
     }
@@ -95,7 +81,6 @@ export async function requireRole(locale: Locale, allowed: Role | readonly Role[
     // -> /mfa/challenge. No verified factor at all (never enrolled) ->
     // /mfa/enroll, which /mfa/challenge itself cannot recover from.
     const hasVerifiedTotp = await hasVerifiedTotpFactor();
-    console.error(`[requireRole DEBUG] redirecting to ${hasVerifiedTotp ? "/mfa/challenge" : "/mfa/enroll"}`);
     redirectTo(hasVerifiedTotp ? "/mfa/challenge" : "/mfa/enroll", locale);
   }
 

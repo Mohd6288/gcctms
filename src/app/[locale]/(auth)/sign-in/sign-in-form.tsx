@@ -25,30 +25,24 @@ export function SignInForm() {
     try {
       const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      console.error("[signin DEBUG] signIn done, error=", signInError);
       if (signInError) {
         setError(signInError.code === "invalid_credentials" ? t("invalidCredentials") : t("genericError"));
         return;
       }
 
       const bypassMfa = isMfaBypassEmail(email);
-      console.error("[signin DEBUG] bypassMfa=", bypassMfa, "email=", email);
 
       // A verified MFA factor already exists — this session needs a
       // challenge before it reaches aal2, regardless of role.
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      console.error("[signin DEBUG] aal=", aal);
       if (!bypassMfa && aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
-        console.error("[signin DEBUG] -> pushing /mfa/challenge");
         router.push("/mfa/challenge");
         return;
       }
 
       const { data: claimsData } = await supabase.auth.getClaims();
       const role = claimsData?.claims.user_role;
-      console.error("[signin DEBUG] role=", role);
       if (!isRole(role)) {
-        console.error("[signin DEBUG] -> invalid role, setting genericError");
         setError(t("genericError"));
         return;
       }
@@ -56,15 +50,12 @@ export function SignInForm() {
       if (!bypassMfa && mfaRequiredFor(role)) {
         const { data: factors } = await supabase.auth.mfa.listFactors();
         const hasVerifiedTotp = factors?.totp.some((f) => f.status === "verified") ?? false;
-        console.error("[signin DEBUG] hasVerifiedTotp=", hasVerifiedTotp);
         if (!hasVerifiedTotp) {
-          console.error("[signin DEBUG] -> pushing /mfa/enroll");
           router.push("/mfa/enroll");
           return;
         }
       }
 
-      console.error("[signin DEBUG] -> pushing role home", roleHomePath(role));
       router.push(roleHomePath(role));
     } finally {
       setLoading(false);
