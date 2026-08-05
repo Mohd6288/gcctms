@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
 
-type DocType = "national_id" | "prior_certificate";
+type DocType = "national_id" | "prior_certificate" | "other";
 
 interface ExistingDocument {
   id: number;
@@ -28,7 +28,11 @@ export function DocumentUpload({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [uploadingType, setUploadingType] = useState<DocType | null>(null);
-  const fileInputs = { national_id: useRef<HTMLInputElement>(null), prior_certificate: useRef<HTMLInputElement>(null) };
+  const fileInputs = {
+    national_id: useRef<HTMLInputElement>(null),
+    prior_certificate: useRef<HTMLInputElement>(null),
+    other: useRef<HTMLInputElement>(null),
+  };
 
   async function handleUpload(type: DocType) {
     const file = fileInputs[type].current?.files?.[0];
@@ -53,6 +57,7 @@ export function DocumentUpload({
   const rows: { type: DocType; label: string }[] = [
     { type: "national_id", label: t("nationalId") },
     { type: "prior_certificate", label: t("priorCertificate") },
+    { type: "other", label: t("other") },
   ];
 
   return (

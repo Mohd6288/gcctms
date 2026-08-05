@@ -4,7 +4,7 @@ import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses, getRequestById, getRequestItems, getRequestLevelDocuments } from "@/modules/requests/queries";
 import { listActiveJobRoles, listEmployeesForCompany } from "@/modules/employees/queries";
-import { getCompanyEmployeeIdsWithNationalId } from "@/modules/platform/storage/queries";
+import { listEmployeeDocumentsForCompany } from "@/modules/platform/storage/queries";
 import { getPaymentForRequest } from "@/modules/payments/queries";
 import { RequestWizard } from "./request-wizard";
 import { RequestSummary } from "./request-summary";
@@ -72,10 +72,10 @@ export default async function RequestDetailPage({
     );
   }
 
-  const [courses, companyEmployees, employeeIdsWithNationalId, jobRoles] = await Promise.all([
+  const [courses, companyEmployees, employeeDocuments, jobRoles] = await Promise.all([
     listActiveCourses(context.companyId),
     listEmployeesForCompany(context.companyId),
-    getCompanyEmployeeIdsWithNationalId(context.companyId),
+    listEmployeeDocumentsForCompany(context.companyId),
     listActiveJobRoles(context.companyId),
   ]);
 
@@ -98,7 +98,6 @@ export default async function RequestDetailPage({
           id: e.id,
           fullNameEn: e.fullNameEn,
           fullNameAr: e.fullNameAr,
-          hasNationalId: employeeIdsWithNationalId.has(e.id),
         }))}
         initialSelectedEmployeeIds={items.map((i) => i.employeeId)}
         initialRequestDocs={requestDocs
@@ -106,6 +105,7 @@ export default async function RequestDetailPage({
             d.type === "registration_sheet" || d.type === "hrbl_request_form"
           )
           .map((d) => ({ id: d.id, type: d.type, originalName: d.originalName, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
+        employeeDocuments={employeeDocuments}
         jobRoles={jobRoles}
         locale={locale}
       />

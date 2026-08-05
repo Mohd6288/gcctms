@@ -17,7 +17,7 @@ const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 // admin-verified before a request can be approved (Phase 4 — see
 // database-schema.md's documents note). sadad_invoice is also
 // request-scoped — the contractor's SADAD receipt (Phase 5).
-export type DocumentType = "national_id" | "prior_certificate" | "registration_sheet" | "hrbl_request_form" | "sadad_invoice";
+export type DocumentType = "national_id" | "prior_certificate" | "other" | "registration_sheet" | "hrbl_request_form" | "sadad_invoice";
 
 export interface UploadDocumentInput {
   companyId: number;

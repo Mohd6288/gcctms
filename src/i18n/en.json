@@ -132,8 +132,7 @@
         "badgeMissingPrerequisite": "Missing prerequisite",
         "documentsHint": "GCC Lab requires both forms below before this request can be approved. Attach them now or later from this page.",
         "employeeDocsTitle": "Employee documents",
-        "employeeDocsComplete": "All selected employees have a national ID on file.",
-        "employeeDocsMissing": "These employees are missing a national ID document:",
+        "employeeDocsNoneSelected": "Add employees in the previous step first.",
         "reviewTitle": "Review & submit",
         "submit": "Submit request",
         "submitting": "Submitting…",
@@ -182,7 +181,11 @@
         "attach": "Attach",
         "attaching": "Attaching…",
         "download": "Download",
-        "downloadTemplate": "Download blank template"
+        "downloadTemplate": "Download blank template",
+        "nationalId": "Iqama",
+        "priorCertificate": "Certificate",
+        "other": "Other",
+        "optional": "optional"
       },
       "summary": {
         "adminNote": "Message from GCC Lab",
@@ -244,6 +247,7 @@
       "title": "Documents",
       "nationalId": "National ID",
       "priorCertificate": "Prior certificate",
+      "other": "Other",
       "uploaded": "Uploaded",
       "notUploaded": "Not uploaded",
       "upload": "Upload",

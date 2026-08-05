@@ -132,8 +132,7 @@
         "badgeMissingPrerequisite": "متطلب سابق ناقص",
         "documentsHint": "يتطلب مختبر الخليج النموذجين أدناه قبل الموافقة على هذا الطلب. أرفقهما الآن أو لاحقًا من هذه الصفحة.",
         "employeeDocsTitle": "مستندات الموظفين",
-        "employeeDocsComplete": "جميع الموظفين المحددين لديهم هوية وطنية مسجّلة.",
-        "employeeDocsMissing": "هؤلاء الموظفون تنقصهم وثيقة الهوية الوطنية:",
+        "employeeDocsNoneSelected": "أضف موظفين في الخطوة السابقة أولاً.",
         "reviewTitle": "المراجعة والإرسال",
         "submit": "إرسال الطلب",
         "submitting": "جارٍ الإرسال…",
@@ -182,7 +181,11 @@
         "attach": "إرفاق",
         "attaching": "جارٍ الإرفاق…",
         "download": "تنزيل",
-        "downloadTemplate": "تنزيل النموذج الفارغ"
+        "downloadTemplate": "تنزيل النموذج الفارغ",
+        "nationalId": "الإقامة",
+        "priorCertificate": "الشهادة",
+        "other": "أخرى",
+        "optional": "اختياري"
       },
       "summary": {
         "adminNote": "رسالة من مختبر الخليج",
@@ -244,6 +247,7 @@
       "title": "المستندات",
       "nationalId": "الهوية الوطنية (الإقامة)",
       "priorCertificate": "شهادة سابقة",
+      "other": "أخرى",
       "uploaded": "تم الرفع",
       "notUploaded": "لم يتم الرفع",
       "upload": "رفع",

@@ -4,7 +4,7 @@ import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses } from "@/modules/requests/queries";
 import { listActiveJobRoles, listEmployeesForCompany } from "@/modules/employees/queries";
-import { getCompanyEmployeeIdsWithNationalId } from "@/modules/platform/storage/queries";
+import { listEmployeeDocumentsForCompany } from "@/modules/platform/storage/queries";
 import { RequestWizard } from "../[id]/request-wizard";
 
 export function generateStaticParams() {
@@ -25,10 +25,10 @@ export default async function NewRequestPage({
     return null;
   }
 
-  const [courses, companyEmployees, employeeIdsWithNationalId, jobRoles] = await Promise.all([
+  const [courses, companyEmployees, employeeDocuments, jobRoles] = await Promise.all([
     listActiveCourses(context.companyId),
     listEmployeesForCompany(context.companyId),
-    getCompanyEmployeeIdsWithNationalId(context.companyId),
+    listEmployeeDocumentsForCompany(context.companyId),
     listActiveJobRoles(context.companyId),
   ]);
 
@@ -51,10 +51,10 @@ export default async function NewRequestPage({
           id: e.id,
           fullNameEn: e.fullNameEn,
           fullNameAr: e.fullNameAr,
-          hasNationalId: employeeIdsWithNationalId.has(e.id),
         }))}
         initialSelectedEmployeeIds={[]}
         initialRequestDocs={[]}
+        employeeDocuments={employeeDocuments}
         jobRoles={jobRoles}
         locale={locale}
       />

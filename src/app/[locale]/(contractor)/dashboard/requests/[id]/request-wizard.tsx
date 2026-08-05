@@ -28,7 +28,13 @@ interface EmployeeOption {
   id: number;
   fullNameEn: string;
   fullNameAr: string;
-  hasNationalId: boolean;
+}
+
+interface EmployeeDocument {
+  id: number;
+  employeeId: number;
+  type: "national_id" | "prior_certificate" | "other";
+  originalName: string;
 }
 
 interface RequestDocInfo {
@@ -69,6 +75,7 @@ export function RequestWizard({
   companyEmployees,
   initialSelectedEmployeeIds,
   initialRequestDocs,
+  employeeDocuments,
   jobRoles,
   locale,
 }: {
@@ -78,6 +85,7 @@ export function RequestWizard({
   courses: CourseOption[];
   companyEmployees: EmployeeOption[];
   initialSelectedEmployeeIds: number[];
+  employeeDocuments: EmployeeDocument[];
   initialRequestDocs: RequestDocInfo[];
   jobRoles: JobRoleOption[];
   locale: string;
@@ -202,6 +210,25 @@ export function RequestWizard({
     }
   }
 
+  async function handleUploadEmployeeDoc(employeeId: number, type: "national_id" | "prior_certificate" | "other", file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setUploadingType(`${employeeId}:${type}`);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("companyId", String(companyId));
+      formData.set("employeeId", String(employeeId));
+      formData.set("type", type);
+      await uploadDocumentAction(formData);
+      router.refresh();
+    } catch {
+      setError(tDocs("attach") + ": " + t("genericError"));
+    } finally {
+      setUploadingType(null);
+    }
+  }
+
   async function handleSubmit() {
     if (!requestId) return;
     setError(null);
@@ -218,7 +245,6 @@ export function RequestWizard({
   }
 
   const selectedEmployees = companyEmployees.filter((e) => selectedEmployeeIds.has(e.id));
-  const missingDocsEmployees = selectedEmployees.filter((e) => !e.hasNationalId);
   const selectedCourse = courses.find((c) => c.id === courseId);
 
   const steps = [t("stepInfo"), t("stepEmployees"), t("stepDocuments"), t("stepReview")];
@@ -440,19 +466,53 @@ export function RequestWizard({
                 </div>
               );
             })}
-            <div>
+            <div className="flex flex-col gap-4">
               <p className="text-sm font-medium">{t("employeeDocsTitle")}</p>
-              {missingDocsEmployees.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("employeeDocsComplete")}</p>
+              {selectedEmployees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("employeeDocsNoneSelected")}</p>
               ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">{t("employeeDocsMissing")}</p>
-                  <ul className="list-inside list-disc text-sm">
-                    {missingDocsEmployees.map((e) => (
-                      <li key={e.id}>{locale === "ar" ? e.fullNameAr : e.fullNameEn}</li>
-                    ))}
-                  </ul>
-                </>
+                selectedEmployees.map((employee) => {
+                  const docs = employeeDocuments.filter((d) => d.employeeId === employee.id);
+                  return (
+                    <div key={employee.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                      <p className="text-sm font-medium">{locale === "ar" ? employee.fullNameAr : employee.fullNameEn}</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {(
+                          [
+                            { type: "national_id" as const, label: tDocs("nationalId"), required: true },
+                            { type: "prior_certificate" as const, label: tDocs("priorCertificate"), required: false },
+                            { type: "other" as const, label: tDocs("other"), required: false },
+                          ]
+                        ).map(({ type, label, required }) => {
+                          const doc = docs.find((d) => d.type === type);
+                          const key = `${employee.id}:${type}`;
+                          return (
+                            <div key={type} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
+                              <span className="text-xs font-medium">
+                                {label}
+                                {!required ? ` (${tDocs("optional")})` : null}
+                              </span>
+                              {doc ? (
+                                <a href={`/api/documents/${doc.id}/download`} className="truncate text-xs text-primary hover:underline">
+                                  {doc.originalName}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">{tDocs("notAttached")}</span>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,application/pdf"
+                                onChange={(e) => handleUploadEmployeeDoc(employee.id, type, e.target.files?.[0])}
+                                className="text-xs"
+                              />
+                              {uploadingType === key ? <span className="text-xs text-muted-foreground">{tDocs("attaching")}</span> : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
