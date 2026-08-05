@@ -1,17 +1,12 @@
--- Reference data seeded on every local `supabase db reset` (see
--- [db.seed] in config.toml). Job roles feed course_job_roles (the
--- certificate eligibility gate) and the employee form's role select —
--- Phase 4.5 gives these full CRUD; until then they're a fixed baseline so
--- Phase 3's employee flow has something real to select from.
-insert into job_roles (code, name_en, name_ar, active) values
-  ('GEN', 'General Worker', 'عامل عام', true),
-  ('ELEC', 'Electrician', 'كهربائي', true),
-  ('RIG', 'Rigger', 'مُعلِّق أحمال (ريغر)', true),
-  ('SCAF', 'Scaffolder', 'فني سقالات', true),
-  ('WELD', 'Welder', 'لحّام', true),
-  ('CRANE', 'Crane Operator', 'مشغل رافعة', true),
-  ('HEO', 'Heavy Equipment Operator', 'مشغل معدات ثقيلة', true),
-  ('SUPV', 'Supervisor', 'مشرف', true),
-  ('SAFETY', 'Safety Officer', 'مسؤول سلامة', true),
-  ('PIPE', 'Pipefitter', 'فني تمديد أنابيب', true)
-on conflict (code) do nothing;
+-- The placeholder job-role baseline that used to live here (10 fake generic
+-- roles: GEN, ELEC, RIG, ...) is gone — `scripts/seed-catalog.mjs` now seeds
+-- the real 52-role GCC Lab Distribution/Transmission matrix (plus the real
+-- 43-course catalog, prerequisites, and regional pricing) against any real
+-- Supabase project. Run it after every fresh `supabase db reset` / new
+-- environment's `db push`:
+--
+--   DATABASE_URL=<connection string> node scripts/seed-catalog.mjs
+--
+-- Kept as a separate script rather than inlined here (unlike the old
+-- placeholder) because job-role eligibility resolution needs real
+-- title-matching logic across two categories, not a flat SQL insert.

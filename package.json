@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "cert:proof": "node scripts/certificate-pdf-proof.mjs",
     "bootstrap:super-admin": "node scripts/bootstrap-super-admin.mjs",
+    "seed:catalog": "node scripts/seed-catalog.mjs",
     "totp": "node scripts/generate-totp.mjs"
   },
   "dependencies": {
