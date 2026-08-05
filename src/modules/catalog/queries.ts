@@ -163,12 +163,22 @@ export async function listTrainers() {
 
 // Cross-company/cross-region counts — super_admin only screen.
 export async function getPlatformOverviewStats() {
+  const t0 = Date.now();
+  const timed = <T,>(label: string, p: Promise<T>) =>
+    p.then((r) => {
+      console.error(`[stats DEBUG] ${label} took ${Date.now() - t0}ms`);
+      return r;
+    }).catch((e) => {
+      console.error(`[stats DEBUG] ${label} FAILED after ${Date.now() - t0}ms:`, e instanceof Error ? e.message : e);
+      throw e;
+    });
+
   const [[companiesRow], [employeesRow], [activeClassesRow], [certificatesIssuedRow], [revenueRow]] = await Promise.all([
-    db.select({ value: count() }).from(companies),
-    db.select({ value: count() }).from(employees),
-    db.select({ value: count() }).from(classes).where(eq(classes.status, "in_progress")),
-    db.select({ value: count() }).from(certificates).where(eq(certificates.status, "issued")),
-    db.select({ value: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` }).from(payments).where(eq(payments.status, "verified")),
+    timed("companies", db.select({ value: count() }).from(companies)),
+    timed("employees", db.select({ value: count() }).from(employees)),
+    timed("activeClasses", db.select({ value: count() }).from(classes).where(eq(classes.status, "in_progress"))),
+    timed("certificatesIssued", db.select({ value: count() }).from(certificates).where(eq(certificates.status, "issued"))),
+    timed("revenue", db.select({ value: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` }).from(payments).where(eq(payments.status, "verified"))),
   ]);
 
   return {
