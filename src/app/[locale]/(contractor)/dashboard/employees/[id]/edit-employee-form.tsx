@@ -22,6 +22,10 @@ interface Employee {
   jobRoleId: number;
   email: string | null;
   phone: string | null;
+  nationality: string | null;
+  activity: string | null;
+  contractorArea: string | null;
+  contractorCity: string | null;
   status: "active" | "inactive";
 }
 
@@ -33,6 +37,10 @@ export function EditEmployeeForm({ employee, jobRoles, locale }: { employee: Emp
   const [jobRoleId, setJobRoleId] = useState(employee.jobRoleId);
   const [email, setEmail] = useState(employee.email ?? "");
   const [phone, setPhone] = useState(employee.phone ?? "");
+  const [nationality, setNationality] = useState(employee.nationality ?? "");
+  const [activity, setActivity] = useState(employee.activity ?? "");
+  const [contractorArea, setContractorArea] = useState(employee.contractorArea ?? "");
+  const [contractorCity, setContractorCity] = useState(employee.contractorCity ?? "");
   const [status, setStatus] = useState<"active" | "inactive">(employee.status);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,7 +50,19 @@ export function EditEmployeeForm({ employee, jobRoles, locale }: { employee: Emp
     setError(null);
     setLoading(true);
     try {
-      await updateEmployeeAction({ employeeId: employee.id, fullNameEn, fullNameAr, jobRoleId, email, phone, status });
+      await updateEmployeeAction({
+        employeeId: employee.id,
+        fullNameEn,
+        fullNameAr,
+        jobRoleId,
+        email,
+        phone,
+        nationality,
+        activity,
+        contractorArea,
+        contractorCity,
+        status,
+      });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("genericError"));
@@ -88,6 +108,22 @@ export function EditEmployeeForm({ employee, jobRoles, locale }: { employee: Emp
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="phone">{t("phoneLabel")}</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="nationality">{t("nationalityLabel")}</Label>
+            <Input id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="activity">{t("activityLabel")}</Label>
+            <Input id="activity" value={activity} onChange={(e) => setActivity(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorArea">{t("contractorAreaLabel")}</Label>
+            <Input id="contractorArea" value={contractorArea} onChange={(e) => setContractorArea(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorCity">{t("contractorCityLabel")}</Label>
+            <Input id="contractorCity" value={contractorCity} onChange={(e) => setContractorCity(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="status">{t("statusLabel")}</Label>

@@ -13,6 +13,10 @@ export const CreateEmployeeInput = z.object({
   jobRoleId: z.number().int().positive(),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
+  nationality: z.string().optional(),
+  activity: z.string().optional(),
+  contractorArea: z.string().optional(),
+  contractorCity: z.string().optional(),
 });
 
 export type CreateEmployeeInput = z.infer<typeof CreateEmployeeInput>;
@@ -24,6 +28,10 @@ export const UpdateEmployeeInput = z.object({
   jobRoleId: z.number().int().positive(),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional(),
+  nationality: z.string().optional(),
+  activity: z.string().optional(),
+  contractorArea: z.string().optional(),
+  contractorCity: z.string().optional(),
   status: z.enum(["active", "inactive"]),
 });
 

@@ -31,6 +31,10 @@ export async function getEmployeeById(employeeId: number) {
       fullNameAr: employees.fullNameAr,
       email: employees.email,
       phone: employees.phone,
+      nationality: employees.nationality,
+      activity: employees.activity,
+      contractorArea: employees.contractorArea,
+      contractorCity: employees.contractorCity,
       status: employees.status,
       jobRoleId: employees.jobRoleId,
     })

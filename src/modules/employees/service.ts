@@ -49,6 +49,10 @@ export async function createEmployee(context: AuthContext, input: CreateEmployee
         jobRoleId: input.jobRoleId,
         email: input.email || null,
         phone: input.phone || null,
+        nationality: input.nationality || null,
+        activity: input.activity || null,
+        contractorArea: input.contractorArea || null,
+        contractorCity: input.contractorCity || null,
       })
       .returning({ id: employees.id });
 
@@ -80,6 +84,10 @@ export async function updateEmployee(context: AuthContext, input: UpdateEmployee
       jobRoleId: input.jobRoleId,
       email: input.email || null,
       phone: input.phone || null,
+      nationality: input.nationality || null,
+      activity: input.activity || null,
+      contractorArea: input.contractorArea || null,
+      contractorCity: input.contractorCity || null,
       status: input.status,
     })
     .where(eq(employees.id, input.employeeId));

@@ -24,6 +24,10 @@ export function CreateEmployeeForm({ companyId, jobRoles, locale }: { companyId:
   const [jobRoleId, setJobRoleId] = useState(jobRoles[0]?.id ?? 0);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [activity, setActivity] = useState("");
+  const [contractorArea, setContractorArea] = useState("");
+  const [contractorCity, setContractorCity] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +36,19 @@ export function CreateEmployeeForm({ companyId, jobRoles, locale }: { companyId:
     setError(null);
     setLoading(true);
     try {
-      await createEmployeeAction({ companyId, fullNameEn, fullNameAr, nationalId, jobRoleId, email, phone });
+      await createEmployeeAction({
+        companyId,
+        fullNameEn,
+        fullNameAr,
+        nationalId,
+        jobRoleId,
+        email,
+        phone,
+        nationality,
+        activity,
+        contractorArea,
+        contractorCity,
+      });
       router.push("/dashboard/employees");
       router.refresh();
     } catch (err) {
@@ -91,6 +107,22 @@ export function CreateEmployeeForm({ companyId, jobRoles, locale }: { companyId:
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="phone">{t("phoneLabel")}</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="nationality">{t("nationalityLabel")}</Label>
+            <Input id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="activity">{t("activityLabel")}</Label>
+            <Input id="activity" value={activity} onChange={(e) => setActivity(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorArea">{t("contractorAreaLabel")}</Label>
+            <Input id="contractorArea" value={contractorArea} onChange={(e) => setContractorArea(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contractorCity">{t("contractorCityLabel")}</Label>
+            <Input id="contractorCity" value={contractorCity} onChange={(e) => setContractorCity(e.target.value)} />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <Button type="submit" disabled={loading}>
