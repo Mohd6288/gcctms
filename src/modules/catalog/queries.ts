@@ -161,31 +161,32 @@ export async function listTrainers() {
     .orderBy(asc(trainers.fullName));
 }
 
-// Cross-company/cross-region counts — super_admin only screen.
+// Cross-company/cross-region counts — super_admin only screen. One round trip
+// (not 5 concurrent queries) — Promise.all-ing separate queries here used to
+// starve the pool under load and, worse, a mid-flight statement_timeout
+// cancellation on a shared connection surfaced as a raw socket-level error
+// that no per-query .catch() could intercept, crashing the whole instance.
 export async function getPlatformOverviewStats() {
-  const t0 = Date.now();
-  const timed = <T,>(label: string, p: Promise<T>) =>
-    p.then((r) => {
-      console.error(`[stats DEBUG] ${label} took ${Date.now() - t0}ms`);
-      return r;
-    }).catch((e) => {
-      console.error(`[stats DEBUG] ${label} FAILED after ${Date.now() - t0}ms:`, e instanceof Error ? e.message : e);
-      throw e;
-    });
-
-  const [[companiesRow], [employeesRow], [activeClassesRow], [certificatesIssuedRow], [revenueRow]] = await Promise.all([
-    timed("companies", db.select({ value: count() }).from(companies)),
-    timed("employees", db.select({ value: count() }).from(employees)),
-    timed("activeClasses", db.select({ value: count() }).from(classes).where(eq(classes.status, "in_progress"))),
-    timed("certificatesIssued", db.select({ value: count() }).from(certificates).where(eq(certificates.status, "issued"))),
-    timed("revenue", db.select({ value: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` }).from(payments).where(eq(payments.status, "verified"))),
-  ]);
+  const [row] = await db.execute<{
+    companies: number;
+    employees: number;
+    active_classes: number;
+    certificates_issued: number;
+    revenue: string;
+  }>(sql`
+    select
+      (select count(*)::int from ${companies}) as companies,
+      (select count(*)::int from ${employees}) as employees,
+      (select count(*)::int from ${classes} where ${classes.status} = 'in_progress') as active_classes,
+      (select count(*)::int from ${certificates} where ${certificates.status} = 'issued') as certificates_issued,
+      (select coalesce(sum(${payments.totalAmount}), 0) from ${payments} where ${payments.status} = 'verified') as revenue
+  `);
 
   return {
-    companies: companiesRow.value,
-    employees: employeesRow.value,
-    activeClasses: activeClassesRow.value,
-    certificatesIssued: certificatesIssuedRow.value,
-    revenue: revenueRow.value,
+    companies: row.companies,
+    employees: row.employees,
+    activeClasses: row.active_classes,
+    certificatesIssued: row.certificates_issued,
+    revenue: row.revenue,
   };
 }
