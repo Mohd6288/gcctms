@@ -22,7 +22,17 @@ export function MfaEnrollForm() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.mfa.enroll({ factorType: "totp" }).then(({ data, error: enrollError }) => {
+    async function startEnrollment() {
+      // A prior unverified attempt (page refresh, tab switch back to grab
+      // the phone, anything) leaves a factor behind with the same default
+      // friendly name — enroll() then fails outright with
+      // mfa_factor_name_conflict, not just "leaves clutter". Clear any
+      // unverified TOTP factor first so remounting this page always works.
+      const { data: existing } = await supabase.auth.mfa.listFactors();
+      const stale = existing?.all.filter((f) => f.factor_type === "totp" && f.status === "unverified") ?? [];
+      await Promise.all(stale.map((f) => supabase.auth.mfa.unenroll({ factorId: f.id })));
+
+      const { data, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: "totp" });
       if (enrollError || !data) {
         setError(t("genericError"));
         return;
@@ -30,9 +40,8 @@ export function MfaEnrollForm() {
       setFactorId(data.id);
       setQrCodeSvg(data.totp.qr_code);
       setSecret(data.totp.secret);
-    });
-    // Enrolling multiple times (e.g. on remount) leaves earlier unverified
-    // factors behind — acceptable for now, cleanup is not wired up here.
+    }
+    startEnrollment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
