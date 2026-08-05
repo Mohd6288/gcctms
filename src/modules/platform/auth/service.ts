@@ -32,9 +32,17 @@ function redirectTo(href: string, locale: Locale): never {
 // no profile has been provisioned yet (no user_role claim).
 export async function getContext(): Promise<AuthContext | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
+  let data, error;
+  try {
+    const result = await supabase.auth.getClaims();
+    data = result.data;
+    error = result.error;
+  } catch (thrown) {
+    console.error("[getContext DEBUG] getClaims THREW:", thrown instanceof Error ? thrown.stack : thrown);
+    return null;
+  }
   if (error || !data) {
-    console.error("[getContext DEBUG] getClaims failed:", error?.message, error?.status, error?.code, error?.cause);
+    console.error("[getContext DEBUG] getClaims failed, raw:", JSON.stringify({ data, error }));
     return null;
   }
 
