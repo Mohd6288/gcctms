@@ -48,6 +48,16 @@
       "submitting": "Verifying…",
       "genericError": "Invalid code. Please try again."
     },
+    "setPassword": {
+      "title": "Set your password",
+      "description": "Choose a password for your account.",
+      "passwordLabel": "New password",
+      "confirmPasswordLabel": "Confirm password",
+      "submit": "Set password",
+      "submitting": "Saving…",
+      "mismatch": "Passwords don't match.",
+      "invalidLink": "This link is invalid or has expired. Ask an admin to resend it."
+    },
     "register": {
       "title": "Register your company",
       "companyNameLabel": "Company name",
