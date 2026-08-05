@@ -26,11 +26,13 @@ curl -s -X PATCH "https://api.supabase.com/v1/projects/<project-ref>/config/auth
 
 Verify it worked by signing in and checking the JWT actually carries `user_role` — `GET .../config/auth` and checking `hook_custom_access_token_enabled` only proves it's *configured*, not that a real token comes out right.
 
+**`DATABASE_URL` must use the transaction-mode pooler (port `6543`), never session mode (port `5432`), for the app's runtime env var.** Found in production: `src/db/index.ts`'s Drizzle client is created once per serverless invocation, and Vercel can spin up many concurrent invocations — session mode's connection cap (15 on free tier) exhausts almost immediately (`EMAXCONNSESSION`, silent 500s on any DB-touching route). `supabase link`/`db push`/migrations still correctly use session mode (`5432`) — that's a CLI-driven, single-connection, session-feature-dependent operation, unrelated to this. Only the deployed app's own `DATABASE_URL` needs `6543`. Set via `vercel env add DATABASE_URL production --force` (and `preview`) with the pooler host on port `6543`.
+
 ## Incident response
 
 1. **Check it's real**: `npx vercel inspect <deployment-url>` or the Vercel dashboard's Runtime Logs / Errors for the `gcctms` project — most "the app is down" reports are a single bad deploy, not infra.
 2. **App-level errors** (500s, exceptions): Vercel dashboard → project → Logs, filtered to the affected route. Server Actions and route handlers log via `console.error`; nothing structured yet (no Sentry/error-tracking service wired up — a real gap, see below).
-3. **Database-level issues** (RLS denials, connection exhaustion, slow queries): Supabase dashboard → the affected project → Logs & Reports, or Database → Query Performance.
+3. **Database-level issues** (RLS denials, connection exhaustion, slow queries): Supabase dashboard → the affected project → Logs & Reports, or Database → Query Performance. `EMAXCONNSESSION` specifically means `DATABASE_URL` is on the session-mode pooler port — see the New Supabase project checklist above.
 4. **Rollback a bad deploy**: Vercel dashboard → Deployments → find the last-known-good deployment → "Promote to Production". This does not touch the database — a bad deploy that only shipped app-code bugs is safe to roll back this way at any time.
 5. **Rollback a bad migration**: see below — this is NOT a one-click operation, plan for it before you need it.
 
