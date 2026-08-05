@@ -45,3 +45,32 @@ export async function GET(request: Request) {
     })),
   });
 }
+
+export async function POST(request: Request) {
+  const context = await getContext();
+  if (!context || context.role !== "super_admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const { email, factorId } = (await request.json()) as { email?: string; factorId?: string };
+  if (!email || !factorId) {
+    return NextResponse.json({ error: "missing email or factorId" }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+  const { data: userList, error: userError } = await admin.auth.admin.listUsers();
+  if (userError) {
+    return NextResponse.json({ error: userError.message }, { status: 500 });
+  }
+  const user = userList.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  if (!user) {
+    return NextResponse.json({ error: "user not found" }, { status: 404 });
+  }
+
+  const { error: deleteError } = await admin.auth.admin.mfa.deleteFactor({ id: factorId, userId: user.id });
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ deleted: factorId });
+}
