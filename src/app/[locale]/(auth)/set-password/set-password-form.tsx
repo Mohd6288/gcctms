@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { isRole, mfaRequiredFor, roleHomePath } from "@/modules/platform/auth/shared";
+import { isMfaBypassEmail, isRole, mfaRequiredFor, roleHomePath } from "@/modules/platform/auth/shared";
 
 // Reached via an invite or password-recovery email link — the Supabase
 // browser client auto-detects the session from the URL on load (SDK
@@ -40,20 +40,23 @@ export function SetPasswordForm() {
         return;
       }
 
+      const { data: claimsData } = await supabase.auth.getClaims();
+      const role = claimsData?.claims.user_role;
+      const email = claimsData?.claims.email;
+      const bypassMfa = typeof email === "string" && isMfaBypassEmail(email);
+
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+      if (!bypassMfa && aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
         router.push("/mfa/challenge");
         return;
       }
 
-      const { data: claimsData } = await supabase.auth.getClaims();
-      const role = claimsData?.claims.user_role;
       if (!isRole(role)) {
         setError(t("invalidLink"));
         return;
       }
 
-      if (mfaRequiredFor(role)) {
+      if (!bypassMfa && mfaRequiredFor(role)) {
         const { data: factors } = await supabase.auth.mfa.listFactors();
         const hasVerifiedTotp = factors?.totp.some((f) => f.status === "verified") ?? false;
         if (!hasVerifiedTotp) {

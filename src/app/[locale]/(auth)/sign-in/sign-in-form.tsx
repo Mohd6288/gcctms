@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { isRole, mfaRequiredFor, roleHomePath } from "@/modules/platform/auth/shared";
+import { isMfaBypassEmail, isRole, mfaRequiredFor, roleHomePath } from "@/modules/platform/auth/shared";
 
 export function SignInForm() {
   const t = useTranslations("auth.signIn");
@@ -30,10 +30,12 @@ export function SignInForm() {
         return;
       }
 
+      const bypassMfa = isMfaBypassEmail(email);
+
       // A verified MFA factor already exists — this session needs a
       // challenge before it reaches aal2, regardless of role.
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+      if (!bypassMfa && aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
         router.push("/mfa/challenge");
         return;
       }
@@ -45,7 +47,7 @@ export function SignInForm() {
         return;
       }
 
-      if (mfaRequiredFor(role)) {
+      if (!bypassMfa && mfaRequiredFor(role)) {
         const { data: factors } = await supabase.auth.mfa.listFactors();
         const hasVerifiedTotp = factors?.totp.some((f) => f.status === "verified") ?? false;
         if (!hasVerifiedTotp) {

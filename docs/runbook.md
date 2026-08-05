@@ -94,6 +94,19 @@ Known gaps, not blocking today (no real users yet) but required before real comp
 - **No CSP** — see above.
 - **Secrets that passed through a chat transcript during setup** (the `gcctms-dev` service_role key and the dev/staging DB passwords) should be rotated via the Supabase dashboard before any real data enters those projects — low urgency today since they're test-data-only projects, but don't carry them forward into prod.
 
+## Test accounts (dev-only, MFA-free)
+
+For quick manual testing across all four roles without an authenticator app each time. All live on `gcctms-dev`, all real accounts (real password sign-in, real role claims, real RLS scoping) — the only thing special about them is `isMfaBypassEmail()` (`modules/platform/auth/shared.ts`) skips both the client-side enroll/challenge redirect and `requireRole()`'s own aal2 gate for these specific emails.
+
+| Role | Email | Password |
+|---|---|---|
+| super_admin | `mohammed.alkhalifa@gccelab.com` | (real MFA, not bypassed — set up on a real phone) |
+| platform_admin | `test-admin@gcclab.test` | `TestAdmin123!` |
+| trainer | `test-trainer@gcclab.test` | `TestTrainer123!` |
+| contractor_manager | `test-company@gcclab.test` | `TestCompany123!` |
+
+The bypass is controlled entirely by the `NEXT_PUBLIC_MFA_BYPASS_EMAILS` env var (comma-separated emails) — currently set on Vercel's `gcctms` project for Production+Preview. **This must never be set on a real production environment** (see the checklist below) — with it unset, `isMfaBypassEmail()` always returns false and every account goes through real MFA again, no code change needed to "turn it off," just don't carry the env var forward.
+
 ## Before onboarding a real company (not done, deliberately deferred)
 
 1. Provision a real **prod** Supabase project on a **paid** plan (backups, no auto-pause) — deferred past Phase 11 specifically to stay within the free-tier 2-project cap while dev+staging cover everything needed pre-launch. See `docs/residency.md` for the region (`eu-central-1`, already decided, must match dev/staging).
@@ -102,3 +115,4 @@ Known gaps, not blocking today (no real users yet) but required before real comp
 4. Add error tracking + uptime alerting (see gaps above).
 5. Decide on a custom domain (currently `gcctms.vercel.app`) — out of scope for this phase per an explicit earlier decision, revisit when actually onboarding.
 6. Re-run this phase's security review and load test against the real prod project once it exists — the numbers here were measured against `gcctms-dev`, not prod infrastructure (though same region/tier, so not expected to differ materially).
+7. **Do not set `NEXT_PUBLIC_MFA_BYPASS_EMAILS` on the prod Vercel environment.** Leave it unset there — it should only ever exist on Production/Preview for the dev deployment, never on whatever environment real companies actually use.

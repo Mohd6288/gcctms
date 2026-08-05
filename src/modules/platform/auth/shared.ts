@@ -30,6 +30,22 @@ export function mfaRequiredFor(role: Role): boolean {
   return role !== "contractor_manager";
 }
 
+// DEV-ONLY escape hatch: a fixed, named allowlist of test account emails
+// that skip MFA entirely (no enroll/challenge redirect, no aal2 gate) —
+// requireRole()'s own MFA check calls this too, so it's a real bypass, not
+// just a UI skip. Controlled by NEXT_PUBLIC_MFA_BYPASS_EMAILS (comma-
+// separated), which must NEVER be set in a real production environment —
+// see docs/runbook.md. NEXT_PUBLIC_ because sign-in-form.tsx needs this
+// before a session/role is even known (the user just typed the email).
+export function isMfaBypassEmail(email: string): boolean {
+  const list = process.env.NEXT_PUBLIC_MFA_BYPASS_EMAILS ?? "";
+  return list
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(email.toLowerCase());
+}
+
 // Role -> capability map, mirroring roles-and-workflows.md's permission
 // matrix exactly. A coarse allow/deny gate — "own" vs "all" scoping (e.g. a
 // contractor_manager only touching their own company) is enforced by the

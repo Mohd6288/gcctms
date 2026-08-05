@@ -6,7 +6,7 @@ import { profiles } from "@/db/schema";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
-import { isRole, mfaRequiredFor, roleHomePath, type AuthContext, type Role } from "./shared";
+import { isMfaBypassEmail, isRole, mfaRequiredFor, roleHomePath, type AuthContext, type Role } from "./shared";
 
 export {
   ROLES,
@@ -48,6 +48,13 @@ export async function getContext(): Promise<AuthContext | null> {
   };
 }
 
+async function getSessionEmail(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const email = (data?.claims as Record<string, unknown> | undefined)?.email;
+  return typeof email === "string" ? email : null;
+}
+
 // Server-side route guard for a role-restricted layout: redirects
 // unauthenticated users to sign-in, wrong-role users to their own area, and
 // (for roles that require it) unchallenged sessions to the MFA gate. This is
@@ -66,6 +73,10 @@ export async function requireRole(locale: Locale, allowed: Role | readonly Role[
   }
 
   if (mfaRequiredFor(context.role) && context.aal !== "aal2") {
+    const email = await getSessionEmail();
+    if (email && isMfaBypassEmail(email)) {
+      return context;
+    }
     // A verified factor exists but this session hasn't been challenged yet
     // -> /mfa/challenge. No verified factor at all (never enrolled) ->
     // /mfa/enroll, which /mfa/challenge itself cannot recover from.
