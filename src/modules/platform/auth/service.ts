@@ -33,7 +33,10 @@ function redirectTo(href: string, locale: Locale): never {
 export async function getContext(): Promise<AuthContext | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
-  if (error || !data) return null;
+  if (error || !data) {
+    console.error("[getContext DEBUG] getClaims failed:", error?.message, error?.status, error?.code, error?.cause);
+    return null;
+  }
 
   const claims = data.claims as Record<string, unknown>;
   const role = claims.user_role;
