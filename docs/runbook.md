@@ -11,6 +11,21 @@
 
 Deploying migrations to dev/staging: `gh workflow run deploy-migrations.yml -f environment=dev` (or `staging`) — see `docs/residency.md` for why this is manual dispatch rather than branch-triggered.
 
+## New Supabase project checklist (do this for prod too — don't skip it)
+
+`supabase db push` only applies SQL migrations to the database schema. It does **not** configure GoTrue's Auth Hooks — those are project-level Auth settings, not part of the schema, and `deploy-migrations.yml` does not set them. Discovered the hard way: dev and staging were both migrated and looked fine, but every sign-in failed with a generic error because the JWT never got a `user_role` claim — `hook_custom_access_token_enabled` was `false` on both, so `public.custom_access_token_hook` (created by `0015_custom_access_token_hook.sql`) was never actually being called by GoTrue.
+
+Fix for a project in this state, or a required step for any newly-created project (including prod, when it's provisioned) — via the Management API, using the CLI's own stored access token:
+
+```bash
+curl -s -X PATCH "https://api.supabase.com/v1/projects/<project-ref>/config/auth" \
+  -H "Authorization: Bearer $(cat ~/.supabase/access-token)" \
+  -H "Content-Type: application/json" \
+  -d '{"hook_custom_access_token_enabled": true, "hook_custom_access_token_uri": "pg-functions://postgres/public/custom_access_token_hook"}'
+```
+
+Verify it worked by signing in and checking the JWT actually carries `user_role` — `GET .../config/auth` and checking `hook_custom_access_token_enabled` only proves it's *configured*, not that a real token comes out right.
+
 ## Incident response
 
 1. **Check it's real**: `npx vercel inspect <deployment-url>` or the Vercel dashboard's Runtime Logs / Errors for the `gcctms` project — most "the app is down" reports are a single bad deploy, not infra.
