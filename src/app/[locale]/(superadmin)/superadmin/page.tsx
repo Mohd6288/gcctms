@@ -20,7 +20,12 @@ export default async function SuperAdminHomePage({
   const t = await getTranslations("superadmin.overview");
 
   const context = await getContext();
-  const stats = authorize("view_reports", context) ? await getPlatformOverviewStats() : null;
+  const stats = authorize("view_reports", context)
+    ? await getPlatformOverviewStats().catch((error) => {
+        console.error("[superadmin] getPlatformOverviewStats failed:", error);
+        return null;
+      })
+    : null;
 
   const metrics = stats
     ? [

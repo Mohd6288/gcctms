@@ -21,7 +21,14 @@
 // not for this app-runtime client. `max: 1` is also set deliberately, not
 // left at postgres.js's default of 10: one serverless instance has no
 // business holding 10 of its own connections when the external pooler is
-// already doing the real pooling across every other instance.
+// already doing the real pooling across every other instance. Bumped from 1
+// to 3 after finding that routes firing several queries via Promise.all
+// (e.g. getPlatformOverviewStats) serialize all of them onto one physical
+// connection; under concurrent requests to the same warm instance the
+// resulting queue depth was long enough for a query to blow past Postgres's
+// statement_timeout — which then surfaced as an unhandled rejection that
+// crashed the whole instance (call sites must still catch DB errors
+// regardless, a query failure should never take the process down).
 import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -30,6 +37,6 @@ import * as schema from "./schema";
 const connectionString =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
-const client = postgres(connectionString, { prepare: false, max: 1 });
+const client = postgres(connectionString, { prepare: false, max: 3 });
 
 export const db = drizzle(client, { schema });
