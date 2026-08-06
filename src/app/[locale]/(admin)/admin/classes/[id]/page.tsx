@@ -11,6 +11,16 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// generateStaticParams only enumerates `locale`, never the real `[id]`
+// values (data-dependent, unbounded) — every actual request falls back to
+// on-demand rendering. Without an explicit dynamic export, Next treats that
+// fallback render as a static-shell candidate, and this page's cookies()/DB
+// reads inside it throw DYNAMIC_SERVER_USAGE in production (works locally,
+// where dev never prerenders). Confirmed live: this crashed every
+// dynamic-segment detail page in the app (companies/[id], requests/[id],
+// classes/[id], employees/[id], catalog/[id], verify/[serial]).
+export const dynamic = "force-dynamic";
+
 export default async function AdminClassDetailPage({
   params,
 }: {

@@ -11,6 +11,12 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// See admin/classes/[id]/page.tsx's comment — generateStaticParams only
+// covers `locale`, so every real [id] falls back to on-demand rendering;
+// without this, the cookies()/DB reads below throw DYNAMIC_SERVER_USAGE in
+// production.
+export const dynamic = "force-dynamic";
+
 export default async function AdminRequestDetailPage({
   params,
 }: {

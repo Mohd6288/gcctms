@@ -7,6 +7,14 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+// See admin/classes/[id]/page.tsx's comment — generateStaticParams only
+// covers `locale`, so every real [serial] falls back to on-demand
+// rendering; without this, the DB read below throws DYNAMIC_SERVER_USAGE in
+// production (this is a public page, so it must also stay live/uncached —
+// a stale-cached "valid" result for an expired/revoked certificate would be
+// a real security problem, not just a bug).
+export const dynamic = "force-dynamic";
+
 // Deliberately not masked in the query layer's SELECT (name is fetched in
 // full) but masked here at render time — keeps the masking rule visible
 // and easy to audit in one place. Real-world verification pages show
