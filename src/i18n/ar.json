@@ -1,4 +1,35 @@
 {
+  "nav": {
+    "portal": {
+      "contractor_manager": "بوابة الشركة",
+      "platform_admin": "بوابة الإدارة",
+      "super_admin": "المشرف العام",
+      "trainer": "بوابة المدرب"
+    },
+    "items": {
+      "dashboard": "لوحة التحكم",
+      "overview": "نظرة عامة",
+      "requests": "طلبات التدريب",
+      "employees": "الموظفون",
+      "payments": "المدفوعات",
+      "certificates": "الشهادات",
+      "profile": "ملف الشركة",
+      "scheduling": "الجدولة",
+      "calendar": "التقويم",
+      "classes": "الفصول التدريبية",
+      "companies": "الشركات",
+      "reports": "التقارير",
+      "catalog": "دليل الدورات",
+      "centers": "مراكز التدريب",
+      "exams": "الاختبارات",
+      "trainers": "المدربون",
+      "users": "المستخدمون"
+    },
+    "openMenu": "فتح قائمة التنقل",
+    "closeMenu": "إغلاق قائمة التنقل",
+    "signOut": "تسجيل الخروج",
+    "regionScope": "منطقة {region}"
+  },
   "landing": {
     "eyebrow": "مختبر الخليج للتطوير والتصديق",
     "title": "منصة إدارة التدريب والتصديق",

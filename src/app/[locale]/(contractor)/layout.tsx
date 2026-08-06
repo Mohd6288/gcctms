@@ -1,3 +1,4 @@
+import { AppShell } from "@/components/layout/app-shell";
 import { requireRole } from "@/modules/platform/auth/service";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -13,7 +14,7 @@ export default async function ContractorLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  await requireRole(locale as Locale, "contractor_manager");
+  const context = await requireRole(locale as Locale, "contractor_manager");
 
-  return children;
+  return <AppShell role={context.role}>{children}</AppShell>;
 }

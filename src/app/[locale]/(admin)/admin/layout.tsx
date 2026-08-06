@@ -1,3 +1,4 @@
+import { AppShell } from "@/components/layout/app-shell";
 import { requireRole } from "@/modules/platform/auth/service";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -13,7 +14,11 @@ export default async function AdminLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  await requireRole(locale as Locale, "platform_admin");
+  const context = await requireRole(locale as Locale, "platform_admin");
 
-  return children;
+  return (
+    <AppShell role={context.role} region={context.region}>
+      {children}
+    </AppShell>
+  );
 }

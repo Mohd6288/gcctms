@@ -1,4 +1,35 @@
 {
+  "nav": {
+    "portal": {
+      "contractor_manager": "Company Portal",
+      "platform_admin": "Admin Portal",
+      "super_admin": "Super Admin",
+      "trainer": "Trainer Portal"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "overview": "Overview",
+      "requests": "Training Requests",
+      "employees": "Employees",
+      "payments": "Payments",
+      "certificates": "Certificates",
+      "profile": "Company Profile",
+      "scheduling": "Scheduling",
+      "calendar": "Calendar",
+      "classes": "Classes",
+      "companies": "Companies",
+      "reports": "Reports",
+      "catalog": "Course Catalog",
+      "centers": "Training Centers",
+      "exams": "Exams",
+      "trainers": "Trainers",
+      "users": "Users"
+    },
+    "openMenu": "Open navigation",
+    "closeMenu": "Close navigation",
+    "signOut": "Sign out",
+    "regionScope": "{region} region"
+  },
   "landing": {
     "eyebrow": "GCC Lab Development & Certification Center",
     "title": "Training & Certification Management Platform",

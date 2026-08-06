@@ -4,8 +4,20 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
 import { profiles, trainers } from "@/db/schema";
+import { redirect } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { authorize, getContext } from "./service";
+
+// Clears the Supabase session cookies and drops the user back at sign-in.
+// scope: "global" so signing out also invalidates the refresh token
+// server-side, not just this browser's cookies.
+export async function signOut(locale: Locale) {
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "global" });
+  redirect({ href: "/sign-in", locale });
+}
 
 // super_admin creates super_admin/platform_admin/trainer login accounts
 // directly (manage_users). Activating contractor accounts is a distinct,
