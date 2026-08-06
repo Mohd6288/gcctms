@@ -146,6 +146,8 @@
         "badgeEligible": "مؤهّل",
         "badgeRoleNotEligible": "المسمى الوظيفي غير مؤهّل",
         "badgeMissingPrerequisite": "متطلب سابق ناقص",
+        "missingPrerequisiteHint": "يحتاج هذا الموظف إلى {course} قبل هذه الدورة.",
+        "startOhsRequest": "بدء طلب السلامة والصحة المهنية",
         "documentsHint": "يتطلب مختبر الخليج النموذجين أدناه قبل الموافقة على هذا الطلب. أرفقهما الآن أو لاحقًا من هذه الصفحة.",
         "employeeDocsTitle": "مستندات الموظفين",
         "employeeDocsNoneSelected": "أضف موظفين في الخطوة السابقة أولاً.",

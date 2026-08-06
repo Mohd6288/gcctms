@@ -13,8 +13,10 @@ export function generateStaticParams() {
 
 export default async function NewRequestPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ courseId?: string; employeeId?: string }>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -24,6 +26,13 @@ export default async function NewRequestPage({
     redirect({ href: "/dashboard", locale });
     return null;
   }
+
+  // Populated when arriving from the "Start OHS request" link in the
+  // wizard's missing-prerequisite hint (request-wizard.tsx) — pre-selects
+  // the course/employee so a contractor doesn't have to redo that lookup.
+  const { courseId: courseIdParam, employeeId: employeeIdParam } = await searchParams;
+  const prefilledCourseId = courseIdParam ? Number(courseIdParam) : null;
+  const prefilledEmployeeId = employeeIdParam ? Number(employeeIdParam) : null;
 
   const [courses, companyEmployees, employeeDocuments, jobRoles] = await Promise.all([
     listActiveCourses(context.companyId),
@@ -37,7 +46,7 @@ export default async function NewRequestPage({
       <RequestWizard
         requestId={null}
         initialFields={{
-          courseId: null,
+          courseId: prefilledCourseId && courses.some((c) => c.id === prefilledCourseId) ? prefilledCourseId : null,
           preferredRegion: null,
           preferredCity: null,
           preferredTrainingType: null,
@@ -52,7 +61,9 @@ export default async function NewRequestPage({
           fullNameEn: e.fullNameEn,
           fullNameAr: e.fullNameAr,
         }))}
-        initialSelectedEmployeeIds={[]}
+        initialSelectedEmployeeIds={
+          prefilledEmployeeId && companyEmployees.some((e) => e.id === prefilledEmployeeId) ? [prefilledEmployeeId] : []
+        }
         initialRequestDocs={[]}
         employeeDocuments={employeeDocuments}
         jobRoles={jobRoles}

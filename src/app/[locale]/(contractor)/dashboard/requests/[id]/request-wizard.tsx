@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { createDraftRequestAction, submitRequestAction, syncRequestItemsAction, updateDraftRequestAction } from "@/modules/requests/actions";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
 import { getEmployeeEligibilitySnapshotAction } from "@/modules/catalog/actions";
@@ -24,9 +24,12 @@ type TrainingType = (typeof TRAINING_TYPES)[number];
 
 interface CourseOption {
   id: number;
+  code: string;
   titleEn: string;
   titleAr: string;
 }
+
+const OHS_COURSE_CODE = "CSCC00";
 
 interface EmployeeOption {
   id: number;
@@ -252,6 +255,7 @@ export function RequestWizard({
 
   const selectedEmployees = companyEmployees.filter((e) => selectedEmployeeIds.has(e.id));
   const selectedCourse = courses.find((c) => c.id === courseId);
+  const ohsCourse = courses.find((c) => c.code === OHS_COURSE_CODE);
 
   const steps = [t("stepInfo"), t("stepEmployees"), t("stepDocuments"), t("stepReview")];
 
@@ -404,33 +408,47 @@ export function RequestWizard({
                 {companyEmployees.map((employee) => {
                   const info = eligibility.get(employee.id);
                   return (
-                    <li key={employee.id} className="flex flex-wrap items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`employee-${employee.id}`}
-                        checked={selectedEmployeeIds.has(employee.id)}
-                        onChange={() => toggleEmployee(employee.id)}
-                      />
-                      <label htmlFor={`employee-${employee.id}`} className="text-sm">
-                        {locale === "ar" ? employee.fullNameAr : employee.fullNameEn}
-                      </label>
-                      {info?.hasRoleRestriction ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            info.jobRoleEligible ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {info.jobRoleEligible ? t("badgeEligible") : t("badgeRoleNotEligible")}
-                        </span>
-                      ) : null}
-                      {info?.hasPrerequisiteRequirement ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            info.missingPrerequisites ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                          }`}
-                        >
-                          {info.missingPrerequisites ? t("badgeMissingPrerequisite") : t("badgeEligible")}
-                        </span>
+                    <li key={employee.id} className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`employee-${employee.id}`}
+                          checked={selectedEmployeeIds.has(employee.id)}
+                          onChange={() => toggleEmployee(employee.id)}
+                        />
+                        <label htmlFor={`employee-${employee.id}`} className="text-sm">
+                          {locale === "ar" ? employee.fullNameAr : employee.fullNameEn}
+                        </label>
+                        {info?.hasRoleRestriction ? (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              info.jobRoleEligible ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {info.jobRoleEligible ? t("badgeEligible") : t("badgeRoleNotEligible")}
+                          </span>
+                        ) : null}
+                        {info?.hasPrerequisiteRequirement ? (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              info.missingPrerequisites ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {info.missingPrerequisites ? t("badgeMissingPrerequisite") : t("badgeEligible")}
+                          </span>
+                        ) : null}
+                      </div>
+                      {info?.missingPrerequisites && ohsCourse ? (
+                        <p className="pl-6 text-xs text-muted-foreground">
+                          {t("missingPrerequisiteHint", { course: locale === "ar" ? ohsCourse.titleAr : ohsCourse.titleEn })}{" "}
+                          <Link
+                            href={`/dashboard/requests/new?courseId=${ohsCourse.id}&employeeId=${employee.id}`}
+                            target="_blank"
+                            className="text-primary hover:underline"
+                          >
+                            {t("startOhsRequest")}
+                          </Link>
+                        </p>
                       ) : null}
                     </li>
                   );

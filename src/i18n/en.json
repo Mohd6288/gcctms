@@ -146,6 +146,8 @@
         "badgeEligible": "Eligible",
         "badgeRoleNotEligible": "Role not eligible",
         "badgeMissingPrerequisite": "Missing prerequisite",
+        "missingPrerequisiteHint": "This employee needs {course} before this course.",
+        "startOhsRequest": "Start OHS request",
         "documentsHint": "GCC Lab requires both forms below before this request can be approved. Attach them now or later from this page.",
         "employeeDocsTitle": "Employee documents",
         "employeeDocsNoneSelected": "Add employees in the previous step first.",

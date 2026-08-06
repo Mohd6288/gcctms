@@ -18,7 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "cert:proof": "node scripts/certificate-pdf-proof.mjs",
     "bootstrap:super-admin": "node scripts/bootstrap-super-admin.mjs",
-    "seed:catalog": "node scripts/seed-catalog.mjs",
+    "seed:catalog": "tsx scripts/seed-catalog.mjs",
     "totp": "node scripts/generate-totp.mjs"
   },
   "dependencies": {
@@ -55,6 +55,7 @@
     "playwright": "^1.62.1",
     "supabase": "^2.111.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.5",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }

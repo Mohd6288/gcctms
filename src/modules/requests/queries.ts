@@ -109,7 +109,7 @@ export async function listActiveCourses(companyId: number) {
   const categoryFilter = category ? or(isNull(courses.contractorCategory), eq(courses.contractorCategory, category)) : isNull(courses.contractorCategory);
 
   return db
-    .select({ id: courses.id, titleEn: courses.titleEn, titleAr: courses.titleAr })
+    .select({ id: courses.id, code: courses.code, titleEn: courses.titleEn, titleAr: courses.titleAr })
     .from(courses)
     .where(and(eq(courses.active, true), categoryFilter))
     .orderBy(courses.titleEn);

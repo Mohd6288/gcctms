@@ -39,6 +39,17 @@ jobs:
       - name: Push migrations
         run: supabase db push --yes
 
+      # Idempotent (onConflictDoNothing() throughout) — safe to re-run every
+      # deploy, so catalog/prerequisite/pricing edits to scripts/seed-catalog.mjs
+      # ship the same way schema changes do, without a separate manual step.
+      # Uses tsx, not plain node: the script imports src/db/schema/*.ts by
+      # extensionless relative path, which Node's own ESM loader can't
+      # resolve on its own.
+      - name: Seed catalog data
+        run: npx tsx scripts/seed-catalog.mjs
+        env:
+          DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+
       # Confirms the deployed schema didn't lose RLS coverage along the way
       # — same check CI runs locally, now against the real project.
       - name: RLS check against the deployed project
