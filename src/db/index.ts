@@ -37,6 +37,26 @@ import * as schema from "./schema";
 const connectionString =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
-const client = postgres(connectionString, { prepare: false, max: 3 });
+// idle_timeout/connect_timeout are both deliberate, and both are about
+// FAILING FAST rather than about throughput. postgres.js defaults to never
+// closing an idle connection and to a 30s connect timeout, which is a bad
+// combination behind Supabase's transaction pooler: Supavisor drops idle
+// client connections on its own schedule, so a warm Vercel instance that
+// has been quiet for a while can hand the next request a socket the server
+// already closed. Nothing notices until TCP retransmits give up, so the
+// request hangs for minutes instead of erroring — observed in production
+// as a dynamic route stalling past 2 minutes and then recovering on its
+// own. Expiring our own idle connections first (20s, comfortably under the
+// pooler's window) means we reconnect rather than reuse a corpse, and
+// bounding the connect leg at 10s turns a dead network path into a real
+// error a route can catch. Cheap now that functions run in fra1 alongside
+// the database (vercel.json) — a reconnect there costs single-digit ms, so
+// the extra reconnects this causes are not worth optimising away.
+const client = postgres(connectionString, {
+  prepare: false,
+  max: 3,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
 export const db = drizzle(client, { schema });
