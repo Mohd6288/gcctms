@@ -1,6 +1,6 @@
 // reporting module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, countDistinct, eq, gte, lte, ne, sql } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { certificates, courses, payments, requestItems, trainingRequests } from "@/db/schema";
 import { periodRange, type ReportPeriod } from "./period";
@@ -11,6 +11,18 @@ const REQUEST_STATUSES = ["draft", "submitted", "info_requested", "rejected", "p
 function num(value: string | null | undefined): number {
   return value ? Number(value) : 0;
 }
+
+// Use drizzle's count()/countDistinct() rather than a hand-written
+// sql<number>`count(*)`: sql<T> is an unchecked type ASSERTION, and
+// postgres.js hands back Postgres bigint counts as strings, so those
+// "numbers" were strings at runtime. Silent everywhere they were only
+// rendered, but not in the charts — StackedStatusBar/BarList both do
+// `items.reduce((sum, i) => sum + i.value, 0)`, and "0" + "1" + "1" is
+// "011", so the computed total was a concatenated string and every bar
+// collapsed to a fraction-of-a-percent sliver. drizzle's helpers carry a
+// .mapWith(Number), so they return real numbers. Where a plain count()
+// won't do (FILTER clauses), the sql`` tag is now typed <string> honestly
+// and passed through num().
 
 // period scoping throughout uses payments.created_at (= approval/invoice
 // time) for revenue, and training_requests.created_at (= submission time)
@@ -29,11 +41,11 @@ export async function getReportSummary(period: ReportPeriod) {
       .from(payments)
       .where(and(ne(payments.status, "verified"), gte(payments.createdAt, start), lte(payments.createdAt, end))),
     db
-      .select({ value: sql<number>`count(*)` })
+      .select({ value: count() })
       .from(certificates)
       .where(and(eq(certificates.status, "issued"), gte(certificates.issuedAt, start), lte(certificates.issuedAt, end))),
     db
-      .select({ value: sql<number>`count(*)` })
+      .select({ value: count() })
       .from(trainingRequests)
       .where(and(gte(trainingRequests.createdAt, start), lte(trainingRequests.createdAt, end))),
     db
@@ -48,13 +60,13 @@ export async function getReportSummary(period: ReportPeriod) {
     // Completion rate is deliberately all-time, not period-scoped — a
     // period-scoped rate would misleadingly read near 0% early in any
     // period (nothing submitted this period has had time to complete yet).
-    db.select({ value: sql<number>`count(*) filter (where ${trainingRequests.status} = 'completed')` }).from(trainingRequests),
-    db.select({ value: sql<number>`count(*)` }).from(trainingRequests),
+    db.select({ value: sql<string>`count(*) filter (where ${trainingRequests.status} = 'completed')` }).from(trainingRequests),
+    db.select({ value: count() }).from(trainingRequests),
   ]);
 
   const verifiedRevenue = num(verifiedRow.total);
   const outstanding = num(outstandingRow.total);
-  const completedAllTime = completedRow.value;
+  const completedAllTime = num(completedRow.value);
   const totalAllTime = totalRequestsAllTimeRow.value;
 
   const revenueByCourse = await getRevenueByCourse(period);
@@ -100,7 +112,7 @@ export async function getRevenueByCourse(period: ReportPeriod) {
 export async function getRequestsByRegion(period: ReportPeriod) {
   const { start, end } = periodRange(period);
   const rows = await db
-    .select({ region: trainingRequests.preferredRegion, value: sql<number>`count(*)` })
+    .select({ region: trainingRequests.preferredRegion, value: count() })
     .from(trainingRequests)
     .where(and(gte(trainingRequests.createdAt, start), lte(trainingRequests.createdAt, end)))
     .groupBy(trainingRequests.preferredRegion);
@@ -113,7 +125,7 @@ export async function getRequestsByRegion(period: ReportPeriod) {
 export async function getRequestsByStatus(period: ReportPeriod) {
   const { start, end } = periodRange(period);
   const rows = await db
-    .select({ status: trainingRequests.status, value: sql<number>`count(*)` })
+    .select({ status: trainingRequests.status, value: count() })
     .from(trainingRequests)
     .where(and(gte(trainingRequests.createdAt, start), lte(trainingRequests.createdAt, end)))
     .groupBy(trainingRequests.status);
@@ -134,7 +146,7 @@ export async function getVerifiedRevenueForMonth(monthValue: string): Promise<nu
 export async function getCertificatesIssuedForMonth(monthValue: string): Promise<number> {
   const { start, end } = periodRange({ mode: "month", value: monthValue });
   const [row] = await db
-    .select({ value: sql<number>`count(*)` })
+    .select({ value: count() })
     .from(certificates)
     .where(and(eq(certificates.status, "issued"), gte(certificates.issuedAt, start), lte(certificates.issuedAt, end)));
   return row.value;
