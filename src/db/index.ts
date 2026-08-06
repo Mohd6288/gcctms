@@ -52,9 +52,34 @@ const connectionString =
 // error a route can catch. Cheap now that functions run in fra1 alongside
 // the database (vercel.json) — a reconnect there costs single-digit ms, so
 // the extra reconnects this causes are not worth optimising away.
+// max: 1 is back, deliberately, and it is what stops pages hanging.
+//
+// Asking Supabase's transaction pooler for a SECOND concurrent connection
+// is what stalls: pages issuing one query were always fine, while
+// /admin/reports (~16 concurrent) hung every time and /admin/scheduling
+// (4 concurrent) hung intermittently. Vercel killed those at the 300s
+// runtime timeout with no database error logged at all. It never
+// reproduces locally, where Postgres is a direct connection with no pooler
+// in front — identical code and data renders in 126ms.
+//
+// With max: 1 postgres.js queues every query onto the single connection,
+// so all 14 Promise.all fan-out sites in this codebase serialize
+// automatically and no future one can reintroduce the bug. That is the
+// whole point of fixing it here instead of page by page.
+//
+// This reverts the earlier 1 -> 3 bump, whose rationale has expired: that
+// change was compensating for queue depth when a query cost ~90ms because
+// functions ran in iad1 and the database is in eu-central-1. Since
+// vercel.json pins fra1 alongside the database a query is ~2ms — the whole
+// reports fan-out measured 5ms over a 3,000-request fixture — so a queue
+// of 16 is tens of milliseconds, not a statement_timeout.
+//
+// If a genuinely slow query ever appears, this serializes everything
+// behind it on that instance; the answer then is to fix that query, not to
+// raise this back up.
 const client = postgres(connectionString, {
   prepare: false,
-  max: 3,
+  max: 1,
   idle_timeout: 20,
   connect_timeout: 10,
 });
