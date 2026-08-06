@@ -8,7 +8,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 
-const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
+const XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+// registration_sheet/hrbl_request_form are the two real GCC Lab request
+// forms — the contractor downloads a blank .xlsx template and re-uploads it
+// filled in, so these two types (and only these two) must accept Excel
+// files instead of the image/PDF types every other document type takes.
+const XLSX_DOCUMENT_TYPES = new Set(["registration_sheet", "hrbl_request_form"]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // matches the "documents" bucket's own file_size_limit
 const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 
@@ -18,6 +24,17 @@ const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 // database-schema.md's documents note). sadad_invoice is also
 // request-scoped — the contractor's SADAD receipt (Phase 5).
 export type DocumentType = "national_id" | "prior_certificate" | "other" | "registration_sheet" | "hrbl_request_form" | "sadad_invoice";
+
+// Some browsers/OS combos report .xlsx uploads as application/octet-stream
+// (or no type at all) when MIME sniffing fails — fall back to the file
+// extension rather than reject a genuinely correct file for those users.
+function isAcceptableFile(type: DocumentType, file: File): boolean {
+  if (XLSX_DOCUMENT_TYPES.has(type)) {
+    if (file.type === XLSX_MIME_TYPE) return true;
+    return (file.type === "" || file.type === "application/octet-stream") && file.name.toLowerCase().endsWith(".xlsx");
+  }
+  return IMAGE_MIME_TYPES.has(file.type);
+}
 
 export interface UploadDocumentInput {
   companyId: number;
@@ -41,8 +58,12 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
   if (!authorize("upload_documents", context)) throw new Error("Not authorized");
   assertCanTouchCompany(context, input.companyId);
 
-  if (!ALLOWED_MIME_TYPES.has(input.file.type)) {
-    throw new Error("Unsupported file type. Only JPG, PNG, or PDF are allowed.");
+  if (!isAcceptableFile(input.type, input.file)) {
+    throw new Error(
+      XLSX_DOCUMENT_TYPES.has(input.type)
+        ? "Unsupported file type. Only an Excel (.xlsx) file is allowed."
+        : "Unsupported file type. Only JPG, PNG, or PDF are allowed."
+    );
   }
   if (input.file.size > MAX_SIZE_BYTES) {
     throw new Error("File is too large. Maximum size is 10MB.");
@@ -51,10 +72,11 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
   const bytes = Buffer.from(await input.file.arrayBuffer());
   const checksum = createHash("sha256").update(bytes).digest("hex");
   const objectKey = randomUUID(); // opaque — no PII, no company/employee id in the key itself
+  const contentType = XLSX_DOCUMENT_TYPES.has(input.type) ? XLSX_MIME_TYPE : input.file.type;
 
   const admin = createAdminClient();
   const { error: uploadError } = await admin.storage.from("documents").upload(objectKey, bytes, {
-    contentType: input.file.type,
+    contentType,
     upsert: false,
   });
   if (uploadError) throw new Error("Upload failed. Please try again.");
@@ -79,7 +101,7 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
         .update(documents)
         .set({
           originalName: input.file.name,
-          mimeType: input.file.type,
+          mimeType: contentType,
           sizeBytes: bytes.length,
           checksumSha256: checksum,
           uploadedBy: context.userId,
@@ -101,7 +123,7 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
       bucket: "documents",
       objectKey,
       originalName: input.file.name,
-      mimeType: input.file.type,
+      mimeType: contentType,
       sizeBytes: bytes.length,
       checksumSha256: checksum,
       uploadedBy: context.userId,

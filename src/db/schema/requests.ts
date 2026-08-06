@@ -87,6 +87,9 @@ export const documents = pgTable(
     uploadedBy: uuid("uploaded_by").notNull(),
     verifiedBy: uuid("verified_by"),
     verifiedAt: timestamptz("verified_at"),
+    rejectedBy: uuid("rejected_by"),
+    rejectedAt: timestamptz("rejected_at"),
+    rejectionReason: text("rejection_reason"),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -98,6 +101,7 @@ export const documents = pgTable(
       "documents_type_check",
       sql`${t.type} in ('national_id', 'prior_certificate', 'sadad_invoice', 'generated_certificate', 'registration_sheet', 'hrbl_request_form', 'other')`
     ),
+    check("documents_not_verified_and_rejected", sql`${t.verifiedAt} is null or ${t.rejectedAt} is null`),
   ]
 );
 

@@ -1,8 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RequestDocsStatus } from "./request-docs-status";
 
 interface RequestSummaryProps {
   locale: string;
+  requestId: number;
+  companyId: number;
   status: string;
   courseTitleEn: string;
   courseTitleAr: string;
@@ -10,11 +13,20 @@ interface RequestSummaryProps {
   adminNote: string | null;
   rejectedReason: string | null;
   items: Array<{ id: number; employeeFullNameEn: string; employeeFullNameAr: string; decision: string }>;
-  requestDocs: Array<{ type: "registration_sheet" | "hrbl_request_form"; verifiedAt: string | null }>;
+  requestDocs: Array<{
+    id: number;
+    type: "registration_sheet" | "hrbl_request_form";
+    originalName: string;
+    verifiedAt: string | null;
+    rejectedAt: string | null;
+    rejectionReason: string | null;
+  }>;
 }
 
 export async function RequestSummary({
   locale,
+  requestId,
+  companyId,
   status,
   courseTitleEn,
   courseTitleAr,
@@ -24,9 +36,7 @@ export async function RequestSummary({
   items,
   requestDocs,
 }: RequestSummaryProps) {
-  const t = await getTranslations("contractor.requests");
   const tSummary = await getTranslations("contractor.requests.summary");
-  const tDocs = await getTranslations("contractor.requests.documents");
   const tStatus = await getTranslations("requestStatus");
 
   const decisionLabel: Record<string, string> = {
@@ -59,19 +69,7 @@ export async function RequestSummary({
           </p>
         ) : null}
 
-        {requestDocs.length > 0 ? (
-          <div>
-            <p className="text-sm font-medium">{t("wizard.stepDocuments")}</p>
-            <ul className="text-sm text-muted-foreground">
-              {requestDocs.map((doc) => (
-                <li key={doc.type}>
-                  {tDocs(doc.type === "registration_sheet" ? "registrationSheet" : "hrblForm")}:{" "}
-                  {doc.verifiedAt ? tDocs("verified") : tDocs("pendingVerification")}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        {requestDocs.length > 0 ? <RequestDocsStatus requestId={requestId} companyId={companyId} requestDocs={requestDocs} /> : null}
 
         <div>
           <p className="text-sm font-medium">{tSummary("employeesTitle")}</p>

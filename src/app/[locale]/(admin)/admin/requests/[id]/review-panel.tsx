@@ -8,6 +8,7 @@ import { useRouter } from "@/i18n/navigation";
 import {
   approveRequestAction,
   rejectRequestAction,
+  rejectRequestDocumentAction,
   requestMoreInfoAction,
   setEmployeeDecisionAction,
   verifyRequestDocumentAction,
@@ -25,6 +26,8 @@ interface RequestDoc {
   id: number;
   type: "registration_sheet" | "hrbl_request_form";
   verifiedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
 }
 
 export function ReviewPanel({
@@ -49,6 +52,8 @@ export function ReviewPanel({
   const [showInfoForm, setShowInfoForm] = useState(false);
   const [infoMessage, setInfoMessage] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
+  const [docRejectReasons, setDocRejectReasons] = useState<Record<string, string>>({});
+  const [showDocRejectForm, setShowDocRejectForm] = useState<string | null>(null);
 
   const bothDocsVerified =
     requestDocs.find((d) => d.type === "registration_sheet")?.verifiedAt != null &&
@@ -72,6 +77,22 @@ export function ReviewPanel({
     setLoading(`verify-${type}`);
     try {
       await verifyRequestDocumentAction({ requestId, type });
+      router.refresh();
+    } catch {
+      setError(t("genericError"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleRejectDoc(type: "registration_sheet" | "hrbl_request_form") {
+    const reason = docRejectReasons[type];
+    if (!reason) return;
+    setError(null);
+    setLoading(`reject-doc-${type}`);
+    try {
+      await rejectRequestDocumentAction({ requestId, type, reason });
+      setShowDocRejectForm(null);
       router.refresh();
     } catch {
       setError(t("genericError"));
@@ -135,24 +156,72 @@ export function ReviewPanel({
         <div className="mt-2 flex flex-col gap-2">
           {(["registration_sheet", "hrbl_request_form"] as const).map((type) => {
             const doc = requestDocs.find((d) => d.type === type);
+            const statusLabel = doc?.rejectedAt ? t("rejected") : doc?.verifiedAt ? t("verified") : doc ? t("pendingVerification") : t("notAttached");
+            const statusClass = doc?.rejectedAt
+              ? "bg-destructive/15 text-destructive"
+              : doc?.verifiedAt
+                ? "bg-success/15 text-success"
+                : doc
+                  ? "bg-warning/15 text-warning"
+                  : "bg-muted text-muted-foreground";
             return (
-              <div key={type} className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-                <span>{t(type === "registration_sheet" ? "registrationSheet" : "hrblForm")}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    {doc ? (doc.verifiedAt ? t("verified") : t("pendingVerification")) : t("notAttached")}
-                  </span>
-                  {doc ? (
-                    <a href={`/api/documents/${doc.id}/download`} className="text-primary hover:underline">
-                      {t("download")}
-                    </a>
-                  ) : null}
-                  {doc && !doc.verifiedAt ? (
-                    <Button type="button" size="sm" variant="outline" disabled={loading === `verify-${type}`} onClick={() => handleVerify(type)}>
-                      {t("verify")}
-                    </Button>
-                  ) : null}
+              <div key={type} className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span>{t(type === "registration_sheet" ? "registrationSheet" : "hrblForm")}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
+                    {doc ? (
+                      <a href={`/api/documents/${doc.id}/download`} className="text-primary hover:underline">
+                        {t("download")}
+                      </a>
+                    ) : null}
+                    {doc && !doc.verifiedAt ? (
+                      <Button type="button" size="sm" variant="outline" disabled={loading === `verify-${type}`} onClick={() => handleVerify(type)}>
+                        {t("verify")}
+                      </Button>
+                    ) : null}
+                    {doc && !doc.rejectedAt ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowDocRejectForm((s) => (s === type ? null : type))}
+                      >
+                        {t("rejectDocument")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
+
+                {doc?.rejectedAt && doc.rejectionReason ? (
+                  <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                    <span className="font-medium">{t("rejectReasonLabel")}: </span>
+                    {doc.rejectionReason}
+                  </p>
+                ) : null}
+
+                {showDocRejectForm === type ? (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border p-2">
+                    <label className="text-xs text-muted-foreground">{t("rejectReasonLabel")}</label>
+                    <Input
+                      value={docRejectReasons[type] ?? ""}
+                      onChange={(e) => setDocRejectReasons((prev) => ({ ...prev, [type]: e.target.value }))}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!docRejectReasons[type] || loading === `reject-doc-${type}`}
+                        onClick={() => handleRejectDoc(type)}
+                      >
+                        {t("rejectConfirm")}
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setShowDocRejectForm(null)}>
+                        {t("cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             );
           })}

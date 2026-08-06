@@ -92,6 +92,22 @@
     "closed": "مغلق",
     "cancelled": "ملغى"
   },
+  "documents": {
+    "uploadSlot": {
+      "required": "مطلوب",
+      "optional": "اختياري",
+      "notAttached": "لم يُرفق بعد",
+      "pendingVerification": "بانتظار المراجعة",
+      "verified": "تم التحقق",
+      "rejected": "مرفوض",
+      "rejectionReasonLabel": "سبب الرفض",
+      "downloadTemplate": "تحميل النموذج",
+      "dragDropHint": "اضغط للرفع أو اسحب الملف وأفلته هنا",
+      "replaceFile": "استبدال الملف",
+      "uploading": "جارٍ الرفع…",
+      "viewFile": "عرض الملف"
+    }
+  },
   "contractor": {
     "requests": {
       "title": "طلبات التدريب",
@@ -174,7 +190,9 @@
       },
       "documents": {
         "registrationSheet": "ورقة التسجيل",
+        "registrationSheetDescription": "نزّل النموذج، واملأ بيانات كل مرشح، ثم ارفع الملف المكتمل هنا.",
         "hrblForm": "HRBL_0004_FO_001",
+        "hrblFormDescription": "نموذج طلب الدورة الرسمي — مطلوب لإكمال هذا الطلب. نزّله، واملأه ووقّعه، ثم ارفعه هنا.",
         "verified": "تم التحقق",
         "pendingVerification": "بانتظار التحقق",
         "notAttached": "لم يتم الإرفاق",
@@ -183,9 +201,14 @@
         "download": "تنزيل",
         "downloadTemplate": "تنزيل النموذج الفارغ",
         "nationalId": "الإقامة",
+        "nationalIdDescription": "صورة أو مسح ضوئي واضح لإقامة الموظف.",
         "priorCertificate": "الشهادة",
+        "priorCertificateDescription": "شهادة سابقة لهذا الموظف، إن كانت لديه شهادة ذات صلة بهذه الدورة.",
         "other": "أخرى",
-        "optional": "اختياري"
+        "otherDescription": "أي مستند داعم آخر لهذا الموظف.",
+        "optional": "اختياري",
+        "acceptHintXlsx": "ملف إكسل (.xlsx) فقط",
+        "acceptHintImage": "JPG أو PNG أو PDF — حتى 10 ميجابايت"
       },
       "summary": {
         "adminNote": "رسالة من مختبر الخليج",
@@ -374,9 +397,11 @@
         "registrationSheet": "ورقة التسجيل",
         "hrblForm": "HRBL_0004_FO_001",
         "verified": "تم التحقق",
+        "rejected": "مرفوض",
         "pendingVerification": "بانتظار التحقق",
         "notAttached": "لم يُرفق بعد",
         "verify": "وضع علامة \"تم التحقق\"",
+        "rejectDocument": "رفض المستند",
         "download": "تنزيل",
         "unitPriceLabel": "تجاوز سعر الوحدة (ريال، اختياري)",
         "approve": "الموافقة على الطلب",

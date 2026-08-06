@@ -41,6 +41,8 @@ export default async function RequestDetailPage({
       <div className="flex flex-1 flex-col items-center gap-6 p-6">
         <RequestSummary
           locale={locale}
+          requestId={request.id}
+          companyId={context.companyId}
           status={request.status}
           courseTitleEn={request.courseTitleEn}
           courseTitleAr={request.courseTitleAr}
@@ -52,7 +54,14 @@ export default async function RequestDetailPage({
             .filter((d): d is typeof d & { type: "registration_sheet" | "hrbl_request_form" } =>
               d.type === "registration_sheet" || d.type === "hrbl_request_form"
             )
-            .map((d) => ({ type: d.type, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
+            .map((d) => ({
+              id: d.id,
+              type: d.type,
+              originalName: d.originalName,
+              verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null,
+              rejectedAt: d.rejectedAt ? d.rejectedAt.toISOString() : null,
+              rejectionReason: d.rejectionReason,
+            }))}
         />
         {payment ? (
           <PaymentPanel
@@ -104,7 +113,14 @@ export default async function RequestDetailPage({
           .filter((d): d is typeof d & { type: "registration_sheet" | "hrbl_request_form" } =>
             d.type === "registration_sheet" || d.type === "hrbl_request_form"
           )
-          .map((d) => ({ id: d.id, type: d.type, originalName: d.originalName, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
+          .map((d) => ({
+            id: d.id,
+            type: d.type,
+            originalName: d.originalName,
+            verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null,
+            rejectedAt: d.rejectedAt ? d.rejectedAt.toISOString() : null,
+            rejectionReason: d.rejectionReason,
+          }))}
         employeeDocuments={employeeDocuments}
         jobRoles={jobRoles}
         locale={locale}

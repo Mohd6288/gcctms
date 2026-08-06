@@ -10,8 +10,12 @@ import { useRouter } from "@/i18n/navigation";
 import { createDraftRequestAction, submitRequestAction, syncRequestItemsAction, updateDraftRequestAction } from "@/modules/requests/actions";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
 import { getEmployeeEligibilitySnapshotAction } from "@/modules/catalog/actions";
+import { DocumentUploadSlot, type DocumentSlotStatus } from "@/components/documents/document-upload-slot";
 import { AddEmployeePanel } from "./add-employee-panel";
 import { ImportEmployeesPanel } from "./import-employees-panel";
+
+const XLSX_ACCEPT = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const IMAGE_ACCEPT = "image/jpeg,image/png,application/pdf";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const TRAINING_TYPES = ["on_site", "training_center", "virtual_theory_onsite_practical"] as const;
@@ -42,6 +46,8 @@ interface RequestDocInfo {
   type: "registration_sheet" | "hrbl_request_form";
   originalName: string;
   verifiedAt: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
 }
 
 interface JobRoleOption {
@@ -201,10 +207,10 @@ export function RequestWizard({
       const uploaded = await uploadDocumentAction(formData);
       setRequestDocs((prev) => [
         ...prev.filter((d) => d.type !== type),
-        { id: uploaded.id, type, originalName: file.name, verifiedAt: null },
+        { id: uploaded.id, type, originalName: file.name, verifiedAt: null, rejectedAt: null, rejectionReason: null },
       ]);
-    } catch {
-      setError(tDocs("attach") + ": " + t("genericError"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("genericError"));
     } finally {
       setUploadingType(null);
     }
@@ -222,8 +228,8 @@ export function RequestWizard({
       formData.set("type", type);
       await uploadDocumentAction(formData);
       router.refresh();
-    } catch {
-      setError(tDocs("attach") + ": " + t("genericError"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("genericError"));
     } finally {
       setUploadingType(null);
     }
@@ -439,31 +445,25 @@ export function RequestWizard({
             <p className="text-sm text-muted-foreground">{t("documentsHint")}</p>
             {(["registration_sheet", "hrbl_request_form"] as const).map((type) => {
               const doc = requestDocs.find((d) => d.type === type);
+              const isRegistrationSheet = type === "registration_sheet";
+              const status: DocumentSlotStatus = doc?.rejectedAt ? "rejected" : doc?.verifiedAt ? "verified" : doc ? "pending" : "not_attached";
               return (
-                <div key={type} className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{tDocs(type === "registration_sheet" ? "registrationSheet" : "hrblForm")}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {doc ? (doc.verifiedAt ? tDocs("verified") : tDocs("pendingVerification")) : tDocs("notAttached")}
-                    </span>
-                  </div>
-                  <a
-                    href={type === "registration_sheet" ? "/documents/Registration-sheet.xlsx" : "/documents/HRBL_0004_FO_001.xlsx"}
-                    download
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {tDocs("downloadTemplate")}
-                  </a>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,application/pdf"
-                      onChange={(e) => handleUploadRequestDoc(type, e.target.files?.[0])}
-                      className="text-sm"
-                    />
-                    {uploadingType === type ? <span className="text-xs text-muted-foreground">{tDocs("attaching")}</span> : null}
-                  </div>
-                </div>
+                <DocumentUploadSlot
+                  key={type}
+                  title={tDocs(isRegistrationSheet ? "registrationSheet" : "hrblForm")}
+                  description={tDocs(isRegistrationSheet ? "registrationSheetDescription" : "hrblFormDescription")}
+                  required
+                  accept={XLSX_ACCEPT}
+                  acceptHint={tDocs("acceptHintXlsx")}
+                  status={status}
+                  fileName={doc?.originalName}
+                  downloadUrl={doc ? `/api/documents/${doc.id}/download` : null}
+                  rejectionReason={doc?.rejectionReason}
+                  templateUrl={isRegistrationSheet ? "/documents/Registration-sheet.xlsx" : "/documents/HRBL_0004_FO_001.xlsx"}
+                  templateLabel={tDocs("downloadTemplate")}
+                  uploading={uploadingType === type}
+                  onSelectFile={(file) => handleUploadRequestDoc(type, file)}
+                />
               );
             })}
             <div className="flex flex-col gap-4">
@@ -479,34 +479,32 @@ export function RequestWizard({
                       <div className="grid gap-3 sm:grid-cols-3">
                         {(
                           [
-                            { type: "national_id" as const, label: tDocs("nationalId"), required: true },
-                            { type: "prior_certificate" as const, label: tDocs("priorCertificate"), required: false },
-                            { type: "other" as const, label: tDocs("other"), required: false },
+                            { type: "national_id" as const, label: tDocs("nationalId"), description: tDocs("nationalIdDescription"), required: true },
+                            {
+                              type: "prior_certificate" as const,
+                              label: tDocs("priorCertificate"),
+                              description: tDocs("priorCertificateDescription"),
+                              required: false,
+                            },
+                            { type: "other" as const, label: tDocs("other"), description: tDocs("otherDescription"), required: false },
                           ]
-                        ).map(({ type, label, required }) => {
+                        ).map(({ type, label, description, required }) => {
                           const doc = docs.find((d) => d.type === type);
                           const key = `${employee.id}:${type}`;
                           return (
-                            <div key={type} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
-                              <span className="text-xs font-medium">
-                                {label}
-                                {!required ? ` (${tDocs("optional")})` : null}
-                              </span>
-                              {doc ? (
-                                <a href={`/api/documents/${doc.id}/download`} className="truncate text-xs text-primary hover:underline">
-                                  {doc.originalName}
-                                </a>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">{tDocs("notAttached")}</span>
-                              )}
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,application/pdf"
-                                onChange={(e) => handleUploadEmployeeDoc(employee.id, type, e.target.files?.[0])}
-                                className="text-xs"
-                              />
-                              {uploadingType === key ? <span className="text-xs text-muted-foreground">{tDocs("attaching")}</span> : null}
-                            </div>
+                            <DocumentUploadSlot
+                              key={type}
+                              title={label}
+                              description={description}
+                              required={required}
+                              accept={IMAGE_ACCEPT}
+                              acceptHint={tDocs("acceptHintImage")}
+                              status={doc ? "pending" : "not_attached"}
+                              fileName={doc?.originalName}
+                              downloadUrl={doc ? `/api/documents/${doc.id}/download` : null}
+                              uploading={uploadingType === key}
+                              onSelectFile={(file) => handleUploadEmployeeDoc(employee.id, type, file)}
+                            />
                           );
                         })}
                       </div>

@@ -54,7 +54,13 @@ export default async function AdminRequestDetailPage({
             .filter((d): d is typeof d & { type: "registration_sheet" | "hrbl_request_form" } =>
               d.type === "registration_sheet" || d.type === "hrbl_request_form"
             )
-            .map((d) => ({ id: d.id, type: d.type, verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null }))}
+            .map((d) => ({
+              id: d.id,
+              type: d.type,
+              verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null,
+              rejectedAt: d.rejectedAt ? d.rejectedAt.toISOString() : null,
+              rejectionReason: d.rejectionReason,
+            }))}
           locale={locale}
         />
       ) : null}

@@ -42,6 +42,13 @@ export const VerifyRequestDocumentInput = z.object({
 });
 export type VerifyRequestDocumentInput = z.infer<typeof VerifyRequestDocumentInput>;
 
+export const RejectRequestDocumentInput = z.object({
+  requestId: z.number().int().positive(),
+  type: z.enum(["registration_sheet", "hrbl_request_form"]),
+  reason: z.string().min(1),
+});
+export type RejectRequestDocumentInput = z.infer<typeof RejectRequestDocumentInput>;
+
 // unitPrice is optional: admin may override the resolved catalog/regional
 // price at approval time, matching the validated prototype's
 // approveRequest(requestId, unitPriceOverride) — AdminRequestDetail.tsx lets

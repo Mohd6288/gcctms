@@ -92,6 +92,22 @@
     "closed": "Closed",
     "cancelled": "Cancelled"
   },
+  "documents": {
+    "uploadSlot": {
+      "required": "Required",
+      "optional": "Optional",
+      "notAttached": "Not attached",
+      "pendingVerification": "Pending verification",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "rejectionReasonLabel": "Rejection reason",
+      "downloadTemplate": "Download template",
+      "dragDropHint": "Click to upload or drag and drop",
+      "replaceFile": "Replace file",
+      "uploading": "Uploading…",
+      "viewFile": "View file"
+    }
+  },
   "contractor": {
     "requests": {
       "title": "Training Requests",
@@ -174,7 +190,9 @@
       },
       "documents": {
         "registrationSheet": "Registration Sheet",
+        "registrationSheetDescription": "Download the template, fill in every candidate's details, then upload the completed file here.",
         "hrblForm": "HRBL_0004_FO_001",
+        "hrblFormDescription": "The official course request form — required to complete this request. Download, fill in and sign, then upload it here.",
         "verified": "Verified",
         "pendingVerification": "Pending verification",
         "notAttached": "Not attached",
@@ -183,9 +201,14 @@
         "download": "Download",
         "downloadTemplate": "Download blank template",
         "nationalId": "Iqama",
+        "nationalIdDescription": "A clear photo or scan of the employee's Iqama (national ID).",
         "priorCertificate": "Certificate",
+        "priorCertificateDescription": "A prior certificate for this employee, if they already hold one relevant to this course.",
         "other": "Other",
-        "optional": "optional"
+        "otherDescription": "Any other supporting document for this employee.",
+        "optional": "optional",
+        "acceptHintXlsx": "Excel (.xlsx) file only",
+        "acceptHintImage": "JPG, PNG, or PDF — up to 10MB"
       },
       "summary": {
         "adminNote": "Message from GCC Lab",
@@ -374,9 +397,11 @@
         "registrationSheet": "Registration Sheet",
         "hrblForm": "HRBL_0004_FO_001",
         "verified": "Verified",
+        "rejected": "Rejected",
         "pendingVerification": "Pending verification",
         "notAttached": "Not attached yet",
         "verify": "Mark as verified",
+        "rejectDocument": "Reject document",
         "download": "Download",
         "unitPriceLabel": "Unit price override (SAR, optional)",
         "approve": "Approve request",

@@ -36,12 +36,14 @@ describe("training request lifecycle — real DB", () => {
   let adminCtx: AuthContext;
 
   function requestDocFile(name: string) {
-    return new File([new Uint8Array([9, 9, 9])], name, { type: "application/pdf" });
+    return new File([new Uint8Array([9, 9, 9])], name, {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
   }
 
   async function attachAndVerifyRequestDocs(requestId: number) {
-    await uploadDocument(contractorCtx, { companyId, requestId, type: "registration_sheet", file: requestDocFile("reg.pdf") });
-    await uploadDocument(contractorCtx, { companyId, requestId, type: "hrbl_request_form", file: requestDocFile("hrbl.pdf") });
+    await uploadDocument(contractorCtx, { companyId, requestId, type: "registration_sheet", file: requestDocFile("reg.xlsx") });
+    await uploadDocument(contractorCtx, { companyId, requestId, type: "hrbl_request_form", file: requestDocFile("hrbl.xlsx") });
     await verifyRequestDocument(adminCtx, { requestId, type: "registration_sheet" });
     await verifyRequestDocument(adminCtx, { requestId, type: "hrbl_request_form" });
   }

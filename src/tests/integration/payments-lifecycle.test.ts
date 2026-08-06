@@ -51,12 +51,18 @@ describe("payment lifecycle — real DB", () => {
     return new File([new Uint8Array([1, 2, 3])], name, { type: "application/pdf" });
   }
 
+  function xlsx(name: string) {
+    return new File([new Uint8Array([1, 2, 3])], name, {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  }
+
   async function driveRequestToPaymentPending() {
     const draft = await createDraftRequest(contractorA, { courseId });
     await syncRequestItems(contractorA, { requestId: draft.id, employeeIds: [employeeId] });
     await submitRequest(contractorA, draft.id);
-    await uploadDocument(contractorA, { companyId: companyAId, requestId: draft.id, type: "registration_sheet", file: pdf("reg.pdf") });
-    await uploadDocument(contractorA, { companyId: companyAId, requestId: draft.id, type: "hrbl_request_form", file: pdf("hrbl.pdf") });
+    await uploadDocument(contractorA, { companyId: companyAId, requestId: draft.id, type: "registration_sheet", file: xlsx("reg.xlsx") });
+    await uploadDocument(contractorA, { companyId: companyAId, requestId: draft.id, type: "hrbl_request_form", file: xlsx("hrbl.xlsx") });
     await verifyRequestDocument(adminCtx, { requestId: draft.id, type: "registration_sheet" });
     await verifyRequestDocument(adminCtx, { requestId: draft.id, type: "hrbl_request_form" });
     const [item] = await db.select().from(requestItems).where(eq(requestItems.requestId, draft.id));

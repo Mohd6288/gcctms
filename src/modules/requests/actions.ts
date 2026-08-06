@@ -4,6 +4,7 @@ import { getContext } from "@/modules/platform/auth/service";
 import {
   ApproveRequestInput,
   CreateDraftRequestInput,
+  RejectRequestDocumentInput,
   RejectRequestInput,
   RequestMoreInfoInput,
   SetEmployeeDecisionInput,
@@ -16,6 +17,7 @@ import {
   closeRequest,
   createDraftRequest,
   rejectRequest,
+  rejectRequestDocument,
   requestMoreInfo,
   setEmployeeDecision,
   submitRequest,
@@ -58,6 +60,11 @@ export async function setEmployeeDecisionAction(input: SetEmployeeDecisionInput)
 export async function verifyRequestDocumentAction(input: VerifyRequestDocumentInput) {
   const context = await requireContext();
   return verifyRequestDocument(context, VerifyRequestDocumentInput.parse(input));
+}
+
+export async function rejectRequestDocumentAction(input: RejectRequestDocumentInput) {
+  const context = await requireContext();
+  return rejectRequestDocument(context, RejectRequestDocumentInput.parse(input));
 }
 
 export async function approveRequestAction(input: ApproveRequestInput) {

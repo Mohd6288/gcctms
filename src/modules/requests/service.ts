@@ -10,6 +10,7 @@ import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/noti
 import { assertTransition, type RequestStatus } from "./machine";
 import type {
   CreateDraftRequestInput,
+  RejectRequestDocumentInput,
   RejectRequestInput,
   RequestMoreInfoInput,
   SetEmployeeDecisionInput,
@@ -232,6 +233,32 @@ export async function verifyRequestDocument(context: AuthContext, input: VerifyR
   });
 
   await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "verify" });
+}
+
+// Sibling of verifyRequestDocument — same trigger-bypass reasoning applies.
+// Rejecting clears any prior verification (a document can't be both) and
+// leaves the file itself in place so the contractor sees exactly what was
+// rejected; re-uploading a replacement (storage/service.ts's replace-in-place
+// path) clears rejected_by/rejected_at/rejection_reason back to null via the
+// same trigger, same as it already does for verified_by/verified_at.
+export async function rejectRequestDocument(context: AuthContext, input: RejectRequestDocumentInput) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+
+  const [doc] = await db
+    .select()
+    .from(documents)
+    .where(and(eq(documents.requestId, input.requestId), eq(documents.type, input.type)));
+  if (!doc) throw new Error("Document not found");
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx
+      .update(documents)
+      .set({ rejectedBy: context.userId, rejectedAt: new Date(), rejectionReason: input.reason, verifiedBy: null, verifiedAt: null })
+      .where(eq(documents.id, doc.id));
+  });
+
+  await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "reject", note: input.reason });
 }
 
 async function resolvePrice(courseId: number, region: string | null): Promise<string> {

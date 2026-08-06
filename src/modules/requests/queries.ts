@@ -91,6 +91,8 @@ export async function getRequestLevelDocuments(requestId: number) {
       type: documents.type,
       originalName: documents.originalName,
       verifiedAt: documents.verifiedAt,
+      rejectedAt: documents.rejectedAt,
+      rejectionReason: documents.rejectionReason,
     })
     .from(documents)
     .where(eq(documents.requestId, requestId));
