@@ -19,7 +19,7 @@ export default async function AdminClassesPage({
   const t = await getTranslations("admin.classes");
 
   const context = await getContext();
-  const classes = authorize("schedule_classes", context) ? await listClasses() : [];
+  const classes = authorize("schedule_classes", context) ? await listClasses(context?.region) : [];
 
   const statusLabels: Record<string, string> = {
     scheduled: t("statusScheduled"),
@@ -30,6 +30,7 @@ export default async function AdminClassesPage({
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
+      {context?.region ? <p className="text-sm text-muted-foreground">{t("regionScopedNote", { region: context.region })}</p> : null}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">{t("title")}</h1>
         <Button asChild>

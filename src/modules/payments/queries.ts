@@ -52,7 +52,11 @@ export async function listPaymentsForCompany(companyId: number) {
 // Admin verification queue — only payments with an actual receipt attached
 // and still awaiting review (status "uploaded" + document_id set; an
 // "uploaded" payment with no document yet has nothing to review).
-export async function listPaymentsAwaitingVerification() {
+//
+// region: Drizzle bypasses RLS, so a region-assigned platform_admin
+// (Phase 5) needs this filter applied explicitly here too — see
+// companies/queries.ts's listCompanies() for the same note.
+export async function listPaymentsAwaitingVerification(region?: string | null) {
   return db
     .select({
       id: payments.id,
@@ -67,6 +71,10 @@ export async function listPaymentsAwaitingVerification() {
     .innerJoin(trainingRequests, eq(payments.requestId, trainingRequests.id))
     .innerJoin(companies, eq(trainingRequests.companyId, companies.id))
     .innerJoin(courses, eq(trainingRequests.courseId, courses.id))
-    .where(and(eq(payments.status, "uploaded"), isNotNull(payments.documentId)))
+    .where(
+      region
+        ? and(eq(payments.status, "uploaded"), isNotNull(payments.documentId), eq(companies.region, region))
+        : and(eq(payments.status, "uploaded"), isNotNull(payments.documentId))
+    )
     .orderBy(desc(payments.createdAt));
 }

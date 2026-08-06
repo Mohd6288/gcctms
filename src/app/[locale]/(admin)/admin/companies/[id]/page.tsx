@@ -30,7 +30,12 @@ export default async function AdminCompanyDetailPage({
   const companyId = Number(id);
   const company = Number.isInteger(companyId) ? await getCompanyById(companyId) : null;
 
-  if (!authorize("manage_companies", context) || !company) {
+  // See admin/requests/[id]/page.tsx's identical note — Drizzle bypasses
+  // RLS, and this detail route is reachable directly by id regardless of
+  // whether it appeared in the (region-scoped) list.
+  const regionDenied = context?.region != null && company?.region !== context.region;
+
+  if (!authorize("manage_companies", context) || !company || regionDenied) {
     redirect({ href: "/admin/companies", locale });
     return null;
   }

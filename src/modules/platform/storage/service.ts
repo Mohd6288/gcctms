@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { documents } from "@/db/schema";
+import { companies, documents } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -48,15 +48,24 @@ export interface UploadDocumentInput {
 // platform_admin has a blanket policy, contractor_manager is scoped to its
 // own company_id, and there is NO super_admin policy — see the identical
 // note in modules/employees/service.ts.
-function assertCanTouchCompany(context: AuthContext, companyId: number) {
-  if (context.role === "platform_admin") return;
+// Drizzle bypasses RLS (see db/index.ts), so a region-assigned platform_admin
+// (Phase 5) is checked against the company's own region here too — RLS
+// would otherwise be the only thing stopping them reaching another
+// region's documents by a known/guessed document id.
+async function assertCanTouchCompany(context: AuthContext, companyId: number) {
+  if (context.role === "platform_admin") {
+    if (!context.region) return;
+    const [company] = await db.select({ region: companies.region }).from(companies).where(eq(companies.id, companyId));
+    if (company?.region === context.region) return;
+    throw new Error("Not authorized");
+  }
   if (context.role === "contractor_manager" && context.companyId === companyId) return;
   throw new Error("Not authorized");
 }
 
 export async function uploadDocument(context: AuthContext, input: UploadDocumentInput) {
   if (!authorize("upload_documents", context)) throw new Error("Not authorized");
-  assertCanTouchCompany(context, input.companyId);
+  await assertCanTouchCompany(context, input.companyId);
 
   if (!isAcceptableFile(input.type, input.file)) {
     throw new Error(
@@ -144,7 +153,7 @@ export async function getSignedDownloadUrl(context: AuthContext, documentId: num
 
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
   if (!doc) throw new Error("Not found");
-  assertCanTouchCompany(context, doc.companyId);
+  await assertCanTouchCompany(context, doc.companyId);
 
   const admin = createAdminClient();
   const { data, error } = await admin.storage.from(doc.bucket).createSignedUrl(doc.objectKey, SIGNED_URL_TTL_SECONDS);

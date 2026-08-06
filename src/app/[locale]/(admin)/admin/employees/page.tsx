@@ -17,11 +17,12 @@ export default async function AdminEmployeesPage({
   const t = await getTranslations("admin.employees");
 
   const context = await getContext();
-  const employees = authorize("manage_employees", context) ? await listAllEmployees() : [];
+  const employees = authorize("manage_employees", context) ? await listAllEmployees(context?.region) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      {context?.region ? <p className="text-sm text-muted-foreground">{t("regionScopedNote", { region: context.region })}</p> : null}
       <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">
           <thead>

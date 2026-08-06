@@ -159,7 +159,7 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
     await issueCertificate(validPrereqBEmployeeId, prerequisiteCourseBId, 365); // satisfies via the OTHER prerequisite
     await issueCertificate(expiredPrereqEmployeeId, prerequisiteCourseAId, -1); // expired — should NOT satisfy
 
-    contractorCtx = { userId: ownerId, role: "contractor_manager", companyId, trainerId: null, aal: "aal2" };
+    contractorCtx = { userId: ownerId, role: "contractor_manager", companyId, trainerId: null, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

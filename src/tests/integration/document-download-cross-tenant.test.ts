@@ -87,7 +87,7 @@ describe("document upload + signed-URL download — cross-tenant denial", () => 
   });
 
   function contractorContext(userId: string, companyId: number): AuthContext {
-    return { userId, role: "contractor_manager", companyId, trainerId: null, aal: "aal2" };
+    return { userId, role: "contractor_manager", companyId, trainerId: null, region: null, aal: "aal2" };
   }
 
   it("company A uploads a real document to the private bucket", async () => {
@@ -117,7 +117,7 @@ describe("document upload + signed-URL download — cross-tenant denial", () => 
   });
 
   it("platform_admin can get a signed URL for any company's document", async () => {
-    const context: AuthContext = { userId: platformAdminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    const context: AuthContext = { userId: platformAdminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
     const url = await getSignedDownloadUrl(context, documentId);
     expect(url).toContain("/storage/v1/object/sign/documents/");
   });

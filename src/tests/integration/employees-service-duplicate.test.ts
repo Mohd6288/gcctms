@@ -68,7 +68,7 @@ describe("createEmployee — global Iqama duplicate via the real service path", 
   });
 
   function contractorContext(userId: string, companyId: number): AuthContext {
-    return { userId, role: "contractor_manager", companyId, trainerId: null, aal: "aal2" };
+    return { userId, role: "contractor_manager", companyId, trainerId: null, region: null, aal: "aal2" };
   }
 
   it("creates the first employee successfully", async () => {

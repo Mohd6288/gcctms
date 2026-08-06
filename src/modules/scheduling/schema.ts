@@ -10,11 +10,15 @@ export const AssignRequestItemRegionInput = z.object({
 });
 export type AssignRequestItemRegionInput = z.infer<typeof AssignRequestItemRegionInput>;
 
-export const SetRegionalAdminInput = z.object({
-  region: z.enum(REGIONS),
+// null region = unassign — an admin has at most one region
+// (regional_admin_assignments.admin_user_id is unique, see
+// 0026_regional_admin_scoping.sql), so setting a new one first clears
+// whichever region they previously held.
+export const SetAdminRegionInput = z.object({
   adminUserId: z.string().uuid(),
+  region: z.enum(REGIONS).nullable(),
 });
-export type SetRegionalAdminInput = z.infer<typeof SetRegionalAdminInput>;
+export type SetAdminRegionInput = z.infer<typeof SetAdminRegionInput>;
 
 // course and region are set once at creation and never change — see
 // UpdateClassInput below, which structurally excludes both.

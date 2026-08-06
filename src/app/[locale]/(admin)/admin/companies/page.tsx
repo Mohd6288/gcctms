@@ -18,7 +18,7 @@ export default async function AdminCompaniesPage({
   const t = await getTranslations("admin.companies");
 
   const context = await getContext();
-  const companies = authorize("manage_companies", context) ? await listCompanies() : [];
+  const companies = authorize("manage_companies", context) ? await listCompanies(context?.region) : [];
 
   const statusLabels: Record<string, string> = {
     active: t("statusActive"),
@@ -29,6 +29,7 @@ export default async function AdminCompaniesPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      {context?.region ? <p className="text-sm text-muted-foreground">{t("regionScopedNote", { region: context.region })}</p> : null}
       <p className="text-sm text-muted-foreground">{t("pendingNote")}</p>
       <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">

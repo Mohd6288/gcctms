@@ -90,8 +90,8 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
     const [otherTrainer] = await db.insert(trainers).values({ userId: otherTrainerUserId, fullName: "Other Trainer" }).returning({ id: trainers.id });
     otherTrainerId = otherTrainer.id;
 
-    trainerCtx = { userId: trainerUserId, role: "trainer", companyId: null, trainerId, aal: "aal2" };
-    otherTrainerCtx = { userId: otherTrainerUserId, role: "trainer", companyId: null, trainerId: otherTrainerId, aal: "aal2" };
+    trainerCtx = { userId: trainerUserId, role: "trainer", companyId: null, trainerId, region: null, aal: "aal2" };
+    otherTrainerCtx = { userId: otherTrainerUserId, role: "trainer", companyId: null, trainerId: otherTrainerId, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

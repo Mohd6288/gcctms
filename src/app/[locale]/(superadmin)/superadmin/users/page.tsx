@@ -1,7 +1,9 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext, listPrivilegedAccounts } from "@/modules/platform/auth/service";
+import { listRegionalAdminAssignments } from "@/modules/scheduling/queries";
 import { CreateAccountForm } from "./create-account-form";
+import { RegionSelect } from "./region-select";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -20,7 +22,11 @@ export default async function SuperAdminUsersPage({
   // role, but every data-touching handler checks authorize() itself too
   // (Golden Rule 2).
   const context = await getContext();
-  const accounts = authorize("manage_users", context) ? await listPrivilegedAccounts() : [];
+  const canManageUsers = authorize("manage_users", context);
+  const [accounts, assignments] = canManageUsers
+    ? await Promise.all([listPrivilegedAccounts(), listRegionalAdminAssignments()])
+    : [[], []];
+  const regionByAdminId = new Map(assignments.filter((a) => a.adminUserId).map((a) => [a.adminUserId as string, a.region]));
 
   const roleLabels: Record<string, string> = {
     super_admin: t("roleSuperAdmin"),
@@ -39,6 +45,7 @@ export default async function SuperAdminUsersPage({
               <tr className="border-b border-border text-start text-muted-foreground">
                 <th className="p-3 text-start font-medium">{t("tableName")}</th>
                 <th className="p-3 text-start font-medium">{t("tableRole")}</th>
+                <th className="p-3 text-start font-medium">{t("tableRegion")}</th>
                 <th className="p-3 text-start font-medium">{t("tableStatus")}</th>
                 <th className="p-3 text-start font-medium">{t("tableCreated")}</th>
               </tr>
@@ -46,7 +53,7 @@ export default async function SuperAdminUsersPage({
             <tbody>
               {accounts.length === 0 ? (
                 <tr>
-                  <td className="p-3 text-muted-foreground" colSpan={4}>
+                  <td className="p-3 text-muted-foreground" colSpan={5}>
                     {t("empty")}
                   </td>
                 </tr>
@@ -55,6 +62,13 @@ export default async function SuperAdminUsersPage({
                   <tr key={account.userId} className="border-b border-border last:border-0">
                     <td className="p-3">{account.fullName}</td>
                     <td className="p-3">{roleLabels[account.role] ?? account.role}</td>
+                    <td className="p-3">
+                      {account.role === "platform_admin" ? (
+                        <RegionSelect adminUserId={account.userId} currentRegion={regionByAdminId.get(account.userId) ?? null} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="p-3">{account.active ? t("statusActive") : t("statusInactive")}</td>
                     <td className="p-3">{new Date(account.createdAt).toLocaleDateString(locale)}</td>
                   </tr>

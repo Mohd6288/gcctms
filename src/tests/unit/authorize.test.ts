@@ -29,7 +29,7 @@ const EXPECTED: Record<Capability, Record<Role, boolean>> = {
 const ROLES: Role[] = ["super_admin", "platform_admin", "contractor_manager", "trainer"];
 
 function contextFor(role: Role): AuthContext {
-  return { userId: "00000000-0000-0000-0000-000000000000", role, companyId: null, trainerId: null, aal: "aal2" };
+  return { userId: "00000000-0000-0000-0000-000000000000", role, companyId: null, trainerId: null, region: null, aal: "aal2" };
 }
 
 describe("authorize() — full 4-role x 19-capability matrix", () => {

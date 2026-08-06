@@ -18,11 +18,12 @@ export default async function AdminRequestsPage({
   const t = await getTranslations("admin.requests");
 
   const context = await getContext();
-  const requests = authorize("review_requests", context) ? await listSubmittedRequestsForAdmin() : [];
+  const requests = authorize("review_requests", context) ? await listSubmittedRequestsForAdmin(context?.region) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      {context?.region ? <p className="text-sm text-muted-foreground">{t("regionScopedNote", { region: context.region })}</p> : null}
       <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">
           <thead>

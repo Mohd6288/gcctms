@@ -145,9 +145,9 @@ describe("payment lifecycle — real DB", () => {
       uploadedBy: ownerAId,
     });
 
-    contractorA = { userId: ownerAId, role: "contractor_manager", companyId: companyAId, trainerId: null, aal: "aal2" };
-    contractorB = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, aal: "aal2" };
-    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    contractorA = { userId: ownerAId, role: "contractor_manager", companyId: companyAId, trainerId: null, region: null, aal: "aal2" };
+    contractorB = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, region: null, aal: "aal2" };
+    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

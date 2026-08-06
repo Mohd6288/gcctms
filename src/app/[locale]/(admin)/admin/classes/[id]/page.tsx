@@ -34,7 +34,12 @@ export default async function AdminClassDetailPage({
   const classId = Number(id);
   const cls = Number.isInteger(classId) ? await getClassById(classId) : null;
 
-  if (!authorize("schedule_classes", context) || !cls) {
+  // See admin/requests/[id]/page.tsx's identical note — Drizzle bypasses
+  // RLS, and this detail route is reachable directly by id regardless of
+  // whether it appeared in the (region-scoped) list.
+  const regionDenied = context?.region != null && cls?.region !== context.region;
+
+  if (!authorize("schedule_classes", context) || !cls || regionDenied) {
     redirect({ href: "/admin/classes", locale });
     return null;
   }

@@ -6,7 +6,7 @@ import {
   CancelClassInput,
   CreateClassInput,
   EnrollRequestItemInput,
-  SetRegionalAdminInput,
+  SetAdminRegionInput,
   UpdateClassInput,
 } from "./schema";
 import {
@@ -17,7 +17,7 @@ import {
   enrollRequestItem,
   removeEnrollment,
   removeFromWaitlist,
-  setRegionalAdmin,
+  setAdminRegion,
   startClass,
   unassignRequestItemRegion,
   updateClass,
@@ -44,9 +44,9 @@ export async function autoAssignPooledByPreferenceAction() {
   return autoAssignPooledByPreference(context);
 }
 
-export async function setRegionalAdminAction(input: SetRegionalAdminInput) {
+export async function setAdminRegionAction(input: SetAdminRegionInput) {
   const context = await requireContext();
-  return setRegionalAdmin(context, SetRegionalAdminInput.parse(input));
+  return setAdminRegion(context, SetAdminRegionInput.parse(input));
 }
 
 export async function createClassAction(input: CreateClassInput) {

@@ -44,6 +44,7 @@ export async function getContext(): Promise<AuthContext | null> {
     role,
     companyId: claims.company_id != null ? Number(claims.company_id) : null,
     trainerId: claims.trainer_id != null ? Number(claims.trainer_id) : null,
+    region: typeof claims.region === "string" ? claims.region : null,
     aal: claims.aal === "aal2" ? "aal2" : "aal1",
   };
 }

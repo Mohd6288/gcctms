@@ -149,7 +149,7 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
       .returning({ id: classes.id });
     prereqClassId = prereqClass.id;
 
-    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

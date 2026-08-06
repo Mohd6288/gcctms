@@ -368,7 +368,8 @@
         "employeesEmpty": "No employees yet.",
         "tableName": "Name",
         "tableJobRole": "Job role"
-      }
+      },
+      "regionScopedNote": "Showing only companies in the {region} region."
     },
     "employees": {
       "title": "Employees",
@@ -378,7 +379,8 @@
       "tableStatus": "Status",
       "statusActive": "Active",
       "statusInactive": "Inactive",
-      "empty": "No employees yet."
+      "empty": "No employees yet.",
+      "regionScopedNote": "Showing only employees in the {region} region."
     },
     "requests": {
       "title": "Review Queue",
@@ -416,7 +418,8 @@
         "requestInfoConfirm": "Send",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
-      }
+      },
+      "regionScopedNote": "Showing only requests in the {region} region."
     },
     "payments": {
       "title": "Payment Verification Queue",
@@ -442,7 +445,8 @@
         "rejectConfirm": "Confirm rejection",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
-      }
+      },
+      "regionScopedNote": "Showing only payments in the {region} region."
     },
     "classes": {
       "title": "Classes",
@@ -507,7 +511,8 @@
         "pendingCertsTitle": "Pending Certificate Releases ({count})",
         "releaseAll": "Release All",
         "release": "Release"
-      }
+      },
+      "regionScopedNote": "Showing only classes in the {region} region."
     },
     "scheduling": {
       "title": "Scheduling Board",
@@ -575,11 +580,14 @@
       "successTempPassword": "Temporary password (share this with the user once — it won't be shown again):",
       "tableName": "Name",
       "tableRole": "Role",
+      "tableRegion": "Region",
       "tableStatus": "Status",
       "tableCreated": "Created",
       "statusActive": "Active",
       "statusInactive": "Inactive",
-      "empty": "No admin or trainer accounts yet."
+      "empty": "No admin or trainer accounts yet.",
+      "regionUnassigned": "Unassigned (sees all regions)",
+      "regionError": "Could not update region. Please try again."
     },
     "overview": {
       "title": "Platform Overview",

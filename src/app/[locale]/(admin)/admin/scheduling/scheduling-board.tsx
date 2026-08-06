@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useRouter } from "@/i18n/navigation";
-import { assignRequestItemRegionAction, autoAssignPooledByPreferenceAction, setRegionalAdminAction, unassignRequestItemRegionAction } from "@/modules/scheduling/actions";
+import { assignRequestItemRegionAction, autoAssignPooledByPreferenceAction, unassignRequestItemRegionAction } from "@/modules/scheduling/actions";
 
 const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 type Region = (typeof REGIONS)[number];
@@ -19,10 +19,6 @@ interface PooledItem {
   companyName: string;
   preferredRegion: string | null;
 }
-interface AdminOption {
-  userId: string;
-  fullName: string;
-}
 
 // The validated prototype's scheduling board uses real drag-and-drop
 // (dnd-kit); this port uses a select+button per row instead — same
@@ -33,14 +29,12 @@ interface AdminOption {
 export function SchedulingBoard({
   unassigned,
   byRegion,
-  adminByRegion,
-  admins,
+  adminNameByRegion,
   locale,
 }: {
   unassigned: PooledItem[];
   byRegion: Record<Region, PooledItem[]>;
-  adminByRegion: Record<string, string | null>;
-  admins: AdminOption[];
+  adminNameByRegion: Record<string, string | null>;
   locale: string;
 }) {
   const t = useTranslations("admin.scheduling");
@@ -132,18 +126,7 @@ export function SchedulingBoard({
               </CardTitle>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-muted-foreground">{t("regionalAdminLabel")}</label>
-                <select
-                  className={selectClassName}
-                  value={adminByRegion[region] ?? ""}
-                  onChange={(e) => run(`admin-${region}`, () => setRegionalAdminAction({ region, adminUserId: e.target.value }))}
-                >
-                  <option value="">{t("regionalAdminNone")}</option>
-                  {admins.map((a) => (
-                    <option key={a.userId} value={a.userId}>
-                      {a.fullName}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-sm">{adminNameByRegion[region] ?? t("regionalAdminNone")}</p>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-2">

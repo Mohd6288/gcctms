@@ -18,9 +18,9 @@ import {
 // RLS half is tests/rls/catalog-pricing-write-denial.test.ts (Phase 2),
 // which proves the database itself would deny it too, independently.
 const nonSuperAdminContexts: AuthContext[] = [
-  { userId: "00000000-0000-0000-0000-000000000001", role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" },
-  { userId: "00000000-0000-0000-0000-000000000002", role: "contractor_manager", companyId: 1, trainerId: null, aal: "aal2" },
-  { userId: "00000000-0000-0000-0000-000000000003", role: "trainer", companyId: null, trainerId: 1, aal: "aal2" },
+  { userId: "00000000-0000-0000-0000-000000000001", role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" },
+  { userId: "00000000-0000-0000-0000-000000000002", role: "contractor_manager", companyId: 1, trainerId: null, region: null, aal: "aal2" },
+  { userId: "00000000-0000-0000-0000-000000000003", role: "trainer", companyId: null, trainerId: 1, region: null, aal: "aal2" },
 ];
 
 describe("catalog service — non-super_admin roles denied at authorize(), before any DB write", () => {

@@ -38,11 +38,14 @@ export default async function AdminSchedulingPage({
     REGIONS.map((region) => [region, pooled.filter((p) => !activeIds.has(p.requestItemId) && p.assignedRegion === region)])
   ) as Record<(typeof REGIONS)[number], typeof pooled>;
 
-  const adminByRegion = Object.fromEntries(assignments.map((a) => [a.region, a.adminUserId])) as Record<string, string | null>;
+  const adminNameById = new Map(admins.map((a) => [a.userId, a.fullName]));
+  const adminNameByRegion = Object.fromEntries(
+    assignments.map((a) => [a.region, a.adminUserId ? (adminNameById.get(a.adminUserId) ?? null) : null])
+  ) as Record<string, string | null>;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <SchedulingBoard unassigned={unassigned} byRegion={byRegion} adminByRegion={adminByRegion} admins={admins} locale={locale} />
+      <SchedulingBoard unassigned={unassigned} byRegion={byRegion} adminNameByRegion={adminNameByRegion} locale={locale} />
     </div>
   );
 }

@@ -125,8 +125,8 @@ describe("training request lifecycle — real DB", () => {
       .returning({ id: employees.id });
     employeeNoDocId = empNoDoc.id;
 
-    contractorCtx = { userId: ownerId, role: "contractor_manager", companyId, trainerId: null, aal: "aal2" };
-    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    contractorCtx = { userId: ownerId, role: "contractor_manager", companyId, trainerId: null, region: null, aal: "aal2" };
+    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

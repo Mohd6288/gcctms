@@ -41,7 +41,7 @@ export default async function AdminCalendarPage({
   const t = await getTranslations("admin.calendar");
 
   const context = await getContext();
-  const classes = authorize("schedule_classes", context) ? await listClasses() : [];
+  const classes = authorize("schedule_classes", context) ? await listClasses(context?.region) : [];
 
   const now = new Date();
   const [viewYear, viewMonth] = month && /^\d{4}-\d{2}$/.test(month) ? month.split("-").map((n, i) => (i === 1 ? Number(n) - 1 : Number(n))) : [now.getFullYear(), now.getMonth()];

@@ -62,7 +62,11 @@ export async function listPlatformAdmins() {
     .orderBy(asc(profiles.fullName));
 }
 
-export async function listClasses() {
+// region: Drizzle bypasses RLS, so a region-assigned platform_admin
+// (Phase 5) needs this filter applied explicitly here too — see
+// companies/queries.ts's listCompanies() for the same note. classes.region
+// is the class's own delivery region, no join needed.
+export async function listClasses(region?: string | null) {
   return db
     .select({
       id: classes.id,
@@ -82,6 +86,7 @@ export async function listClasses() {
     .from(classes)
     .innerJoin(courses, eq(classes.courseId, courses.id))
     .innerJoin(trainers, eq(classes.trainerId, trainers.id))
+    .where(region ? eq(classes.region, region) : undefined)
     .orderBy(asc(classes.startDate));
 }
 

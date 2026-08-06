@@ -57,7 +57,7 @@ describe("updateCompany — role-scoped field restrictions, real DB", () => {
   });
 
   it("platform_admin can update every field, including crVerified/crNumber/region", async () => {
-    const adminCtx: AuthContext = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    const adminCtx: AuthContext = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
     await updateCompany(adminCtx, {
       companyId: companyAId,
       name: "Updated By Admin",
@@ -79,7 +79,7 @@ describe("updateCompany — role-scoped field restrictions, real DB", () => {
   });
 
   it("contractor_manager can update their own shared fields, but crVerified/crNumber/region are silently ignored", async () => {
-    const contractorCtx: AuthContext = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, aal: "aal2" };
+    const contractorCtx: AuthContext = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, region: null, aal: "aal2" };
     await updateCompany(contractorCtx, {
       companyId: companyBId,
       name: "Updated By Contractor",
@@ -102,7 +102,7 @@ describe("updateCompany — role-scoped field restrictions, real DB", () => {
   });
 
   it("contractor_manager cannot update a different company", async () => {
-    const contractorCtx: AuthContext = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, aal: "aal2" };
+    const contractorCtx: AuthContext = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, region: null, aal: "aal2" };
     await expect(
       updateCompany(contractorCtx, {
         companyId: companyAId,

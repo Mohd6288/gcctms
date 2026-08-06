@@ -70,7 +70,10 @@ export async function listEmployeesForCompany(companyId: number) {
 // Admin (platform_admin) employee browser — cross-company, read-only per
 // Phase 3's scope. Caller must have already checked
 // authorize("manage_employees", context).
-export async function listAllEmployees() {
+// region: Drizzle bypasses RLS, so a region-assigned platform_admin
+// (Phase 5) needs this filter applied explicitly here too — see
+// companies/queries.ts's listCompanies() for the same note.
+export async function listAllEmployees(region?: string | null) {
   return db
     .select({
       id: employees.id,
@@ -84,5 +87,6 @@ export async function listAllEmployees() {
     .from(employees)
     .innerJoin(jobRoles, eq(employees.jobRoleId, jobRoles.id))
     .innerJoin(companies, eq(employees.companyId, companies.id))
+    .where(region ? eq(companies.region, region) : undefined)
     .orderBy(desc(employees.createdAt));
 }

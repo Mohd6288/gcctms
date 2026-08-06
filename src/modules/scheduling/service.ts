@@ -7,7 +7,7 @@ import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { getTrainerEmail, queueNotification } from "@/modules/platform/notifications/service";
 import { listActiveEnrollmentRequestItemIds, listSchedulableRequestItems } from "./queries";
-import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, SetRegionalAdminInput, UpdateClassInput } from "./schema";
+import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, SetAdminRegionInput, UpdateClassInput } from "./schema";
 
 const REGIONS_ORDER = ["North", "South", "East", "West", "Central"] as const;
 
@@ -50,13 +50,24 @@ export async function autoAssignPooledByPreference(context: AuthContext) {
 }
 
 // Regional admin assignment is super_admin-only (manage_users capability),
-// distinct from schedule_classes — matches roles-and-workflows.md.
-export async function setRegionalAdmin(context: AuthContext, input: SetRegionalAdminInput) {
+// distinct from schedule_classes — matches roles-and-workflows.md. An admin
+// has at most one region (0026_regional_admin_scoping.sql's unique
+// constraint on admin_user_id), so moving them to a new one first clears
+// whichever region they previously held; region: null just clears it.
+export async function setAdminRegion(context: AuthContext, input: SetAdminRegionInput) {
   if (!authorize("manage_users", context)) throw new Error("Not authorized");
-  await db
-    .insert(regionalAdminAssignments)
-    .values({ region: input.region, adminUserId: input.adminUserId })
-    .onConflictDoUpdate({ target: regionalAdminAssignments.region, set: { adminUserId: input.adminUserId, assignedAt: new Date() } });
+  await db.transaction(async (tx) => {
+    await tx
+      .update(regionalAdminAssignments)
+      .set({ adminUserId: null })
+      .where(eq(regionalAdminAssignments.adminUserId, input.adminUserId));
+    if (input.region) {
+      await tx
+        .insert(regionalAdminAssignments)
+        .values({ region: input.region, adminUserId: input.adminUserId })
+        .onConflictDoUpdate({ target: regionalAdminAssignments.region, set: { adminUserId: input.adminUserId, assignedAt: new Date() } });
+    }
+  });
 }
 
 function isExclusionViolation(err: unknown): boolean {

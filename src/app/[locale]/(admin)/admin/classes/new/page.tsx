@@ -30,7 +30,12 @@ export default async function NewClassPage({
     return null;
   }
 
-  const [courses, trainers, centers, companies] = await Promise.all([listCourses(), listTrainers(), listTrainingCenters(), listCompanies()]);
+  const [courses, trainers, centers, companies] = await Promise.all([
+    listCourses(),
+    listTrainers(),
+    listTrainingCenters(),
+    listCompanies(context?.region),
+  ]);
   const initialRegion = (REGIONS as readonly string[]).includes(region ?? "") ? (region as (typeof REGIONS)[number]) : undefined;
 
   return (

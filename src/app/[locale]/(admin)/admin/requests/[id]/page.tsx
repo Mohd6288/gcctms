@@ -32,7 +32,13 @@ export default async function AdminRequestDetailPage({
   const canReviewRequests = authorize("review_requests", context);
   const canVerifyPayments = authorize("verify_payments", context);
 
-  if ((!canReviewRequests && !canVerifyPayments) || !request) {
+  // Drizzle bypasses RLS (see companies/queries.ts's listCompanies() note),
+  // so a region-assigned admin's list already filters this out — but the
+  // detail route is still reachable directly by URL/id, so deny it here too
+  // rather than relying on the list page alone to keep them out.
+  const regionDenied = context?.region != null && request?.companyRegion !== context.region;
+
+  if ((!canReviewRequests && !canVerifyPayments) || !request || regionDenied) {
     redirect({ href: "/admin/requests", locale });
     return null;
   }

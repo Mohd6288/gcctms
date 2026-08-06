@@ -16,8 +16,16 @@ import type { CreateEmployeeInput, ImportEmployeeRow, UpdateEmployeeInput } from
 // coarse — the permission matrix lists super_admin ✓ for manage_employees,
 // but that's not this table's real RLS scope, so this check must be
 // stricter than authorize() to avoid the app granting more than RLS would.
-function assertCanTouchCompany(context: AuthContext, companyId: number) {
-  if (context.role === "platform_admin") return;
+// Drizzle bypasses RLS (see db/index.ts), so a region-assigned platform_admin
+// (Phase 5) is checked against the company's own region here too — see the
+// identical note in platform/storage/service.ts.
+async function assertCanTouchCompany(context: AuthContext, companyId: number) {
+  if (context.role === "platform_admin") {
+    if (!context.region) return;
+    const [company] = await db.select({ region: companies.region }).from(companies).where(eq(companies.id, companyId));
+    if (company?.region === context.region) return;
+    throw new Error("Not authorized");
+  }
   if (context.role === "contractor_manager" && context.companyId === companyId) return;
   throw new Error("Not authorized");
 }
@@ -35,7 +43,7 @@ function rethrowFriendlyDuplicateError(err: unknown): never {
 
 export async function createEmployee(context: AuthContext, input: CreateEmployeeInput) {
   if (!authorize("manage_employees", context)) throw new Error("Not authorized");
-  assertCanTouchCompany(context, input.companyId);
+  await assertCanTouchCompany(context, input.companyId);
 
   try {
     const [employee] = await db
@@ -74,7 +82,7 @@ export async function updateEmployee(context: AuthContext, input: UpdateEmployee
 
   const [existing] = await db.select({ companyId: employees.companyId }).from(employees).where(eq(employees.id, input.employeeId));
   if (!existing) throw new Error("Employee not found");
-  assertCanTouchCompany(context, existing.companyId);
+  await assertCanTouchCompany(context, existing.companyId);
 
   await db
     .update(employees)
@@ -112,7 +120,7 @@ export async function updateEmployee(context: AuthContext, input: UpdateEmployee
 // the same raw value; the contractor can split them via Edit Employee.
 export async function importEmployees(context: AuthContext, companyId: number, rows: ImportEmployeeRow[]) {
   if (!authorize("manage_employees", context)) throw new Error("Not authorized");
-  assertCanTouchCompany(context, companyId);
+  await assertCanTouchCompany(context, companyId);
 
   const [company] = await db.select({ contractorCategory: companies.contractorCategory }).from(companies).where(eq(companies.id, companyId));
   const category = company?.contractorCategory ?? null;

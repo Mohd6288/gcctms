@@ -22,7 +22,11 @@ export async function listRequestsForCompany(companyId: number) {
 
 // Admin review queue — only "submitted" requests, per Phase 4's scope
 // (nothing to review outside that status).
-export async function listSubmittedRequestsForAdmin() {
+//
+// region: Drizzle bypasses RLS, so a region-assigned platform_admin
+// (Phase 5) needs this filter applied explicitly here too — see
+// companies/queries.ts's listCompanies() for the same note.
+export async function listSubmittedRequestsForAdmin(region?: string | null) {
   return db
     .select({
       id: trainingRequests.id,
@@ -34,7 +38,7 @@ export async function listSubmittedRequestsForAdmin() {
     .from(trainingRequests)
     .innerJoin(courses, eq(trainingRequests.courseId, courses.id))
     .innerJoin(companies, eq(trainingRequests.companyId, companies.id))
-    .where(eq(trainingRequests.status, "submitted"))
+    .where(region ? and(eq(trainingRequests.status, "submitted"), eq(companies.region, region)) : eq(trainingRequests.status, "submitted"))
     .orderBy(desc(trainingRequests.createdAt));
 }
 
@@ -44,6 +48,7 @@ export async function getRequestById(requestId: number) {
       id: trainingRequests.id,
       companyId: trainingRequests.companyId,
       companyName: companies.name,
+      companyRegion: companies.region,
       courseId: trainingRequests.courseId,
       courseTitleEn: courses.titleEn,
       courseTitleAr: courses.titleAr,

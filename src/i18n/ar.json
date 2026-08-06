@@ -368,7 +368,8 @@
         "employeesEmpty": "لا يوجد موظفون بعد.",
         "tableName": "الاسم",
         "tableJobRole": "المسمى الوظيفي"
-      }
+      },
+      "regionScopedNote": "تُعرض هنا شركات منطقة {region} فقط."
     },
     "employees": {
       "title": "الموظفون",
@@ -378,7 +379,8 @@
       "tableStatus": "الحالة",
       "statusActive": "نشط",
       "statusInactive": "غير نشط",
-      "empty": "لا يوجد موظفون بعد."
+      "empty": "لا يوجد موظفون بعد.",
+      "regionScopedNote": "يُعرض هنا موظفو منطقة {region} فقط."
     },
     "requests": {
       "title": "قائمة المراجعة",
@@ -416,7 +418,8 @@
         "requestInfoConfirm": "إرسال",
         "cancel": "إلغاء",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
-      }
+      },
+      "regionScopedNote": "تُعرض هنا طلبات منطقة {region} فقط."
     },
     "payments": {
       "title": "قائمة التحقق من المدفوعات",
@@ -442,7 +445,8 @@
         "rejectConfirm": "تأكيد الرفض",
         "cancel": "إلغاء",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
-      }
+      },
+      "regionScopedNote": "تُعرض هنا مدفوعات منطقة {region} فقط."
     },
     "classes": {
       "title": "الفصول التدريبية",
@@ -507,7 +511,8 @@
         "pendingCertsTitle": "شهادات بانتظار الإصدار ({count})",
         "releaseAll": "إصدار الكل",
         "release": "إصدار"
-      }
+      },
+      "regionScopedNote": "تُعرض هنا فصول منطقة {region} فقط."
     },
     "scheduling": {
       "title": "لوحة الجدولة",
@@ -575,11 +580,14 @@
       "successTempPassword": "كلمة مرور مؤقتة (شاركها مع المستخدم الآن — لن تظهر مرة أخرى):",
       "tableName": "الاسم",
       "tableRole": "الدور",
+      "tableRegion": "المنطقة",
       "tableStatus": "الحالة",
       "tableCreated": "تاريخ الإنشاء",
       "statusActive": "نشط",
       "statusInactive": "غير نشط",
-      "empty": "لا توجد حسابات مسؤولين أو مدربين بعد."
+      "empty": "لا توجد حسابات مسؤولين أو مدربين بعد.",
+      "regionUnassigned": "غير معيَّن (يرى جميع المناطق)",
+      "regionError": "تعذّر تحديث المنطقة. يرجى المحاولة مرة أخرى."
     },
     "overview": {
       "title": "نظرة عامة على المنصة",

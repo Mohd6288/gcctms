@@ -97,7 +97,7 @@ describe("scheduling — classes, capacity/waitlist, cancellation, real DB", () 
     const [trainer] = await db.insert(trainers).values({ userId: trainerUserId, fullName: "Sched Trainer" }).returning({ id: trainers.id });
     trainerId = trainer.id;
 
-    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, aal: "aal2" };
+    adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
   });
 
   afterAll(async () => {

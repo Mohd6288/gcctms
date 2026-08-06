@@ -81,6 +81,14 @@ export interface AuthContext {
   role: Role;
   companyId: number | null;
   trainerId: number | null;
+  /**
+   * Set only for a platform_admin assigned to a region via
+   * regional_admin_assignments (Phase 5). null means unassigned, which is
+   * NOT "no access" — it means unrestricted (sees every region), matching
+   * today's default so existing/new admin accounts aren't silently locked
+   * out until someone explicitly assigns them one.
+   */
+  region: string | null;
   /** Authenticator Assurance Level — "aal2" means an MFA challenge was completed this session. */
   aal: "aal1" | "aal2";
 }
