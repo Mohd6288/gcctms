@@ -1,6 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
-import { getReportSummary, getRequestsByRegion, getRequestsByStatus, getRevenueByCourse, getVerifiedRevenueForMonth, getCertificatesIssuedForMonth, listRequestYears } from "@/modules/reporting/queries";
+import { getReportSummary, getRequestsByRegion, getRequestsByStatus, getRevenueByCourse, getVerifiedRevenueByMonth, getCertificatesIssuedByMonth, listRequestYears } from "@/modules/reporting/queries";
 import { comparisonPeriod, currentMonthValue, trailingMonths, yearOptionsFromDates, type ComparisonBasis, type ReportPeriod } from "@/modules/reporting/period";
 import { ReportsView } from "./reports-view";
 
@@ -33,8 +33,8 @@ export default async function AdminReportsPage({
     getRevenueByCourse(period),
     getRequestsByRegion(period),
     getRequestsByStatus(period),
-    Promise.all(trailing.map((m) => getVerifiedRevenueForMonth(m.value))),
-    Promise.all(trailing.map((m) => getCertificatesIssuedForMonth(m.value))),
+    getVerifiedRevenueByMonth(trailing.map((m) => m.value)),
+    getCertificatesIssuedByMonth(trailing.map((m) => m.value)),
     listRequestYears(),
   ]);
 

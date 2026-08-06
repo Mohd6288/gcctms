@@ -31,25 +31,31 @@ function num(value: string | null | undefined): number {
 export async function getReportSummary(period: ReportPeriod) {
   const { start, end } = periodRange(period);
 
-  const [[verifiedRow], [outstandingRow], [certsRow], [requestsRow], [companiesRow], [learnersRow], [completedRow], [totalRequestsAllTimeRow]] = await Promise.all([
+  // Grouped by the table each aggregate reads rather than one query per
+  // figure: eight round trips plus a getRevenueByCourse call collapse to
+  // five. Identical numbers (pinned by reporting-aggregates.test.ts) —
+  // FILTER just lets a single scan answer several questions at once.
+  const [[paymentsRow], [certsRow], [requestsRow], [learnersRow], [allTimeRow]] = await Promise.all([
     db
-      .select({ total: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` })
+      .select({
+        verified: sql<string>`coalesce(sum(${payments.totalAmount}) filter (where ${payments.status} = 'verified'), 0)`,
+        outstanding: sql<string>`coalesce(sum(${payments.totalAmount}) filter (where ${payments.status} <> 'verified'), 0)`,
+        // Replaces counting a whole getRevenueByCourse result client-side.
+        // The join can't drop rows: payments.request_id is NOT NULL with an
+        // FK. Differs from the old `revenue > 0` form only for a verified
+        // payment totalling exactly 0 — unreachable, since qty and
+        // unit_price are both required and positive.
+        coursesWithRevenue: sql<string>`count(distinct ${trainingRequests.courseId}) filter (where ${payments.status} = 'verified')`,
+      })
       .from(payments)
-      .where(and(eq(payments.status, "verified"), gte(payments.createdAt, start), lte(payments.createdAt, end))),
-    db
-      .select({ total: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` })
-      .from(payments)
-      .where(and(ne(payments.status, "verified"), gte(payments.createdAt, start), lte(payments.createdAt, end))),
+      .innerJoin(trainingRequests, eq(payments.requestId, trainingRequests.id))
+      .where(and(gte(payments.createdAt, start), lte(payments.createdAt, end))),
     db
       .select({ value: count() })
       .from(certificates)
       .where(and(eq(certificates.status, "issued"), gte(certificates.issuedAt, start), lte(certificates.issuedAt, end))),
     db
-      .select({ value: count() })
-      .from(trainingRequests)
-      .where(and(gte(trainingRequests.createdAt, start), lte(trainingRequests.createdAt, end))),
-    db
-      .select({ value: countDistinct(trainingRequests.companyId) })
+      .select({ total: count(), companies: countDistinct(trainingRequests.companyId) })
       .from(trainingRequests)
       .where(and(gte(trainingRequests.createdAt, start), lte(trainingRequests.createdAt, end))),
     db
@@ -60,25 +66,27 @@ export async function getReportSummary(period: ReportPeriod) {
     // Completion rate is deliberately all-time, not period-scoped — a
     // period-scoped rate would misleadingly read near 0% early in any
     // period (nothing submitted this period has had time to complete yet).
-    db.select({ value: sql<string>`count(*) filter (where ${trainingRequests.status} = 'completed')` }).from(trainingRequests),
-    db.select({ value: count() }).from(trainingRequests),
+    db
+      .select({
+        completed: sql<string>`count(*) filter (where ${trainingRequests.status} = 'completed')`,
+        total: count(),
+      })
+      .from(trainingRequests),
   ]);
 
-  const verifiedRevenue = num(verifiedRow.total);
-  const outstanding = num(outstandingRow.total);
-  const completedAllTime = num(completedRow.value);
-  const totalAllTime = totalRequestsAllTimeRow.value;
-
-  const revenueByCourse = await getRevenueByCourse(period);
-  const coursesWithRevenue = revenueByCourse.filter((c) => c.revenue > 0).length;
+  const verifiedRevenue = num(paymentsRow.verified);
+  const outstanding = num(paymentsRow.outstanding);
+  const completedAllTime = num(allTimeRow.completed);
+  const totalAllTime = allTimeRow.total;
+  const coursesWithRevenue = num(paymentsRow.coursesWithRevenue);
 
   return {
     verifiedRevenue,
     outstanding,
     certificatesIssued: certsRow.value,
     completionRate: totalAllTime > 0 ? completedAllTime / totalAllTime : 0,
-    totalRequests: requestsRow.value,
-    activeCompanies: companiesRow.value,
+    totalRequests: requestsRow.total,
+    activeCompanies: requestsRow.companies,
     activeLearners: learnersRow.value,
     avgRevenuePerCourse: coursesWithRevenue > 0 ? verifiedRevenue / coursesWithRevenue : 0,
   };
@@ -134,26 +142,57 @@ export async function getRequestsByStatus(period: ReportPeriod) {
   return REQUEST_STATUSES.map((status) => ({ status, value: byStatus.get(status) ?? 0 }));
 }
 
-export async function getVerifiedRevenueForMonth(monthValue: string): Promise<number> {
-  const { start, end } = periodRange({ mode: "month", value: monthValue });
-  const [row] = await db
-    .select({ total: sql<string>`coalesce(sum(${payments.totalAmount}), 0)` })
-    .from(payments)
-    .where(and(eq(payments.status, "verified"), gte(payments.createdAt, start), lte(payments.createdAt, end)));
-  return num(row.total);
+// Sparkline trails, one query each rather than one per month. The page asks
+// for 6 months, so this replaced 12 round trips with 2. Returns a value per
+// requested month in the order given, zero-filled for months with no rows —
+// the caller must get back exactly as many points as it asked for, or the
+// sparkline silently shifts along its x-axis.
+function monthKey(monthValue: string): string {
+  return monthValue.slice(0, 7);
 }
 
-export async function getCertificatesIssuedForMonth(monthValue: string): Promise<number> {
-  const { start, end } = periodRange({ mode: "month", value: monthValue });
-  const [row] = await db
-    .select({ value: count() })
+export async function getVerifiedRevenueByMonth(monthValues: string[]): Promise<number[]> {
+  if (monthValues.length === 0) return [];
+  const { start } = periodRange({ mode: "month", value: monthValues[0] });
+  const { end } = periodRange({ mode: "month", value: monthValues[monthValues.length - 1] });
+
+  const bucket = sql`date_trunc('month', ${payments.createdAt} at time zone 'UTC')`;
+  const rows = await db
+    .select({
+      month: sql<string>`to_char(${bucket}, 'YYYY-MM')`,
+      total: sql<string>`coalesce(sum(${payments.totalAmount}), 0)`,
+    })
+    .from(payments)
+    .where(and(eq(payments.status, "verified"), gte(payments.createdAt, start), lte(payments.createdAt, end)))
+    .groupBy(bucket);
+
+  const byMonth = new Map(rows.map((r) => [r.month, num(r.total)]));
+  return monthValues.map((v) => byMonth.get(monthKey(v)) ?? 0);
+}
+
+export async function getCertificatesIssuedByMonth(monthValues: string[]): Promise<number[]> {
+  if (monthValues.length === 0) return [];
+  const { start } = periodRange({ mode: "month", value: monthValues[0] });
+  const { end } = periodRange({ mode: "month", value: monthValues[monthValues.length - 1] });
+
+  const bucket = sql`date_trunc('month', ${certificates.issuedAt} at time zone 'UTC')`;
+  const rows = await db
+    .select({ month: sql<string>`to_char(${bucket}, 'YYYY-MM')`, value: count() })
     .from(certificates)
-    .where(and(eq(certificates.status, "issued"), gte(certificates.issuedAt, start), lte(certificates.issuedAt, end)));
-  return row.value;
+    .where(and(eq(certificates.status, "issued"), gte(certificates.issuedAt, start), lte(certificates.issuedAt, end)))
+    .groupBy(bucket);
+
+  const byMonth = new Map(rows.map((r) => [r.month, r.value]));
+  return monthValues.map((v) => byMonth.get(monthKey(v)) ?? 0);
 }
 
 // For the year-option dropdown — every year that has at least one request.
+// DISTINCT in SQL: this used to select every training_requests row in the
+// table just to read the year off each one, which is the one query here
+// that would degrade without bound as the platform fills up.
 export async function listRequestYears(): Promise<Date[]> {
-  const rows = await db.select({ createdAt: trainingRequests.createdAt }).from(trainingRequests);
-  return rows.map((r) => r.createdAt);
+  const rows = await db
+    .selectDistinct({ year: sql<number>`extract(year from ${trainingRequests.createdAt} at time zone 'UTC')::int` })
+    .from(trainingRequests);
+  return rows.map((r) => new Date(Date.UTC(Number(r.year), 0, 1)));
 }

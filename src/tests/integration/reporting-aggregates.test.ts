@@ -17,12 +17,12 @@ import {
 } from "../../db/schema";
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
 import {
-  getCertificatesIssuedForMonth,
+  getCertificatesIssuedByMonth,
   getReportSummary,
   getRequestsByRegion,
   getRequestsByStatus,
   getRevenueByCourse,
-  getVerifiedRevenueForMonth,
+  getVerifiedRevenueByMonth,
   listRequestYears,
 } from "../../modules/reporting/queries";
 
@@ -236,13 +236,21 @@ describe("reporting aggregates — pinned against a seeded fixture", () => {
     expect(byStatus.scheduled).toBe(0);
   });
 
-  it("monthly trail queries match the same month's totals", async () => {
-    expect(await getVerifiedRevenueForMonth("2031-03-01")).toBeCloseTo(1150, 2);
-    expect(await getCertificatesIssuedForMonth("2031-03-01")).toBe(1);
+  it("monthly trail queries bucket by month and zero-fill empty ones", async () => {
+    // Order and length must survive: a sparkline reading one point short
+    // silently shifts every value along its x-axis. 2031-04 and 2031-05 are
+    // untouched by the fixture, so they must come back as explicit zeros
+    // rather than being dropped from the grouped result.
+    const months = ["2031-03-01", "2031-04-01", "2031-05-01"];
 
-    // A neighbouring month the fixture doesn't touch must read zero.
-    expect(await getVerifiedRevenueForMonth("2031-04-01")).toBeCloseTo(0, 2);
-    expect(await getCertificatesIssuedForMonth("2031-04-01")).toBe(0);
+    const revenue = await getVerifiedRevenueByMonth(months);
+    expect(revenue).toHaveLength(3);
+    expect(revenue[0]).toBeCloseTo(1150, 2);
+    expect(revenue[1]).toBeCloseTo(0, 2);
+    expect(revenue[2]).toBeCloseTo(0, 2);
+
+    const certs = await getCertificatesIssuedByMonth(months);
+    expect(certs).toEqual([1, 0, 0]);
   });
 
   it("listRequestYears includes the seeded year", async () => {
