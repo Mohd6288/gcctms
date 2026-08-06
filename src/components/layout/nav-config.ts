@@ -33,6 +33,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   contractor_manager: [
     { key: "dashboard", href: "/dashboard", icon: LayoutDashboard, end: true },
     { key: "requests", href: "/dashboard/requests", icon: FileText },
+    { key: "training", href: "/dashboard/training", icon: CalendarRange },
     { key: "employees", href: "/dashboard/employees", icon: Users },
     { key: "payments", href: "/dashboard/payments", icon: CreditCard },
     { key: "certificates", href: "/dashboard/certificates", icon: Award },

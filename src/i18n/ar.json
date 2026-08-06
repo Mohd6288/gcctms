@@ -23,7 +23,8 @@
       "centers": "مراكز التدريب",
       "exams": "الاختبارات",
       "trainers": "المدربون",
-      "users": "المستخدمون"
+      "users": "المستخدمون",
+      "training": "تدريبي"
     },
     "openMenu": "فتح قائمة التنقل",
     "closeMenu": "إغلاق قائمة التنقل",
@@ -357,6 +358,22 @@
       "tableExpires": "تاريخ الانتهاء",
       "download": "تنزيل",
       "empty": "لا توجد شهادات صادرة بعد."
+    },
+    "training": {
+      "title": "تدريبي",
+      "description": "كل الفصول التي تمت جدولة موظفيك فيها، من جميع الطلبات، في مكان واحد.",
+      "empty": "لا يوجد تدريب مجدول بعد. بمجرد أن يقوم مختبر الخليج بجدولة موظفيك المعتمدين في فصل، سيظهر هنا.",
+      "sectionUpcoming": "القادمة",
+      "sectionCompleted": "المكتملة",
+      "dates": "التواريخ",
+      "location": "الموقع",
+      "trainer": "المدرب",
+      "employees": "موظفوك ({count})",
+      "waitlisted": "قائمة الانتظار ({count})",
+      "attendance": "نسبة الحضور {pct}%",
+      "statusScheduled": "مجدول",
+      "statusInProgress": "قيد التنفيذ",
+      "statusCompleted": "مكتمل"
     }
   },
   "admin": {

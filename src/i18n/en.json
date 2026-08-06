@@ -23,7 +23,8 @@
       "centers": "Training Centers",
       "exams": "Exams",
       "trainers": "Trainers",
-      "users": "Users"
+      "users": "Users",
+      "training": "My Training"
     },
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -357,6 +358,22 @@
       "tableExpires": "Expires",
       "download": "Download",
       "empty": "No certificates issued yet."
+    },
+    "training": {
+      "title": "My Training",
+      "description": "Every class your employees are scheduled into, across all requests, in one place.",
+      "empty": "No scheduled training yet. Once GCC Lab schedules your approved employees into a class, it will show up here.",
+      "sectionUpcoming": "Upcoming",
+      "sectionCompleted": "Completed",
+      "dates": "Dates",
+      "location": "Location",
+      "trainer": "Trainer",
+      "employees": "Your employees ({count})",
+      "waitlisted": "Waitlisted ({count})",
+      "attendance": "{pct}% attendance",
+      "statusScheduled": "Scheduled",
+      "statusInProgress": "In progress",
+      "statusCompleted": "Completed"
     }
   },
   "admin": {

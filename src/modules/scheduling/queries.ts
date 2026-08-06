@@ -12,6 +12,7 @@ import {
   regionalAdminAssignments,
   requestItems,
   trainers,
+  trainingCenters,
   trainingRequests,
 } from "@/db/schema";
 
@@ -133,6 +134,47 @@ export async function listEnrollmentsForClass(classId: number) {
     .innerJoin(companies, eq(classEnrollments.companyId, companies.id))
     .where(eq(classEnrollments.classId, classId))
     .orderBy(asc(classEnrollments.createdAt));
+}
+
+// Every class this company's employees sit in, one row per employee — the
+// contractor's "My Training" view groups them by class. Scoped by
+// class_enrollments.company_id, which is denormalised onto the enrollment
+// precisely so this doesn't need to walk back through request_items.
+//
+// Cancelled classes never appear here, and can't: cancelClass() deletes the
+// enrollment rows outright (see service.ts) so employees fall back into the
+// scheduling pool. The validated prototype keeps its cancelled roster as
+// history and shows a Cancelled section; that history simply doesn't exist
+// in this schema, so the section is deliberately absent rather than faked.
+export async function listClassEnrollmentsForCompany(companyId: number) {
+  return db
+    .select({
+      classId: classes.id,
+      courseCode: courses.code,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      trainerFullName: trainers.fullName,
+      centerName: trainingCenters.name,
+      region: classes.region,
+      startDate: classes.startDate,
+      endDate: classes.endDate,
+      classStatus: classes.status,
+      employeeId: employees.id,
+      employeeFullNameEn: employees.fullNameEn,
+      employeeFullNameAr: employees.fullNameAr,
+      enrollmentStatus: classEnrollments.status,
+      attendancePct: classEnrollments.attendancePct,
+    })
+    .from(classEnrollments)
+    .innerJoin(classes, eq(classEnrollments.classId, classes.id))
+    .innerJoin(courses, eq(classes.courseId, courses.id))
+    .innerJoin(trainers, eq(classes.trainerId, trainers.id))
+    // centerId is nullable, so this must not be an inner join — an
+    // otherwise-valid class with no centre assigned would vanish.
+    .leftJoin(trainingCenters, eq(classes.centerId, trainingCenters.id))
+    .innerJoin(employees, eq(classEnrollments.employeeId, employees.id))
+    .where(eq(classEnrollments.companyId, companyId))
+    .orderBy(desc(classes.startDate), asc(employees.fullNameEn));
 }
 
 // Trainer's own upcoming/active classes (Phase 7 builds the attendance/
