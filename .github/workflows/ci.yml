@@ -41,8 +41,14 @@ jobs:
       # Phase 10 (postcss, sharp) are cleared by the `next` 16.3.0 bump.
       # drizzle-kit's moderate esbuild advisory stays unaddressed on purpose
       # — it's a dev-only tool (db:generate/db:studio) never shipped to
-      # users, and the fix is a breaking drizzle-kit downgrade; not worth
-      # forcing at --audit-level=high.
+      # users, and npm's "fix" is a DOWNGRADE to drizzle-kit 0.18.1, which
+      # would break our migration tooling to silence a dev-server advisory
+      # that never runs in CI or production. Do not run `npm audit fix
+      # --force` here; it is the wrong direction.
+      #
+      # Anything genuinely high must be fixed, not excused — nanoid 3.3.16
+      # (GHSA-2v37-7h3g-55p8, reached via postcss) broke this step until it
+      # was bumped to 3.3.18 with a plain `npm audit fix`.
       - name: Audit dependencies (fails on high/critical advisories)
         run: npm audit --audit-level=high
 
