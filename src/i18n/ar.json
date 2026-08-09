@@ -238,7 +238,10 @@
           "importButton": "استيراد {count} موظف",
           "createdCount": "تم استيراد {count} موظف",
           "skippedCount": "تم تخطي {count} صف",
-          "rowLabel": "الصف {row}"
+          "rowLabel": "الصف {row}",
+          "chooseRolesHint": "{count} صف بحاجة إلى تحديد المهنة — النموذج يسجّل المهنة كما وردت في الإقامة، وغالباً لا تطابق أي مهنة معتمدة تماماً.",
+          "jobRoleNone": "اختر المهنة…",
+          "jobRoleFor": "المهنة لـ {name}"
         },
         "regionCentral": "المنطقة الوسطى",
         "regionEast": "المنطقة الشرقية",

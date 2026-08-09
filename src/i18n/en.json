@@ -238,7 +238,10 @@
           "importButton": "Import {count} employee(s)",
           "createdCount": "{count} employee(s) imported",
           "skippedCount": "{count} row(s) skipped",
-          "rowLabel": "Row {row}"
+          "rowLabel": "Row {row}",
+          "chooseRolesHint": "{count} row(s) need a job role — the form records the job as written on the Iqama, which rarely matches a role exactly.",
+          "jobRoleNone": "Choose a job role…",
+          "jobRoleFor": "Job role for {name}"
         },
         "regionCentral": "Central Region",
         "regionEast": "Eastern Region",

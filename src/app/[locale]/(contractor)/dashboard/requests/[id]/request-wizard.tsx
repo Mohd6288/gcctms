@@ -450,6 +450,8 @@ export function RequestWizard({
             {showImport ? (
               <ImportEmployeesPanel
                 companyId={companyId}
+                jobRoles={jobRoles}
+                locale={locale}
                 onClose={() => setShowImport(false)}
                 onImported={(created) => {
                   setSelectedEmployeeIds((prev) => {

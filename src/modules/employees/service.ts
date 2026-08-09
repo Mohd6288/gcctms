@@ -125,10 +125,22 @@ export async function importEmployees(context: AuthContext, companyId: number, r
   const [company] = await db.select({ contractorCategory: companies.contractorCategory }).from(companies).where(eq(companies.id, companyId));
   const category = company?.contractorCategory ?? null;
   const roleRows = await db
-    .select({ id: jobRoles.id, nameEn: jobRoles.nameEn })
+    .select({ id: jobRoles.id, nameEn: jobRoles.nameEn, nameAr: jobRoles.nameAr })
     .from(jobRoles)
     .where(category ? and(eq(jobRoles.active, true), eq(jobRoles.contractorCategory, category)) : eq(jobRoles.active, true));
-  const roleIdByLowerName = new Map(roleRows.map((r) => [r.nameEn.toLowerCase(), r.id]));
+
+  // Match on either name: the Registration Sheet is filled in English, the
+  // HRBL form's job column is Arabic by definition (it's the profession as
+  // printed on the Iqama).
+  const roleIdByLowerName = new Map<string, number>();
+  for (const r of roleRows) {
+    roleIdByLowerName.set(r.nameEn.trim().toLowerCase(), r.id);
+    if (r.nameAr) roleIdByLowerName.set(r.nameAr.trim().toLowerCase(), r.id);
+  }
+  // The set the contractor is actually allowed to assign — an explicit
+  // jobRoleId arrives from the browser, so it gets checked against the same
+  // category/active filter as the name lookup rather than trusted.
+  const allowedRoleIds = new Set(roleRows.map((r) => r.id));
 
   const created: { id: number; fullName: string }[] = [];
   const skipped: { row: number; reason: string }[] = [];
@@ -144,9 +156,20 @@ export async function importEmployees(context: AuthContext, companyId: number, r
       skipped.push({ row: i + 1, reason: "Duplicate Iqama number in this file" });
       continue;
     }
-    const jobRoleId = row.jobTitleText ? roleIdByLowerName.get(row.jobTitleText.trim().toLowerCase()) : undefined;
+    // What the contractor chose for this row wins; the sheet's free text is
+    // only a fallback for the rare file that happens to name a role exactly.
+    let jobRoleId: number | undefined;
+    if (row.jobRoleId != null) {
+      if (!allowedRoleIds.has(row.jobRoleId)) {
+        skipped.push({ row: i + 1, reason: "That job role isn't available for this company" });
+        continue;
+      }
+      jobRoleId = row.jobRoleId;
+    } else if (row.jobTitleText) {
+      jobRoleId = roleIdByLowerName.get(row.jobTitleText.trim().toLowerCase());
+    }
     if (!jobRoleId) {
-      skipped.push({ row: i + 1, reason: "Could not match job title — add manually via Edit Employee" });
+      skipped.push({ row: i + 1, reason: "Choose a job role for this row before importing" });
       continue;
     }
 

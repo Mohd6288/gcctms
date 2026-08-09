@@ -38,8 +38,13 @@ export const UpdateEmployeeInput = z.object({
 export type UpdateEmployeeInput = z.infer<typeof UpdateEmployeeInput>;
 
 // Rows parsed client-side from a Registration Sheet or HRBL_0004_FO_001
-// Excel upload — jobRoleId isn't known yet (the sheet only has free-text job
-// titles), resolved server-side against the company's real job roles.
+// Excel upload. Both forms' job column is free text copied off the
+// candidate's Iqama ("المهنة طبقا للإقامة"), so jobTitleText rarely equals a
+// canonical job role — real uploads carry "Electrical, Engineer",
+// "TECHNICIAN, ELECTRICAL", "مهندس كهربائي". jobRoleId is what the
+// contractor picked for that row in the import panel; importEmployees still
+// falls back to matching jobTitleText by name when the sheet happens to
+// carry a canonical one.
 // nationalId isn't strictly validated here (loose enough to still count the
 // row) — importEmployees reports the real per-row reason a row was skipped,
 // matching the validated prototype's invalid/duplicate row counts.
@@ -47,6 +52,7 @@ export const ImportEmployeeRow = z.object({
   fullName: z.string().min(1),
   nationalId: z.string().min(1),
   jobTitleText: z.string().optional(),
+  jobRoleId: z.number().int().positive().optional(),
   nationality: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
