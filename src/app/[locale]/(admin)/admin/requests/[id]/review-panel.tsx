@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DocumentPreview } from "@/components/documents/document-preview";
+import { verifyEmployeeDocumentAction } from "@/modules/platform/storage/actions";
 import { useRouter } from "@/i18n/navigation";
 import {
   approveRequestAction,
@@ -78,6 +79,23 @@ export function ReviewPanel({
     setLoading(`decision-${requestItemId}`);
     try {
       await setEmployeeDecisionAction({ requestItemId, decision, decisionReason: reasons[requestItemId] || undefined });
+      router.refresh();
+    } catch {
+      setError(t("genericError"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  // The approval guard tells the admin to verify these "below", so the
+  // control has to actually be here — sending them to the Employee documents
+  // queue mid-review, and back again, is the kind of round trip that gets a
+  // request approved with an unchecked ID out of sheer friction.
+  async function handleVerifyIqama(documentId: number) {
+    setError(null);
+    setLoading(`iqama-${documentId}`);
+    try {
+      await verifyEmployeeDocumentAction(documentId);
       router.refresh();
     } catch {
       setError(t("genericError"));
@@ -263,7 +281,22 @@ export function ReviewPanel({
                 <span className="text-xs text-muted-foreground">{decisionLabel[item.decision] ?? item.decision}</span>
               </div>
               {item.iqamaDocumentId && !item.iqamaVerified && item.decision !== "rejected" ? (
-                <DocumentPreview documentId={item.iqamaDocumentId} mimeType={item.iqamaMimeType} />
+                <div className="flex flex-col gap-2 rounded-md bg-muted/40 p-2">
+                  <DocumentPreview documentId={item.iqamaDocumentId} mimeType={item.iqamaMimeType} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-fit"
+                    disabled={loading === `iqama-${item.iqamaDocumentId}`}
+                    onClick={() => handleVerifyIqama(item.iqamaDocumentId!)}
+                  >
+                    {t("verifyIqama")}
+                  </Button>
+                </div>
+              ) : null}
+              {!item.iqamaDocumentId && item.decision !== "rejected" ? (
+                <p className="text-xs text-warning">{t("iqamaMissing")}</p>
               ) : null}
               <div className="flex items-center gap-2">
                 <Input
