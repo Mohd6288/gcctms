@@ -3,6 +3,7 @@
 import { useId, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { DocumentPreview } from "./document-preview";
 
 export type DocumentSlotStatus = "not_attached" | "pending" | "verified" | "rejected";
 
@@ -28,6 +29,11 @@ interface DocumentUploadSlotProps {
   uploading: boolean;
   onSelectFile: (file: File) => void;
   readOnly?: boolean;
+  // When set, the slot renders an inline preview instead of a bare download
+  // link — the whole point being that reviewing a document shouldn't mean
+  // downloading it first.
+  documentId?: number | null;
+  mimeType?: string | null;
 }
 
 // A single document's upload control — used for both request-level forms
@@ -51,6 +57,8 @@ export function DocumentUploadSlot({
   uploading,
   onSelectFile,
   readOnly = false,
+  documentId,
+  mimeType,
 }: DocumentUploadSlotProps) {
   const t = useTranslations("documents.uploadSlot");
   const inputId = useId();
@@ -146,7 +154,9 @@ export function DocumentUploadSlot({
         </div>
       )}
 
-      {downloadUrl && fileName ? (
+      {documentId && fileName ? (
+        <DocumentPreview documentId={documentId} mimeType={mimeType ?? null} />
+      ) : downloadUrl && fileName ? (
         <a href={downloadUrl} className="w-fit text-xs text-primary hover:underline">
           {t("viewFile")}
         </a>

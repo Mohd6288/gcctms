@@ -69,6 +69,7 @@ export default async function AdminRequestDetailPage({
             .map((d) => ({
               id: d.id,
               type: d.type,
+              mimeType: d.mimeType,
               verifiedAt: d.verifiedAt ? d.verifiedAt.toISOString() : null,
               rejectedAt: d.rejectedAt ? d.rejectedAt.toISOString() : null,
               rejectionReason: d.rejectionReason,

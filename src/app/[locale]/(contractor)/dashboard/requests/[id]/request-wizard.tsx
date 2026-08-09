@@ -42,6 +42,7 @@ interface EmployeeDocument {
   employeeId: number;
   type: "national_id" | "prior_certificate" | "other";
   originalName: string;
+  mimeType: string | null;
 }
 
 interface RequestDocInfo {
@@ -539,7 +540,7 @@ export function RequestWizard({
                   acceptHint={tDocs("acceptHintXlsx")}
                   status={status}
                   fileName={doc?.originalName}
-                  downloadUrl={doc ? `/api/documents/${doc.id}/download` : null}
+                  documentId={doc?.id ?? null}
                   rejectionReason={doc?.rejectionReason}
                   templateUrl={isRegistrationSheet ? "/documents/Registration-sheet.xlsx" : "/documents/HRBL_0004_FO_001.xlsx"}
                   templateLabel={tDocs("downloadTemplate")}
@@ -579,7 +580,8 @@ export function RequestWizard({
                               acceptHint={tDocs("acceptHintImage")}
                               status={doc ? "pending" : "not_attached"}
                               fileName={doc?.originalName}
-                              downloadUrl={doc ? `/api/documents/${doc.id}/download` : null}
+                              documentId={doc?.id ?? null}
+                              mimeType={doc?.mimeType ?? null}
                               uploading={uploadingType === key}
                               onSelectFile={(file) => handleUploadEmployeeDoc(employee.id, type, file)}
                             />

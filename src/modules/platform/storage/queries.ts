@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, courses, documents, employees } from "@/db/schema";
 
@@ -15,6 +15,7 @@ export async function listDocumentsForEmployee(employeeId: number) {
       id: documents.id,
       type: documents.type,
       originalName: documents.originalName,
+      mimeType: documents.mimeType,
       createdAt: documents.createdAt,
     })
     .from(documents)
@@ -28,7 +29,7 @@ export async function listDocumentsForEmployee(employeeId: number) {
 // changes client-side after page load (Step 2's Add/Import panels).
 export async function listEmployeeDocumentsForCompany(companyId: number) {
   const rows = await db
-    .select({ id: documents.id, employeeId: documents.employeeId, type: documents.type, originalName: documents.originalName })
+    .select({ id: documents.id, employeeId: documents.employeeId, type: documents.type, originalName: documents.originalName, mimeType: documents.mimeType })
     .from(documents)
     .where(and(eq(documents.companyId, companyId), inArray(documents.type, EMPLOYEE_DOCUMENT_TYPES)));
   return rows
@@ -47,6 +48,7 @@ export async function listExternalCertificatesForCompany(companyId: number) {
       employeeId: documents.employeeId,
       courseId: documents.courseId,
       originalName: documents.originalName,
+      mimeType: documents.mimeType,
       issuedAt: documents.issuedAt,
       expiresAt: documents.expiresAt,
       verifiedAt: documents.verifiedAt,
@@ -57,14 +59,23 @@ export async function listExternalCertificatesForCompany(companyId: number) {
     .where(and(eq(documents.companyId, companyId), eq(documents.type, "prior_certificate"), isNotNull(documents.courseId)));
 }
 
-// Admin review queue. Pending only — a contractor is blocked from submitting
-// until these are decided, so this is the screen that unblocks them, and a
-// region-scoped platform_admin (0026) sees only their own region's.
-export async function listPendingExternalCertificates(region?: string | null) {
+// Admin review queue for employee-scoped documents: the Iqama every
+// candidate must have on file, and externally-earned certificates. Both are
+// identity/eligibility evidence an admin has to actually look at, and
+// neither belongs to a single request — the Iqama is uploaded once per
+// employee and a certificate is filed before the request it unblocks even
+// exists, so there is no request-review screen either could live on.
+//
+// Pending only (not yet verified, not yet rejected); a region-scoped
+// platform_admin (0026) sees only their own region's. LEFT JOIN on courses
+// because an Iqama has no course_id.
+export async function listPendingEmployeeDocuments(region?: string | null) {
   return db
     .select({
       id: documents.id,
+      type: documents.type,
       originalName: documents.originalName,
+      mimeType: documents.mimeType,
       issuedAt: documents.issuedAt,
       expiresAt: documents.expiresAt,
       createdAt: documents.createdAt,
@@ -79,11 +90,10 @@ export async function listPendingExternalCertificates(region?: string | null) {
     .from(documents)
     .innerJoin(employees, eq(employees.id, documents.employeeId))
     .innerJoin(companies, eq(companies.id, documents.companyId))
-    .innerJoin(courses, eq(courses.id, documents.courseId))
+    .leftJoin(courses, eq(courses.id, documents.courseId))
     .where(
       and(
-        eq(documents.type, "prior_certificate"),
-        isNotNull(documents.courseId),
+        or(eq(documents.type, "national_id"), and(eq(documents.type, "prior_certificate"), isNotNull(documents.courseId))),
         isNull(documents.verifiedAt),
         isNull(documents.rejectedAt),
         region ? eq(companies.region, region) : undefined

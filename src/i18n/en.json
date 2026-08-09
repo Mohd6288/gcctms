@@ -25,7 +25,7 @@
       "trainers": "Trainers",
       "users": "Users",
       "training": "My Training",
-      "externalCertificates": "External certificates"
+      "externalCertificates": "Employee documents"
     },
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -160,6 +160,14 @@
       "required": "Required",
       "optional": "Optional",
       "requiredDescription": "This employee has no OHS General Induction on record with us. Upload the certificate they already hold — a platform admin verifies it before the request can be submitted."
+    },
+    "preview": {
+      "show": "Preview",
+      "hide": "Hide preview",
+      "download": "Download",
+      "noPreview": "No inline preview for this file type",
+      "loading": "Loading preview…",
+      "failed": "Could not load the preview — try downloading instead."
     }
   },
   "contractor": {
@@ -652,8 +660,8 @@
       }
     },
     "externalCertificates": {
-      "title": "External certificates",
-      "subtitle": "Certificates employees already hold from outside the platform, waiting on verification. Until these are decided, the contractor cannot submit the request they unblock.",
+      "title": "Employee documents",
+      "subtitle": "Iqamas and externally-earned certificates waiting on verification. Preview each one here — a pending certificate also blocks the contractor from submitting the request it unblocks.",
       "empty": "Nothing waiting for review.",
       "regionScopedNote": "Showing the {region} region only.",
       "verify": "Verify",
@@ -664,7 +672,9 @@
       "issuedAt": "Issued",
       "expiresAt": "Valid until",
       "viewFile": "View file",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "typeIqama": "Iqama",
+      "typeCertificate": "Certificate"
     }
   },
   "superadmin": {

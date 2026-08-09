@@ -95,6 +95,7 @@ export async function getRequestLevelDocuments(requestId: number) {
       id: documents.id,
       type: documents.type,
       originalName: documents.originalName,
+      mimeType: documents.mimeType,
       verifiedAt: documents.verifiedAt,
       rejectedAt: documents.rejectedAt,
       rejectionReason: documents.rejectionReason,

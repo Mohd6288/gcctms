@@ -1,8 +1,8 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { listPendingExternalCertificates } from "@/modules/platform/storage/queries";
-import { ExternalCertificateReviewList } from "./review-list";
+import { listPendingEmployeeDocuments } from "@/modules/platform/storage/queries";
+import { EmployeeDocumentReviewList } from "./review-list";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -10,12 +10,12 @@ export function generateStaticParams() {
 
 export const dynamic = "force-dynamic";
 
-// Review queue for certificates employees already hold from outside this
-// platform. These block their contractor: a request can't be submitted until
-// the certificate that satisfies its prerequisite is verified, and the
-// certificate belongs to an employee rather than to any one request, so
-// there's no request-review screen it could have lived on.
-export default async function AdminExternalCertificatesPage({
+// Review queue for employee-scoped evidence: Iqamas and externally-earned
+// certificates. Both belong to an employee rather than to any one request —
+// an Iqama is uploaded once, and a certificate is filed before the request
+// it unblocks exists — so neither has a request-review screen it could have
+// lived on. Pending certificates also block their contractor outright.
+export default async function AdminEmployeeDocumentsPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -25,7 +25,7 @@ export default async function AdminExternalCertificatesPage({
   const t = await getTranslations("admin.externalCertificates");
 
   const context = await getContext();
-  const certificates = authorize("review_requests", context) ? await listPendingExternalCertificates(context?.region) : [];
+  const pendingDocuments = authorize("review_requests", context) ? await listPendingEmployeeDocuments(context?.region) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -34,7 +34,7 @@ export default async function AdminExternalCertificatesPage({
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
       {context?.region ? <p className="text-sm text-muted-foreground">{t("regionScopedNote", { region: context.region })}</p> : null}
-      <ExternalCertificateReviewList certificates={certificates} locale={locale} />
+      <EmployeeDocumentReviewList documents={pendingDocuments} locale={locale} />
     </div>
   );
 }

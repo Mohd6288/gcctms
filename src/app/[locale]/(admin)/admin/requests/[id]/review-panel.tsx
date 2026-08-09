@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DocumentPreview } from "@/components/documents/document-preview";
 import { useRouter } from "@/i18n/navigation";
 import {
   approveRequestAction,
@@ -25,6 +26,7 @@ interface RequestItem {
 interface RequestDoc {
   id: number;
   type: "registration_sheet" | "hrbl_request_form";
+  mimeType?: string | null;
   verifiedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
@@ -170,11 +172,7 @@ export function ReviewPanel({
                   <span>{t(type === "registration_sheet" ? "registrationSheet" : "hrblForm")}</span>
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusClass}`}>{statusLabel}</span>
-                    {doc ? (
-                      <a href={`/api/documents/${doc.id}/download`} className="text-primary hover:underline">
-                        {t("download")}
-                      </a>
-                    ) : null}
+
                     {doc && !doc.verifiedAt ? (
                       <Button type="button" size="sm" variant="outline" disabled={loading === `verify-${type}`} onClick={() => handleVerify(type)}>
                         {t("verify")}
@@ -192,6 +190,8 @@ export function ReviewPanel({
                     ) : null}
                   </div>
                 </div>
+
+                {doc ? <DocumentPreview documentId={doc.id} mimeType={doc.mimeType ?? null} /> : null}
 
                 {doc?.rejectedAt && doc.rejectionReason ? (
                   <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">

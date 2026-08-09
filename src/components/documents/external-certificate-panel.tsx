@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
+import { DocumentPreview } from "./document-preview";
 
 export interface ExternalCertificateCourse {
   id: number;
@@ -20,6 +21,7 @@ export interface ExternalCertificate {
   employeeId: number | null;
   courseId: number | null;
   originalName: string;
+  mimeType: string | null;
   issuedAt: string | null;
   expiresAt: string | null;
   verifiedAt: string | Date | null;
@@ -123,10 +125,8 @@ export function ExternalCertificatePanel({
                     {t(status)}
                   </span>
                   {cert.expiresAt ? <span className="text-[11px] text-muted-foreground">{t("expires", { date: cert.expiresAt })}</span> : null}
-                  <a href={`/api/documents/${cert.id}/download`} className="text-[11px] text-primary hover:underline">
-                    {t("viewFile")}
-                  </a>
                 </div>
+                <DocumentPreview documentId={cert.id} mimeType={cert.mimeType ?? null} fileName={cert.originalName} />
                 {status === "rejected" && cert.rejectionReason ? (
                   <p className="text-[11px] text-destructive">
                     {t("rejectionReasonLabel")}: {cert.rejectionReason}
