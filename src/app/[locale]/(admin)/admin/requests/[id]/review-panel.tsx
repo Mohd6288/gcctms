@@ -64,6 +64,15 @@ export function ReviewPanel({
     requestDocs.find((d) => d.type === "registration_sheet")?.verifiedAt != null &&
     requestDocs.find((d) => d.type === "hrbl_request_form")?.verifiedAt != null;
 
+  // approveRequest enforces this server-side, but a Server Action's error
+  // message is redacted in production builds — the admin would just get an
+  // opaque failure. The data needed to say exactly who is blocking approval
+  // is already on this page, so say it here and don't let the click happen.
+  const blockingIqamaNames = items
+    .filter((i) => i.decision !== "rejected" && !i.iqamaVerified)
+    .map((i) => (locale === "ar" ? i.employeeFullNameAr : i.employeeFullNameEn));
+  const canApprove = bothDocsVerified && blockingIqamaNames.length === 0;
+
   async function handleDecision(requestItemId: number, decision: "approved" | "rejected") {
     setError(null);
     setLoading(`decision-${requestItemId}`);
@@ -290,6 +299,9 @@ export function ReviewPanel({
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         {!bothDocsVerified ? <p className="text-xs text-muted-foreground">{t("approveBlocked")}</p> : null}
+        {blockingIqamaNames.length > 0 ? (
+          <p className="text-xs text-warning">{t("approveBlockedIqama", { employees: blockingIqamaNames.join(", ") })}</p>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <Input
             type="number"
@@ -300,7 +312,7 @@ export function ReviewPanel({
             onChange={(e) => setUnitPrice(e.target.value)}
             className="w-56"
           />
-          <Button type="button" disabled={!bothDocsVerified || loading === "approve"} onClick={handleApprove}>
+          <Button type="button" disabled={!canApprove || loading === "approve"} onClick={handleApprove}>
             {t("approve")}
           </Button>
           <Button type="button" variant="outline" onClick={() => setShowRejectForm((s) => !s)}>

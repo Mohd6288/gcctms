@@ -517,7 +517,8 @@
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again.",
         "iqamaVerified": "Iqama verified",
-        "iqamaPending": "Iqama not verified"
+        "iqamaPending": "Iqama not verified",
+        "approveBlockedIqama": "Approval is blocked until these employees have a verified Iqama: {employees}. Verify them below, or reject them on this request."
       },
       "regionScopedNote": "Showing only requests in the {region} region."
     },

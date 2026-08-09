@@ -165,7 +165,9 @@ export function ImportEmployeesPanel({
         const sheet = wb.Sheets[sheetName] ?? wb.Sheets[wb.SheetNames[0]];
         const rows: unknown[][] = utils.sheet_to_json(sheet, { header: 1, defval: "" });
         const values = source === "registration" ? parseRegistrationSheet(rows) : parseHrblForm(rows);
-        const withNationalId = values.filter((v) => v.nationalId);
+        // Both, not just an Iqama: a row carrying an ID-shaped cell but no
+        // name is a stray line from the form's layout, not a candidate.
+        const withNationalId = values.filter((v) => v.nationalId && v.fullName.trim());
         setSkippedByParse(values.length - withNationalId.length);
         // Pre-select the role for any row whose free text does name one
         // exactly (same rule the server falls back to), so the contractor

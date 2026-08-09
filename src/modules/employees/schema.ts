@@ -49,8 +49,12 @@ export type UpdateEmployeeInput = z.infer<typeof UpdateEmployeeInput>;
 // row) — importEmployees reports the real per-row reason a row was skipped,
 // matching the validated prototype's invalid/duplicate row counts.
 export const ImportEmployeeRow = z.object({
-  fullName: z.string().min(1),
-  nationalId: z.string().min(1),
+  // Deliberately not .min(1): a spreadsheet row with an Iqama but no name is
+  // a normal thing to find in a half-filled form, and rejecting it at the
+  // boundary threw a ZodError that failed the ENTIRE import with an opaque
+  // production error. importEmployees skips such rows individually instead.
+  fullName: z.string(),
+  nationalId: z.string(),
   jobTitleText: z.string().optional(),
   jobRoleId: z.number().int().positive().optional(),
   nationality: z.string().optional(),

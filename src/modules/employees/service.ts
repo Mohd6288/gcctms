@@ -148,6 +148,10 @@ export async function importEmployees(context: AuthContext, companyId: number, r
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
+    if (!row.fullName.trim()) {
+      skipped.push({ row: i + 1, reason: "This row has no name" });
+      continue;
+    }
     if (!/^\d{10}$/.test(row.nationalId)) {
       skipped.push({ row: i + 1, reason: "Invalid Iqama number" });
       continue;
@@ -178,8 +182,8 @@ export async function importEmployees(context: AuthContext, companyId: number, r
         .insert(employees)
         .values({
           companyId,
-          fullNameEn: row.fullName,
-          fullNameAr: row.fullName,
+          fullNameEn: row.fullName.trim(),
+          fullNameAr: row.fullName.trim(),
           nationalIdEnc: encryptNationalId(row.nationalId),
           nationalIdHash: hashNationalId(row.nationalId),
           jobRoleId,

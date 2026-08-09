@@ -100,6 +100,22 @@ describe("importEmployees — job role resolution from real intake forms", () =>
     expect(result.created).toHaveLength(1);
   });
 
+  // A half-filled form leaves rows with an ID-shaped cell and no name. The
+  // schema used to require fullName.min(1), so one such row threw a ZodError
+  // at the action boundary and failed the WHOLE import — surfacing in
+  // production as React error 441, with the real cause visible only in
+  // server logs.
+  it("skips a nameless row instead of failing the entire import", async () => {
+    const result = await importEmployees(contractorCtx, companyId, [
+      { fullName: "", nationalId: "2311100999", jobTitleText: "", jobRoleId: electricianRoleId },
+      { fullName: "Valid Alongside Nameless", nationalId: "2311100998", jobTitleText: "", jobRoleId: electricianRoleId },
+    ]);
+
+    expect(result.created).toHaveLength(1);
+    expect(result.created[0].fullName).toBe("Valid Alongside Nameless");
+    expect(result.skipped).toEqual([{ row: 1, reason: "This row has no name" }]);
+  });
+
   it("rejects a job role the caller doesn't get to choose — an id outside the company's allowed roles", async () => {
     const [otherRole] = await db
       .insert(jobRoles)
