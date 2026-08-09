@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
 import { uploadPaymentReceiptAction } from "@/modules/payments/actions";
+import { DocumentPreview } from "@/components/documents/document-preview";
 
 interface Payment {
   id: number;
@@ -14,6 +15,7 @@ interface Payment {
   totalAmount: string | null;
   status: "uploaded" | "verified" | "rejected";
   documentId: number | null;
+  documentMimeType: string | null;
   rejectionReason: string | null;
 }
 
@@ -77,9 +79,7 @@ export function PaymentPanel({ requestId, payment }: { requestId: number; paymen
         ) : null}
 
         {payment.documentId ? (
-          <a href={`/api/documents/${payment.documentId}/download`} className="text-sm text-primary hover:underline">
-            {t("download")}
-          </a>
+          <DocumentPreview documentId={payment.documentId} mimeType={payment.documentMimeType} />
         ) : (
           <p className="text-sm text-muted-foreground">{t("noReceiptYet")}</p>
         )}

@@ -86,6 +86,7 @@ export default async function AdminRequestDetailPage({
             totalAmount: payment.totalAmount,
             status: payment.status as "uploaded" | "verified" | "rejected",
             documentId: payment.documentId,
+            documentMimeType: payment.documentMimeType,
           }}
         />
       ) : null}

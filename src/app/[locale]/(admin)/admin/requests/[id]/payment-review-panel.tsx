@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
 import { rejectPaymentAction, verifyPaymentAction } from "@/modules/payments/actions";
+import { DocumentPreview } from "@/components/documents/document-preview";
 
 interface Payment {
   id: number;
@@ -15,6 +16,7 @@ interface Payment {
   totalAmount: string | null;
   status: "uploaded" | "verified" | "rejected";
   documentId: number | null;
+  documentMimeType: string | null;
 }
 
 export function PaymentReviewPanel({ payment }: { payment: Payment }) {
@@ -80,10 +82,11 @@ export function PaymentReviewPanel({ payment }: { payment: Payment }) {
         ) : null}
         <p className="text-sm text-muted-foreground">{statusLabel}</p>
 
+        {/* Verifying a SADAD receipt means reading the reference and amount
+            off it — doing that from a download link meant leaving the page
+            that has the Verify button. */}
         {payment.documentId ? (
-          <a href={`/api/documents/${payment.documentId}/download`} className="text-sm text-primary hover:underline">
-            {t("download")}
-          </a>
+          <DocumentPreview documentId={payment.documentId} mimeType={payment.documentMimeType} />
         ) : (
           <p className="text-sm text-muted-foreground">{t("noReceiptYet")}</p>
         )}

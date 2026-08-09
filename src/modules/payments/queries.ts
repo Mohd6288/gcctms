@@ -2,7 +2,7 @@
 import "server-only";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, courses, payments, trainingRequests } from "@/db/schema";
+import { companies, courses, documents, payments, trainingRequests } from "@/db/schema";
 
 export async function getPaymentForRequest(requestId: number) {
   const [payment] = await db
@@ -17,11 +17,13 @@ export async function getPaymentForRequest(requestId: number) {
       vatRate: payments.vatRate,
       totalAmount: payments.totalAmount,
       documentId: payments.documentId,
+      documentMimeType: documents.mimeType,
       status: payments.status,
       rejectionReason: payments.rejectionReason,
       verifiedAt: payments.verifiedAt,
     })
     .from(payments)
+    .leftJoin(documents, eq(documents.id, payments.documentId))
     .where(eq(payments.requestId, requestId));
   return payment ?? null;
 }

@@ -80,6 +80,7 @@ export default async function RequestDetailPage({
               totalAmount: payment.totalAmount,
               status: payment.status as "uploaded" | "verified" | "rejected",
               documentId: payment.documentId,
+              documentMimeType: payment.documentMimeType,
               rejectionReason: payment.rejectionReason,
             }}
           />
