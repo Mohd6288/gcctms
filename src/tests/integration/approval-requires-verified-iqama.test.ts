@@ -7,6 +7,7 @@ import { encryptNationalId, hashNationalId } from "../../modules/platform/securi
 import type { AuthContext } from "../../modules/platform/auth/shared";
 import { approveRequest, createDraftRequest, setEmployeeDecision, submitRequest, syncRequestItems, verifyRequestDocument } from "../../modules/requests/service";
 import { uploadDocument, verifyEmployeeDocument } from "../../modules/platform/storage/service";
+import { getRequestItems } from "../../modules/requests/queries";
 import { grantOhsInduction } from "../helpers/ohs-induction";
 
 // An Iqama is the only proof that the person being certified is who the
@@ -116,6 +117,19 @@ describe("approveRequest — every billable employee needs a verified Iqama", ()
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.delete(profiles).where(eq(profiles.userId, adminId));
     await db.execute(sql`delete from auth.users where id in (${ownerId}, ${adminId})`);
+  });
+
+  // sql<T> is an unchecked ASSERTION and postgres.js returns bigint as a
+  // string, so this field's declared `number` type proves nothing at compile
+  // time. It reached verifyEmployeeDocumentAction as "123" once already and
+  // turned the Verify button into a generic failure.
+  it("hands the review panel a real number for the Iqama document id", async () => {
+    const requestId = await driveToSubmitted([verifiedEmployeeId]);
+    const items = await getRequestItems(requestId);
+
+    expect(items).toHaveLength(1);
+    expect(typeof items[0].iqamaDocumentId).toBe("number");
+    expect(typeof items[0].iqamaVerified).toBe("boolean");
   });
 
   it("blocks approval while a billable employee's Iqama is still unverified", async () => {

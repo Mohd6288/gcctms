@@ -84,8 +84,16 @@ export async function getRequestItems(requestId: number) {
       // approveRequest blocks until every billable employee's Iqama is
       // verified, so the reviewer needs to see that per row rather than
       // discovering it as an error after clicking Approve.
+      //
+      // ::int is load-bearing, not decoration. sql<T> is an unchecked type
+      // ASSERTION and postgres.js hands back a Postgres bigint as a STRING
+      // (same trap the reporting module documents above its count() helpers)
+      // — so without the cast this "number" reached
+      // verifyEmployeeDocumentAction as "123", failed its z.number() parse,
+      // and the admin got a generic "something went wrong" instead of a
+      // verified Iqama.
       iqamaDocumentId: sql<number | null>`(
-        select d.id from documents d
+        select d.id::int from documents d
         where d.employee_id = ${employees.id} and d.type = 'national_id'
         order by d.id desc limit 1
       )`,

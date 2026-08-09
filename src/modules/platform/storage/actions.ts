@@ -47,12 +47,15 @@ export async function uploadDocumentAction(formData: FormData) {
 export async function verifyEmployeeDocumentAction(documentId: number) {
   const context = await getContext();
   if (!context) throw new Error("Not authorized");
-  await verifyEmployeeDocument(context, z.number().int().positive().parse(documentId));
+  // coerce, not z.number(): document ids reach here from the browser, and a
+  // bigint that arrived as a string shouldn't be a 500 — see the ::int note
+  // in requests/queries.ts.
+  await verifyEmployeeDocument(context, z.coerce.number().int().positive().parse(documentId));
 }
 
 export async function rejectEmployeeDocumentAction(documentId: number, reason: string) {
   const context = await getContext();
   if (!context) throw new Error("Not authorized");
-  const input = z.object({ documentId: z.number().int().positive(), reason: z.string().trim().min(1).max(500) }).parse({ documentId, reason });
+  const input = z.object({ documentId: z.coerce.number().int().positive(), reason: z.string().trim().min(1).max(500) }).parse({ documentId, reason });
   await rejectEmployeeDocument(context, input.documentId, input.reason);
 }
