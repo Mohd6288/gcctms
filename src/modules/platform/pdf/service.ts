@@ -7,7 +7,6 @@
 import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { chromium } from "playwright";
 import QRCode from "qrcode";
 
 const ROOT = process.cwd();
@@ -126,6 +125,14 @@ async function buildHtml(data: CertificatePdfData): Promise<string> {
 
 export async function renderCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
   const html = await buildHtml(data);
+  // Imported here, not at module scope. certification/service.ts imports
+  // this file, and the admin class screen imports that — so a top-level
+  // `import { chromium } from "playwright"` put a ~300MB browser driver in
+  // the module graph of a page that only enrols candidates. On Vercel that
+  // module fails to resolve at all ("Cannot find module
+  // playwright-core/browsers.json"), which took down the whole route with a
+  // minified React 441 instead of failing only the PDF it's actually for.
+  const { chromium } = await import("playwright");
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 2000, height: 1414 } });
