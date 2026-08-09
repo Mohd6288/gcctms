@@ -514,7 +514,9 @@
         "requestInfoMessageLabel": "Message to contractor",
         "requestInfoConfirm": "Send",
         "cancel": "Cancel",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "iqamaVerified": "Iqama verified",
+        "iqamaPending": "Iqama not verified"
       },
       "regionScopedNote": "Showing only requests in the {region} region."
     },

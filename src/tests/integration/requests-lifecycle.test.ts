@@ -16,7 +16,7 @@ import {
   updateDraftRequest,
   verifyRequestDocument,
 } from "../../modules/requests/service";
-import { uploadDocument } from "../../modules/platform/storage/service";
+import { uploadDocument, verifyEmployeeDocument } from "../../modules/platform/storage/service";
 
 // Full training-request lifecycle against the real local Supabase Postgres —
 // Phase 4 acceptance criteria: every legal transition works, per-employee
@@ -100,18 +100,21 @@ describe("training request lifecycle — real DB", () => {
       })
       .returning({ id: employees.id });
     employeeWithDocId = empWithDoc.id;
-    await db.insert(documents).values({
-      companyId,
-      employeeId: employeeWithDocId,
-      type: "national_id",
-      bucket: "documents",
-      objectKey: randomUUID(),
-      originalName: "id.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 10,
-      checksumSha256: "0".repeat(64),
-      uploadedBy: ownerId,
-    });
+    const [iqamaDoc] = await db
+      .insert(documents)
+      .values({
+        companyId,
+        employeeId: employeeWithDocId,
+        type: "national_id",
+        bucket: "documents",
+        objectKey: randomUUID(),
+        originalName: "id.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 10,
+        checksumSha256: "0".repeat(64),
+        uploadedBy: ownerId,
+      })
+      .returning({ id: documents.id });
     // Every course is gated on the OHS General Induction — without it these
     // lifecycle cases fail at submit for a reason none of them is testing.
     await grantOhsInduction(companyId, employeeWithDocId, ownerId);
@@ -131,6 +134,10 @@ describe("training request lifecycle — real DB", () => {
 
     contractorCtx = { userId: ownerId, role: "contractor_manager", companyId, trainerId: null, region: null, aal: "aal2" };
     adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
+
+    // approveRequest requires every billable employee's Iqama to be verified,
+    // not merely uploaded — see approval-requires-verified-iqama.test.ts.
+    await verifyEmployeeDocument(adminCtx, iqamaDoc.id);
   });
 
   afterAll(async () => {

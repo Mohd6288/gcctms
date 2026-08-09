@@ -1,6 +1,6 @@
 // requests module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, courses, documents, employees, requestItems, trainingRequests } from "@/db/schema";
 
@@ -81,6 +81,23 @@ export async function getRequestItems(requestId: number) {
       status: requestItems.status,
       decision: requestItems.decision,
       decisionReason: requestItems.decisionReason,
+      // approveRequest blocks until every billable employee's Iqama is
+      // verified, so the reviewer needs to see that per row rather than
+      // discovering it as an error after clicking Approve.
+      iqamaDocumentId: sql<number | null>`(
+        select d.id from documents d
+        where d.employee_id = ${employees.id} and d.type = 'national_id'
+        order by d.id desc limit 1
+      )`,
+      iqamaMimeType: sql<string | null>`(
+        select d.mime_type from documents d
+        where d.employee_id = ${employees.id} and d.type = 'national_id'
+        order by d.id desc limit 1
+      )`,
+      iqamaVerified: sql<boolean>`exists (
+        select 1 from documents d
+        where d.employee_id = ${employees.id} and d.type = 'national_id' and d.verified_at is not null
+      )`,
     })
     .from(requestItems)
     .innerJoin(employees, eq(requestItems.employeeId, employees.id))

@@ -26,7 +26,7 @@ import {
   syncRequestItems,
   verifyRequestDocument,
 } from "../../modules/requests/service";
-import { uploadDocument } from "../../modules/platform/storage/service";
+import { uploadDocument, verifyEmployeeDocument } from "../../modules/platform/storage/service";
 import { rejectPayment, uploadPaymentReceipt, verifyPayment } from "../../modules/payments/service";
 
 // Full SADAD payment lifecycle against the real local Supabase Postgres —
@@ -133,24 +133,30 @@ describe("payment lifecycle — real DB", () => {
       })
       .returning({ id: employees.id });
     employeeId = employee.id;
-    await db.insert(documents).values({
-      companyId: companyAId,
-      employeeId,
-      type: "national_id",
-      bucket: "documents",
-      objectKey: randomUUID(),
-      originalName: "id.pdf",
-      mimeType: "application/pdf",
-      sizeBytes: 10,
-      checksumSha256: "0".repeat(64),
-      uploadedBy: ownerAId,
-    });
+    const [iqamaDoc] = await db
+      .insert(documents)
+      .values({
+        companyId: companyAId,
+        employeeId,
+        type: "national_id",
+        bucket: "documents",
+        objectKey: randomUUID(),
+        originalName: "id.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 10,
+        checksumSha256: "0".repeat(64),
+        uploadedBy: ownerAId,
+      })
+      .returning({ id: documents.id });
     // Every course is gated on the OHS General Induction.
     await grantOhsInduction(companyAId, employeeId, ownerAId);
 
     contractorA = { userId: ownerAId, role: "contractor_manager", companyId: companyAId, trainerId: null, region: null, aal: "aal2" };
     contractorB = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, region: null, aal: "aal2" };
     adminCtx = { userId: adminId, role: "platform_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
+
+    // approveRequest requires a verified Iqama for every billable employee.
+    await verifyEmployeeDocument(adminCtx, iqamaDoc.id);
   });
 
   afterAll(async () => {

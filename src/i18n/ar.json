@@ -514,7 +514,9 @@
         "requestInfoMessageLabel": "رسالة إلى المقاول",
         "requestInfoConfirm": "إرسال",
         "cancel": "إلغاء",
-        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "iqamaVerified": "الإقامة معتمدة",
+        "iqamaPending": "الإقامة غير معتمدة"
       },
       "regionScopedNote": "تُعرض هنا طلبات منطقة {region} فقط."
     },

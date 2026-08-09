@@ -21,6 +21,9 @@ interface RequestItem {
   employeeFullNameAr: string;
   decision: string;
   decisionReason: string | null;
+  iqamaDocumentId: number | null;
+  iqamaMimeType: string | null;
+  iqamaVerified: boolean;
 }
 
 interface RequestDoc {
@@ -233,10 +236,26 @@ export function ReviewPanel({
         <div className="mt-2 flex flex-col gap-2">
           {items.map((item) => (
             <div key={item.id} className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span>{locale === "ar" ? item.employeeFullNameAr : item.employeeFullNameEn}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>{locale === "ar" ? item.employeeFullNameAr : item.employeeFullNameEn}</span>
+                  {/* Approval blocks on this for anyone not rejected, so it
+                      belongs next to the name rather than behind an error. */}
+                  {item.decision === "rejected" ? null : (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        item.iqamaVerified ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                      }`}
+                    >
+                      {item.iqamaVerified ? t("iqamaVerified") : t("iqamaPending")}
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-muted-foreground">{decisionLabel[item.decision] ?? item.decision}</span>
               </div>
+              {item.iqamaDocumentId && !item.iqamaVerified && item.decision !== "rejected" ? (
+                <DocumentPreview documentId={item.iqamaDocumentId} mimeType={item.iqamaMimeType} />
+              ) : null}
               <div className="flex items-center gap-2">
                 <Input
                   placeholder={t("reasonPlaceholder")}

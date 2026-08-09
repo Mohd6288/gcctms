@@ -1,6 +1,6 @@
 // requests module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
 import { employeesSatisfyingPrerequisites, listCourseJobRoleIds } from "@/modules/catalog/queries";
@@ -312,6 +312,29 @@ export async function approveRequest(context: AuthContext, requestId: number, un
       await queueNotification({ type: "request.rejected", recipientEmail: company.contactEmail, data: { requestId } });
     }
     return { id: requestId, status: "rejected" as const };
+  }
+
+  // Every employee about to be invoiced and scheduled needs their Iqama
+  // actually looked at, not merely uploaded. Submission only checks that the
+  // file exists (the contractor can't verify their own document), so
+  // approval is where the check has to land — the last point before an
+  // invoice is raised and a seat is booked. Rejected employees are excluded:
+  // they aren't being trained, so their ID is moot.
+  const billableEmployeeIds = billable.map((i) => i.employeeId);
+  const verifiedIqamas = await db
+    .select({ employeeId: documents.employeeId })
+    .from(documents)
+    .where(and(inArray(documents.employeeId, billableEmployeeIds), eq(documents.type, "national_id"), isNotNull(documents.verifiedAt)));
+  const verifiedIds = new Set(verifiedIqamas.map((d) => d.employeeId));
+  const unverified = billableEmployeeIds.filter((id) => !verifiedIds.has(id));
+  if (unverified.length > 0) {
+    const names = await db
+      .select({ fullNameEn: employees.fullNameEn })
+      .from(employees)
+      .where(inArray(employees.id, unverified));
+    throw new Error(
+      `Every employee needs a verified Iqama before approval. Still unverified: ${names.map((n) => n.fullNameEn).join(", ")}. Review them under Employee documents, or reject them on this request.`
+    );
   }
 
   assertTransition("submitted", "payment_pending");
