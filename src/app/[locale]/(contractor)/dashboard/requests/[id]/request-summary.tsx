@@ -17,6 +17,7 @@ interface RequestSummaryProps {
     id: number;
     type: "registration_sheet" | "hrbl_request_form";
     originalName: string;
+    mimeType?: string | null;
     verifiedAt: string | null;
     rejectedAt: string | null;
     rejectionReason: string | null;

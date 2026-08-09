@@ -49,6 +49,7 @@ interface RequestDocInfo {
   id: number;
   type: "registration_sheet" | "hrbl_request_form";
   originalName: string;
+  mimeType: string | null;
   verifiedAt: string | null;
   rejectedAt?: string | null;
   rejectionReason?: string | null;
@@ -218,7 +219,7 @@ export function RequestWizard({
       const uploaded = await uploadDocumentAction(formData);
       setRequestDocs((prev) => [
         ...prev.filter((d) => d.type !== type),
-        { id: uploaded.id, type, originalName: file.name, verifiedAt: null, rejectedAt: null, rejectionReason: null },
+        { id: uploaded.id, type, originalName: file.name, mimeType: file.type || null, verifiedAt: null, rejectedAt: null, rejectionReason: null },
       ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("genericError"));
@@ -541,6 +542,7 @@ export function RequestWizard({
                   status={status}
                   fileName={doc?.originalName}
                   documentId={doc?.id ?? null}
+                  mimeType={doc?.mimeType ?? null}
                   rejectionReason={doc?.rejectionReason}
                   templateUrl={isRegistrationSheet ? "/documents/Registration-sheet.xlsx" : "/documents/HRBL_0004_FO_001.xlsx"}
                   templateLabel={tDocs("downloadTemplate")}

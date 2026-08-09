@@ -167,7 +167,8 @@
       "download": "Download",
       "noPreview": "No inline preview for this file type",
       "loading": "Loading preview…",
-      "failed": "Could not load the preview — try downloading instead."
+      "failed": "Could not load the preview — try downloading instead.",
+      "truncated": "Showing the first {rows} rows and {cols} columns — download the file for the rest."
     }
   },
   "contractor": {

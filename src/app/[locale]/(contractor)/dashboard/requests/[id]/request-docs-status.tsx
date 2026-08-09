@@ -12,6 +12,7 @@ interface RequestDoc {
   id: number;
   type: "registration_sheet" | "hrbl_request_form";
   originalName: string;
+  mimeType?: string | null;
   verifiedAt: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
@@ -77,7 +78,8 @@ export function RequestDocsStatus({
             acceptHint={tDocs("acceptHintXlsx")}
             status={status}
             fileName={doc.originalName}
-            downloadUrl={`/api/documents/${doc.id}/download`}
+            documentId={doc.id}
+            mimeType={doc.mimeType ?? null}
             rejectionReason={doc.rejectionReason}
             uploading={uploadingType === doc.type}
             onSelectFile={(file) => handleReupload(doc.type, file)}
