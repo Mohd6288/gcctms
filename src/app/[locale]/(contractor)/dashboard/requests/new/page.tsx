@@ -5,6 +5,7 @@ import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses } from "@/modules/requests/queries";
 import { listActiveJobRoles, listEmployeesForCompany } from "@/modules/employees/queries";
 import { listEmployeeDocumentsForCompany, listExternalCertificatesForCompany } from "@/modules/platform/storage/queries";
+import { listActiveCities } from "@/modules/catalog/queries";
 import { RequestWizard } from "../[id]/request-wizard";
 
 export function generateStaticParams() {
@@ -43,6 +44,7 @@ export default async function NewRequestPage({
   // Sequential, not a fifth entry in the Promise.all above — concurrent
   // Drizzle calls stall against the pooler under load.
   const externalCertificates = await listExternalCertificatesForCompany(context.companyId);
+  const cities = await listActiveCities();
 
   return (
     <div className="flex flex-1 items-center justify-center p-6">
@@ -68,6 +70,7 @@ export default async function NewRequestPage({
         initialRequestDocs={[]}
         employeeDocuments={employeeDocuments}
         externalCertificates={externalCertificates}
+        cities={cities}
         jobRoles={jobRoles}
         locale={locale}
       />

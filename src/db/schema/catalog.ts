@@ -129,3 +129,22 @@ export const trainerCourses = pgTable(
   },
   (t) => [primaryKey({ columns: [t.trainerId, t.courseId] }), index("trainer_courses_course_id_idx").on(t.courseId)]
 );
+
+// GCC Lab's training-institute cities (0032). Replaces the hardcoded
+// REGION_CITIES map so super_admin can add one without a deploy;
+// training_requests.preferred_city is a foreign key onto name.
+export const cities = pgTable(
+  "cities",
+  {
+    name: text("name").primaryKey(),
+    region: text("region").notNull(),
+    nameAr: text("name_ar").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+    updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("cities_region_idx").on(t.region),
+    check("cities_region_check", sql`${t.region} in ('Central', 'East', 'West', 'South')`),
+  ]
+);

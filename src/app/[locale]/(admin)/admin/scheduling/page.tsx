@@ -38,9 +38,18 @@ export default async function AdminSchedulingPage({
     REGIONS.map((region) => [region, pooled.filter((p) => !activeIds.has(p.requestItemId) && p.assignedRegion === region)])
   ) as Record<(typeof REGIONS)[number], typeof pooled>;
 
+  // A region can have several admins since 0030, so collect every name
+  // rather than letting Object.fromEntries keep only the last one — that
+  // would quietly show one admin and hide the rest.
   const adminNameById = new Map(admins.map((a) => [a.userId, a.fullName]));
+  const namesByRegion = new Map<string, string[]>();
+  for (const a of assignments) {
+    const name = a.adminUserId ? adminNameById.get(a.adminUserId) : null;
+    if (!name) continue;
+    namesByRegion.set(a.region, [...(namesByRegion.get(a.region) ?? []), name]);
+  }
   const adminNameByRegion = Object.fromEntries(
-    assignments.map((a) => [a.region, a.adminUserId ? (adminNameById.get(a.adminUserId) ?? null) : null])
+    REGIONS.map((region) => [region, namesByRegion.get(region)?.join(", ") ?? null])
   ) as Record<string, string | null>;
 
   return (

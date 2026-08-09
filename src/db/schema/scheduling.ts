@@ -29,7 +29,7 @@ export const classes = pgTable(
     index("classes_trainer_id_idx").on(t.trainerId),
     index("classes_company_id_idx").on(t.companyId),
     index("classes_status_idx").on(t.status),
-    check("classes_region_check", sql`${t.region} in ('North', 'South', 'East', 'West', 'Central')`),
+    check("classes_region_check", sql`${t.region} in ('Central', 'East', 'West', 'South')`),
     check("classes_type_check", sql`${t.type} in ('private', 'public')`),
     check("classes_status_check", sql`${t.status} in ('scheduled', 'in_progress', 'completed', 'cancelled')`),
     // classes_private_requires_company and classes_trainer_no_overlap (the
@@ -42,12 +42,15 @@ export const regionalAdminAssignments = pgTable(
   "regional_admin_assignments",
   {
     region: text("region").notNull(),
-    adminUserId: uuid("admin_user_id"),
+    // Keyed on the admin since 0030: one region per admin, any number of
+    // admins per region.
+    adminUserId: uuid("admin_user_id").notNull(),
     assignedAt: timestamptz("assigned_at").notNull().defaultNow(),
   },
   (t) => [
-    primaryKey({ columns: [t.region] }),
-    check("regional_admin_assignments_region_check", sql`${t.region} in ('North', 'South', 'East', 'West', 'Central')`),
+    primaryKey({ columns: [t.adminUserId] }),
+    index("regional_admin_assignments_region_idx").on(t.region),
+    check("regional_admin_assignments_region_check", sql`${t.region} in ('Central', 'East', 'West', 'South')`),
   ]
 );
 

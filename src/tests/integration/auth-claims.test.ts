@@ -118,4 +118,27 @@ describe("custom_access_token_hook — real login resolves correct claims for al
     expect(claims.company_id).toBe(companyId);
     expect(claims.trainer_id).toBeUndefined();
   });
+
+  // profiles.active was shown in the super_admin users screen and filtered
+  // on in listPlatformAdmins, but nothing checked it at sign-in — so
+  // deactivating an account did nothing at all. Withholding the role claim
+  // (0031) is what makes it real: they can still authenticate, but
+  // getContext() returns null, requireRole() bounces them, and every RLS
+  // policy keyed on auth_role() stops matching.
+  it("deactivated profile: signs in but gets no role claim, so authorizes as nobody", async () => {
+    const email = `platform-admin-${suffix}@example.com`;
+    await db.update(profiles).set({ active: false }).where(eq(profiles.userId, userIds.platformAdmin));
+    try {
+      const claims = await signInAndGetClaims(email);
+      expect(claims.user_role).toBeUndefined();
+      expect(claims.company_id).toBeUndefined();
+      expect(claims.region).toBeUndefined();
+    } finally {
+      await db.update(profiles).set({ active: true }).where(eq(profiles.userId, userIds.platformAdmin));
+    }
+
+    // Reactivating restores it, so this is a switch and not a one-way door.
+    const restored = await signInAndGetClaims(email);
+    expect(restored.user_role).toBe("platform_admin");
+  });
 });

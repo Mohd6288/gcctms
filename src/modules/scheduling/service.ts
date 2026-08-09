@@ -50,21 +50,18 @@ export async function autoAssignPooledByPreference(context: AuthContext) {
 
 // Regional admin assignment is super_admin-only (manage_users capability),
 // distinct from schedule_classes — matches roles-and-workflows.md. An admin
-// has at most one region (0026_regional_admin_scoping.sql's unique
-// constraint on admin_user_id), so moving them to a new one first clears
-// whichever region they previously held; region: null just clears it.
+// holds at most one region, but a region can have any number of admins
+// (0030_many_admins_per_region.sql moved the primary key onto the admin).
+// region: null clears the assignment, which means UNSCOPED — the admin then
+// sees every region, per auth_region()'s null semantics. Delete-then-insert
+// rather than an upsert on region: region stopped being unique, so a
+// region-targeted ON CONFLICT no longer has an arbiter to match.
 export async function setAdminRegion(context: AuthContext, input: SetAdminRegionInput) {
   if (!authorize("manage_users", context)) throw new Error("Not authorized");
   await db.transaction(async (tx) => {
-    await tx
-      .update(regionalAdminAssignments)
-      .set({ adminUserId: null })
-      .where(eq(regionalAdminAssignments.adminUserId, input.adminUserId));
+    await tx.delete(regionalAdminAssignments).where(eq(regionalAdminAssignments.adminUserId, input.adminUserId));
     if (input.region) {
-      await tx
-        .insert(regionalAdminAssignments)
-        .values({ region: input.region, adminUserId: input.adminUserId })
-        .onConflictDoUpdate({ target: regionalAdminAssignments.region, set: { adminUserId: input.adminUserId, assignedAt: new Date() } });
+      await tx.insert(regionalAdminAssignments).values({ region: input.region, adminUserId: input.adminUserId });
     }
   });
 }

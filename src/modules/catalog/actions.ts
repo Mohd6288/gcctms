@@ -6,6 +6,8 @@ import { employees } from "@/db/schema";
 import { getContext } from "@/modules/platform/auth/service";
 import { getEmployeeEligibilitySnapshot } from "./queries";
 import {
+  CreateCityInput,
+  SetCityActiveInput,
   CreateCourseInput,
   CreateExamInput,
   CreatePricingInput,
@@ -19,6 +21,8 @@ import {
   UpdateTrainingCenterInput,
 } from "./schema";
 import {
+  createCity,
+  setCityActive,
   createCourse,
   createExam,
   createPricing,
@@ -87,6 +91,16 @@ export async function createPricingAction(input: CreatePricingInput) {
 export async function endPricingAction(pricingId: number, effectiveTo: string) {
   const context = await requireContext();
   return endPricing(context, pricingId, effectiveTo);
+}
+
+export async function createCityAction(input: CreateCityInput) {
+  const context = await requireContext();
+  return createCity(context, CreateCityInput.parse(input));
+}
+
+export async function setCityActiveAction(input: SetCityActiveInput) {
+  const context = await requireContext();
+  return setCityActive(context, SetCityActiveInput.parse(input));
 }
 
 export async function createTrainerAction(input: CreateTrainerInput) {

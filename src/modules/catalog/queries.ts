@@ -8,6 +8,7 @@ import {
   companies,
   courseJobRoles,
   coursePrerequisites,
+  cities,
   courses,
   documents,
   employees,
@@ -196,6 +197,24 @@ export async function getEmployeeEligibilitySnapshot(courseId: number, employeeI
 
 export async function listAllJobRoles() {
   return db.select({ id: jobRoles.id, nameEn: jobRoles.nameEn, nameAr: jobRoles.nameAr }).from(jobRoles).orderBy(asc(jobRoles.nameEn));
+}
+
+export async function listCities() {
+  return db
+    .select({ name: cities.name, region: cities.region, nameAr: cities.nameAr, active: cities.active })
+    .from(cities)
+    .orderBy(asc(cities.region), asc(cities.name));
+}
+
+// Only active ones reach the request wizard: a deactivated city keeps its
+// historical requests intact (the FK is ON DELETE RESTRICT) but must not be
+// offered for new ones.
+export async function listActiveCities() {
+  return db
+    .select({ name: cities.name, region: cities.region, nameAr: cities.nameAr })
+    .from(cities)
+    .where(eq(cities.active, true))
+    .orderBy(asc(cities.region), asc(cities.name));
 }
 
 export async function listPricingForCourse(courseId: number) {

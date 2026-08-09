@@ -73,6 +73,21 @@ export const CreatePricingInput = z.object({
 });
 export type CreatePricingInput = z.infer<typeof CreatePricingInput>;
 
+// name is the primary key and the FK target from training_requests, so it
+// is not editable after creation — renaming would cascade through history.
+export const CreateCityInput = z.object({
+  name: z.string().trim().min(1).max(60),
+  nameAr: z.string().trim().min(1).max(60),
+  region: z.enum(REGIONS),
+});
+export type CreateCityInput = z.infer<typeof CreateCityInput>;
+
+export const SetCityActiveInput = z.object({
+  name: z.string().trim().min(1),
+  active: z.boolean(),
+});
+export type SetCityActiveInput = z.infer<typeof SetCityActiveInput>;
+
 export const CreateTrainerInput = z.object({
   email: z.string().email(),
   fullName: z.string().min(1),

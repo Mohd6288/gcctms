@@ -163,22 +163,38 @@ describe("regional admin scoping — real DB", () => {
     ).resolves.toBeTruthy();
   });
 
-  it("setAdminRegion moves an admin to a new region, clearing the old one (at most one region per admin)", async () => {
+  it("moves an admin between regions, holding at most one at a time", async () => {
     const superAdminCtx: AuthContext = { userId: randomUUID(), role: "super_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
 
     await setAdminRegion(superAdminCtx, { adminUserId: adminId, region: "East" });
-    let [assignment] = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.region, "East"));
-    expect(assignment.adminUserId).toBe(adminId);
+    let rows = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.adminUserId, adminId));
+    expect(rows.map((r) => r.region)).toEqual(["East"]);
 
     await setAdminRegion(superAdminCtx, { adminUserId: adminId, region: "Central" });
-    [assignment] = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.region, "East"));
-    expect(assignment.adminUserId).toBeNull(); // cleared from East
-    const [centralAssignment] = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.region, "Central"));
-    expect(centralAssignment.adminUserId).toBe(adminId); // now on Central
+    rows = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.adminUserId, adminId));
+    expect(rows.map((r) => r.region)).toEqual(["Central"]); // moved, not duplicated
 
     await setAdminRegion(superAdminCtx, { adminUserId: adminId, region: null });
-    const [clearedCentral] = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.region, "Central"));
-    expect(clearedCentral.adminUserId).toBeNull();
+    rows = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.adminUserId, adminId));
+    expect(rows).toEqual([]); // unassigned means no row at all
+  });
+
+  // The whole point of 0030: region used to be the primary key, so the
+  // platform could never have more regional admins than regions, and two
+  // admins could never share one.
+  it("puts several admins in the same region", async () => {
+    const superAdminCtx: AuthContext = { userId: randomUUID(), role: "super_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
+    const secondAdminId = randomUUID();
+    await db.execute(sql`insert into auth.users (id) values (${secondAdminId})`);
+
+    await setAdminRegion(superAdminCtx, { adminUserId: adminId, region: "Central" });
+    await setAdminRegion(superAdminCtx, { adminUserId: secondAdminId, region: "Central" });
+
+    const central = await db.select().from(regionalAdminAssignments).where(eq(regionalAdminAssignments.region, "Central"));
+    expect(central.map((r) => r.adminUserId).sort()).toEqual([adminId, secondAdminId].sort());
+
+    await db.delete(regionalAdminAssignments).where(eq(regionalAdminAssignments.adminUserId, secondAdminId));
+    await db.execute(sql`delete from auth.users where id = ${secondAdminId}`);
   });
 
   it("setAdminRegion rejects a non-super_admin caller", async () => {

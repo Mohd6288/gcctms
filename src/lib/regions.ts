@@ -12,21 +12,11 @@
 export const REGIONS = ["Central", "East", "West", "South"] as const;
 export type Region = (typeof REGIONS)[number];
 
-// GCC Lab's own training institutes, from HRBL_0004_FO_001's
-// "مكان تقديم الدورة" list: معهد تدريب الرياض / جدة / أبها / الدمام. A course
-// delivered anywhere else is an on-site or external-institute booking, which
-// the request's training type already covers — so this is the full list, not
-// a sample of Saudi cities.
-export const REGION_CITIES = {
-  Central: ["Riyadh"],
-  East: ["Dammam"],
-  West: ["Jeddah"],
-  South: ["Abha"],
-} as const satisfies Record<Region, readonly string[]>;
-
-export const CITIES = Object.values(REGION_CITIES).flat();
-
-export function citiesForRegion(region: string | null | undefined): readonly string[] {
-  if (!region) return [];
-  return REGION_CITIES[region as Region] ?? [];
-}
+// Cities used to live here as a hardcoded REGION_CITIES map. They are now
+// rows in the `cities` table (0032_cities.sql) so a super_admin can add one
+// without a deploy, and so training_requests.preferred_city can be a real
+// foreign key instead of a CHECK that needed a migration per city.
+//
+// Regions deliberately did NOT move: they are SEC's Registration Sheet
+// droplist rather than GCC Lab's to invent, and this tuple feeds z.enum()
+// literal unions across eight modules plus six CHECK constraints.

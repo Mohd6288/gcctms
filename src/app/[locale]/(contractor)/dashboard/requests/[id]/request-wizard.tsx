@@ -14,7 +14,7 @@ import { DocumentUploadSlot, type DocumentSlotStatus } from "@/components/docume
 import { ExternalCertificatePanel, type ExternalCertificate } from "@/components/documents/external-certificate-panel";
 import { AddEmployeePanel } from "./add-employee-panel";
 import { ImportEmployeesPanel } from "./import-employees-panel";
-import { REGIONS, citiesForRegion, type Region } from "@/lib/regions";
+import { REGIONS, type Region } from "@/lib/regions";
 
 const XLSX_ACCEPT = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const IMAGE_ACCEPT = "image/jpeg,image/png,application/pdf";
@@ -55,6 +55,12 @@ interface RequestDocInfo {
   rejectionReason?: string | null;
 }
 
+export interface CityOption {
+  name: string;
+  nameAr: string;
+  region: string;
+}
+
 interface JobRoleOption {
   id: number;
   nameEn: string;
@@ -88,6 +94,7 @@ export function RequestWizard({
   employeeDocuments,
   externalCertificates,
   jobRoles,
+  cities,
   locale,
 }: {
   requestId: number | null;
@@ -100,6 +107,9 @@ export function RequestWizard({
   initialRequestDocs: RequestDocInfo[];
   externalCertificates: ExternalCertificate[];
   jobRoles: JobRoleOption[];
+  // Server-provided since 0032 — cities are rows now, not a hardcoded map,
+  // so a super_admin can add one without a deploy.
+  cities: CityOption[];
   locale: string;
 }) {
   const t = useTranslations("contractor.requests.wizard");
@@ -350,8 +360,8 @@ export function RequestWizard({
                   // The city list is derived from the region, so a stale city
                   // from the previous region must not survive the switch.
                   // A region with exactly one institute city picks it itself.
-                  const cities = citiesForRegion(region);
-                  setPreferredCity(cities.length === 1 ? cities[0] : "");
+                  const forRegion = cities.filter((c) => c.region === region);
+                  setPreferredCity(forRegion.length === 1 ? forRegion[0].name : "");
                 }}
               >
                 <option value="">{t("regionNone")}</option>
@@ -374,11 +384,13 @@ export function RequestWizard({
                 onChange={(e) => setPreferredCity(e.target.value)}
               >
                 <option value="">{preferredRegion ? t("cityNone") : t("citySelectRegionFirst")}</option>
-                {citiesForRegion(preferredRegion).map((city) => (
-                  <option key={city} value={city}>
-                    {t(`city${city}`)}
-                  </option>
-                ))}
+                {cities
+                  .filter((c) => c.region === preferredRegion)
+                  .map((city) => (
+                    <option key={city.name} value={city.name}>
+                      {locale === "ar" ? city.nameAr : city.name}
+                    </option>
+                  ))}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">

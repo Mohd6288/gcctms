@@ -25,7 +25,8 @@
       "trainers": "المدربون",
       "users": "المستخدمون",
       "training": "تدريبي",
-      "externalCertificates": "مستندات الموظفين"
+      "externalCertificates": "مستندات الموظفين",
+      "cities": "المدن"
     },
     "openMenu": "فتح قائمة التنقل",
     "closeMenu": "إغلاق قائمة التنقل",
@@ -256,10 +257,6 @@
         "regionEast": "المنطقة الشرقية",
         "regionWest": "المنطقة الغربية",
         "regionSouth": "المنطقة الجنوبية",
-        "cityRiyadh": "الرياض",
-        "cityDammam": "الدمام",
-        "cityJeddah": "جدة",
-        "cityAbha": "أبها",
         "cityNone": "اختر المدينة",
         "citySelectRegionFirst": "اختر المنطقة أولاً",
         "requiredCourse": "اختر الدورة المطلوبة.",
@@ -707,7 +704,11 @@
       "statusInactive": "غير نشط",
       "empty": "لا توجد حسابات مسؤولين أو مدربين بعد.",
       "regionUnassigned": "غير معيَّن (يرى جميع المناطق)",
-      "regionError": "تعذّر تحديث المنطقة. يرجى المحاولة مرة أخرى."
+      "regionError": "تعذّر تحديث المنطقة. يرجى المحاولة مرة أخرى.",
+      "regionLabel": "المنطقة",
+      "regionAll": "كل المناطق (غير مقيّد)",
+      "regionAllHint": "سيرى هذا المسؤول بيانات كل المناطق. حدّد منطقة لتقييده.",
+      "regionScopedHint": "سيرى هذا المسؤول بيانات منطقة {region} فقط."
     },
     "overview": {
       "title": "نظرة عامة على المنصة",
@@ -826,6 +827,25 @@
       "submitting": "جارٍ الحفظ…",
       "genericError": "تعذّر حفظ بيانات المدرب. يرجى المحاولة مرة أخرى.",
       "successTempPassword": "كلمة مرور مؤقتة (شاركها مع المدرب الآن — لن تظهر مرة أخرى):"
+    },
+    "cities": {
+      "title": "المدن",
+      "subtitle": "المدن التي تُقدَّم فيها الدورات لكل منطقة. لا يمكن حذف مدينة مرتبطة بطلب — عطّلها بدلاً من ذلك.",
+      "createTitle": "إضافة مدينة",
+      "nameLabel": "الاسم (بالإنجليزية)",
+      "nameArLabel": "الاسم (بالعربية)",
+      "regionLabel": "المنطقة",
+      "submit": "إضافة المدينة",
+      "submitting": "جارٍ الإضافة…",
+      "tableName": "المدينة",
+      "tableRegion": "المنطقة",
+      "tableStatus": "الحالة",
+      "statusActive": "مفعّلة",
+      "statusInactive": "معطّلة",
+      "activate": "تفعيل",
+      "deactivate": "تعطيل",
+      "empty": "لا توجد مدن بعد.",
+      "genericError": "حدث خطأ. حاول مرة أخرى."
     }
   },
   "trainer": {

@@ -25,7 +25,8 @@
       "trainers": "Trainers",
       "users": "Users",
       "training": "My Training",
-      "externalCertificates": "Employee documents"
+      "externalCertificates": "Employee documents",
+      "cities": "Cities"
     },
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -256,10 +257,6 @@
         "regionEast": "Eastern Region",
         "regionWest": "Western Region",
         "regionSouth": "Southern Region",
-        "cityRiyadh": "Riyadh",
-        "cityDammam": "Dammam",
-        "cityJeddah": "Jeddah",
-        "cityAbha": "Abha",
         "cityNone": "Select a city",
         "citySelectRegionFirst": "Select a region first",
         "requiredCourse": "Choose the course you are requesting.",
@@ -707,7 +704,11 @@
       "statusInactive": "Inactive",
       "empty": "No admin or trainer accounts yet.",
       "regionUnassigned": "Unassigned (sees all regions)",
-      "regionError": "Could not update region. Please try again."
+      "regionError": "Could not update region. Please try again.",
+      "regionLabel": "Region",
+      "regionAll": "All regions (unscoped)",
+      "regionAllHint": "This admin will see every region's data. Assign a region to limit them.",
+      "regionScopedHint": "This admin will only see {region} region data."
     },
     "overview": {
       "title": "Platform Overview",
@@ -826,6 +827,25 @@
       "submitting": "Saving…",
       "genericError": "Could not save trainer. Please try again.",
       "successTempPassword": "Temporary password (share this with the trainer once — it won't be shown again):"
+    },
+    "cities": {
+      "title": "Cities",
+      "subtitle": "Where courses can be delivered, per region. A city cannot be deleted once a request references it — deactivate it instead.",
+      "createTitle": "Add a city",
+      "nameLabel": "Name (English)",
+      "nameArLabel": "Name (Arabic)",
+      "regionLabel": "Region",
+      "submit": "Add city",
+      "submitting": "Adding…",
+      "tableName": "City",
+      "tableRegion": "Region",
+      "tableStatus": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "empty": "No cities yet.",
+      "genericError": "Something went wrong. Please try again."
     }
   },
   "trainer": {

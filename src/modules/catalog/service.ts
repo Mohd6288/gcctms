@@ -3,11 +3,13 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
+import { cities, courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import type {
+  CreateCityInput,
+  SetCityActiveInput,
   CreateCourseInput,
   CreateExamInput,
   CreatePricingInput,
@@ -194,6 +196,31 @@ export async function endPricing(context: AuthContext, pricingId: number, effect
 // Distinct from Phase 2's superadmin/users screen (generic manage_users
 // account creation) — this is the catalog-adjacent roster view, capturing
 // trainer-specific fields (qualifications) under manage_trainer_roster.
+// Cities are catalog data, owned by super_admin under manage_catalog — the
+// same capability that already owns training_centers. No new capability:
+// one implementation, one role.
+export async function createCity(context: AuthContext, input: CreateCityInput) {
+  if (!authorize("manage_catalog", context)) throw new Error("Not authorized");
+  try {
+    await db.insert(cities).values({ name: input.name, nameAr: input.nameAr, region: input.region });
+  } catch (err) {
+    if ((err as { cause?: { code?: string } })?.cause?.code === "23505") {
+      throw new Error("A city with this name already exists.");
+    }
+    throw err;
+  }
+  await writeAudit({ userId: context.userId, entityType: "city", entityId: 0, action: "create", note: `${input.name} (${input.region})` });
+}
+
+// Deactivate, never delete: training_requests.preferred_city is a foreign
+// key with ON DELETE RESTRICT, so a city with any request history cannot be
+// removed — and shouldn't be, since that history is real.
+export async function setCityActive(context: AuthContext, input: SetCityActiveInput) {
+  if (!authorize("manage_catalog", context)) throw new Error("Not authorized");
+  await db.update(cities).set({ active: input.active, updatedAt: new Date() }).where(eq(cities.name, input.name));
+  await writeAudit({ userId: context.userId, entityType: "city", entityId: 0, action: input.active ? "activate" : "deactivate", note: input.name });
+}
+
 export async function createTrainer(context: AuthContext, input: CreateTrainerInput) {
   requireTrainerRosterAccess(context);
 
