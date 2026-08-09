@@ -9,6 +9,7 @@ import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import type {
   CreateCityInput,
+  CreateTrainerLoginInput,
   SetCityActiveInput,
   CreateCourseInput,
   CreateExamInput,
@@ -234,11 +235,48 @@ export async function createTrainer(context: AuthContext, input: CreateTrainerIn
   try {
     const [trainer] = await db
       .insert(trainers)
-      .values({ userId: data.user.id, fullName: input.fullName, qualifications: input.qualifications })
+      // Store the email: it's how a roster row is matched later (0029's
+      // unique index) and how seed-trainers.mjs identifies people.
+      .values({ userId: data.user.id, email: input.email, fullName: input.fullName, qualifications: input.qualifications })
       .returning({ id: trainers.id });
     await db.insert(profiles).values({ userId: data.user.id, role: "trainer", fullName: input.fullName, trainerId: trainer.id });
     await writeAudit({ userId: context.userId, entityType: "trainer", entityId: trainer.id, action: "create" });
     return { trainerId: trainer.id, email: input.email, tempPassword };
+  } catch (err) {
+    await admin.auth.admin.deleteUser(data.user.id);
+    throw err;
+  }
+}
+
+// Gives an existing roster trainer a login, rather than creating a second
+// trainer. createTrainer() inserts a new row, which is right for someone
+// being added from scratch but wrong for the 13 seeded from
+// files_TMS/tainers.xlsx: doing it that way leaves a duplicate name where
+// one row holds the course competencies and the other holds the account.
+export async function createTrainerLogin(context: AuthContext, input: CreateTrainerLoginInput) {
+  requireTrainerRosterAccess(context);
+
+  const [trainer] = await db
+    .select({ id: trainers.id, fullName: trainers.fullName, email: trainers.email, userId: trainers.userId })
+    .from(trainers)
+    .where(eq(trainers.id, input.trainerId));
+  if (!trainer) throw new Error("Trainer not found");
+  if (trainer.userId) throw new Error("This trainer already has a login.");
+  if (!trainer.email) throw new Error("Add an email to this trainer before creating their login.");
+
+  const tempPassword = randomBytes(12).toString("base64url");
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({ email: trainer.email, password: tempPassword, email_confirm: true });
+  if (error || !data.user) {
+    throw new Error(error?.code === "email_exists" ? "An account with this email already exists." : "Could not create account.");
+  }
+
+  try {
+    // Update, not insert — this is the whole point.
+    await db.update(trainers).set({ userId: data.user.id }).where(eq(trainers.id, trainer.id));
+    await db.insert(profiles).values({ userId: data.user.id, role: "trainer", fullName: trainer.fullName, trainerId: trainer.id });
+    await writeAudit({ userId: context.userId, entityType: "trainer", entityId: trainer.id, action: "create_login", note: trainer.email });
+    return { email: trainer.email, tempPassword };
   } catch (err) {
     await admin.auth.admin.deleteUser(data.user.id);
     throw err;

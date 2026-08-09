@@ -825,8 +825,15 @@
       "statusLabel": "الحالة",
       "submit": "حفظ",
       "submitting": "جارٍ الحفظ…",
-      "genericError": "تعذّر حفظ بيانات المدرب. يرجى المحاولة مرة أخرى.",
-      "successTempPassword": "كلمة مرور مؤقتة (شاركها مع المدرب الآن — لن تظهر مرة أخرى):"
+      "genericError": "حدث خطأ. حاول مرة أخرى.",
+      "successTempPassword": "كلمة مرور مؤقتة (شاركها مع المدرب الآن — لن تظهر مرة أخرى):",
+      "tableLogin": "الدخول",
+      "createLogin": "إنشاء حساب دخول",
+      "loginCreating": "جارٍ الإنشاء…",
+      "loginActive": "لديه حساب",
+      "loginNeedsEmail": "أضف بريداً إلكترونياً أولاً",
+      "loginCreated": "تم إنشاء حساب الدخول لـ {email}",
+      "loginTempPassword": "كلمة مرور مؤقتة — تُعرض مرة واحدة، سلّمها بشكل آمن:"
     },
     "cities": {
       "title": "المدن",

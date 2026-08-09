@@ -825,8 +825,15 @@
       "statusLabel": "Status",
       "submit": "Save",
       "submitting": "Saving…",
-      "genericError": "Could not save trainer. Please try again.",
-      "successTempPassword": "Temporary password (share this with the trainer once — it won't be shown again):"
+      "genericError": "Something went wrong. Please try again.",
+      "successTempPassword": "Temporary password (share this with the trainer once — it won't be shown again):",
+      "tableLogin": "Login",
+      "createLogin": "Create login",
+      "loginCreating": "Creating…",
+      "loginActive": "Has login",
+      "loginNeedsEmail": "Add an email first",
+      "loginCreated": "Login created for {email}",
+      "loginTempPassword": "Temporary password — shown once, hand it over securely:"
     },
     "cities": {
       "title": "Cities",

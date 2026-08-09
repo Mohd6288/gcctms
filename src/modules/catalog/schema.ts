@@ -95,6 +95,11 @@ export const CreateTrainerInput = z.object({
 });
 export type CreateTrainerInput = z.infer<typeof CreateTrainerInput>;
 
+export const CreateTrainerLoginInput = z.object({
+  trainerId: z.coerce.number().int().positive(),
+});
+export type CreateTrainerLoginInput = z.infer<typeof CreateTrainerLoginInput>;
+
 export const UpdateTrainerInput = z.object({
   trainerId: z.number().int().positive(),
   fullName: z.string().min(1),

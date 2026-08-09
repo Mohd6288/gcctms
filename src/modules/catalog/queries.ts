@@ -244,8 +244,10 @@ export async function listTrainers() {
     .select({
       id: trainers.id,
       fullName: trainers.fullName,
+      email: trainers.email,
       qualifications: trainers.qualifications,
       active: trainers.active,
+      hasLogin: sql<boolean>`${trainers.userId} is not null`,
     })
     .from(trainers)
     .orderBy(asc(trainers.fullName));

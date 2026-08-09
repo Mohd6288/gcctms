@@ -12,6 +12,7 @@ import {
   CreateExamInput,
   CreatePricingInput,
   CreateTrainerInput,
+  CreateTrainerLoginInput,
   CreateTrainingCenterInput,
   SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
@@ -27,6 +28,7 @@ import {
   createExam,
   createPricing,
   createTrainer,
+  createTrainerLogin,
   createTrainingCenter,
   endPricing,
   setCoursePrerequisites,
@@ -101,6 +103,11 @@ export async function createCityAction(input: CreateCityInput) {
 export async function setCityActiveAction(input: SetCityActiveInput) {
   const context = await requireContext();
   return setCityActive(context, SetCityActiveInput.parse(input));
+}
+
+export async function createTrainerLoginAction(input: CreateTrainerLoginInput) {
+  const context = await requireContext();
+  return createTrainerLogin(context, CreateTrainerLoginInput.parse(input));
 }
 
 export async function createTrainerAction(input: CreateTrainerInput) {
