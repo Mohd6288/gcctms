@@ -63,6 +63,23 @@ alter table regional_admin_assignments add constraint regional_admin_assignments
 -- Training requests carry a preferred city; constrain it to the four GCC Lab
 -- institute cities (HRBL_0004_FO_001's "مكان تقديم الدورة" list) so a typo
 -- can't route a request to a city that has no institute.
+--
+-- It used to be a free-text input, so existing rows hold whatever was typed.
+-- Fold the ones that are one of the four under different spacing or casing
+-- onto the canonical spelling first — those are the same city, not new data.
+update training_requests t
+set preferred_city = c.canonical
+from (values ('Riyadh'), ('Dammam'), ('Jeddah'), ('Abha')) as c(canonical)
+where lower(btrim(t.preferred_city)) = lower(c.canonical) and t.preferred_city <> c.canonical;
+
+-- Anything left names a city GCC Lab has no institute in, so it could never
+-- have been honoured. Same reasoning as the region columns above: this is a
+-- nullable preference, and null ("none stated") is truthful where the stated
+-- value was never routable. The real venue is set on the class itself.
+update training_requests
+set preferred_city = null
+where preferred_city is not null and preferred_city not in ('Riyadh', 'Dammam', 'Jeddah', 'Abha');
+
 alter table training_requests drop constraint if exists training_requests_preferred_city_check;
 alter table training_requests add constraint training_requests_preferred_city_check
   check (preferred_city is null or preferred_city in ('Riyadh', 'Dammam', 'Jeddah', 'Abha'));
