@@ -59,8 +59,12 @@ export const jobRoles = pgTable(
 
 export const trainers = pgTable("trainers", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-  userId: uuid("user_id").notNull().unique(),
+  // Nullable since 0029: a trainer can be on the roster and schedulable
+  // before anyone provisions their login.
+  userId: uuid("user_id").unique(),
   fullName: text("full_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
   qualifications: text("qualifications"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamptz("created_at").notNull().defaultNow(),

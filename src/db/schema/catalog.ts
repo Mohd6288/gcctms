@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, date, index, integer, numeric, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, date, index, integer, numeric, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { timestamptz } from "./_helpers";
 import { jobRoles } from "./auth";
 
@@ -115,4 +115,17 @@ export const pricing = pgTable(
     uniqueIndex("pricing_course_region_effective_from_key").on(t.courseId, t.region, t.effectiveFrom),
     check("pricing_region_check", sql`${t.region} is null or ${t.region} in ('North', 'South', 'East', 'West', 'Central')`),
   ]
+);
+
+// Which courses a trainer is qualified to deliver (0029). Seeded from the
+// per-trainer profile sheets in files_TMS/tainers.xlsx via
+// scripts/seed-trainers.mjs.
+export const trainerCourses = pgTable(
+  "trainer_courses",
+  {
+    trainerId: bigint("trainer_id", { mode: "number" }).notNull(),
+    courseId: bigint("course_id", { mode: "number" }).notNull().references(() => courses.id),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.trainerId, t.courseId] }), index("trainer_courses_course_id_idx").on(t.courseId)]
 );

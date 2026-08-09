@@ -50,6 +50,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
 
+      # Same deal as the catalog: idempotent, matched on email, and records
+      # only — no auth accounts are provisioned for these 13 people here.
+      - name: Seed trainer roster
+        run: npx tsx scripts/seed-trainers.mjs
+        env:
+          DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+
       # Confirms the deployed schema didn't lose RLS coverage along the way
       # — same check CI runs locally, now against the real project.
       - name: RLS check against the deployed project
