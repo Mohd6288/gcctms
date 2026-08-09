@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // Playwright drives the certificate renderer and must not be bundled —
   // it resolves its own browser driver from node_modules at runtime, and
   // bundling silently drops the data files it needs.
-  serverExternalPackages: ["playwright", "playwright-core"],
+  serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium"],
   experimental: {
     // Uploads go through a Server Action (uploadDocumentAction), whose body
     // defaults to 1MB — so storage/service.ts's documented 10MB limit was a

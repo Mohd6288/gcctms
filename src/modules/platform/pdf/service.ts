@@ -123,17 +123,40 @@ async function buildHtml(data: CertificatePdfData): Promise<string> {
 </html>`;
 }
 
+// Serverless runtimes ship no browser, so the certificate renderer brings
+// its own: @sparticuz/chromium is a Chromium build packaged for Lambda-style
+// filesystems, which playwright-core then drives. Locally and in CI we use
+// the browser `playwright install` already downloaded — same rendering
+// engine, no 50MB binary to inflate on every run.
+//
+// Both are imported inside this function, never at module scope.
+// certification/service.ts imports this file and the admin class screen
+// imports that, so a top-level browser import put a driver in the module
+// graph of a page that only enrols candidates — and when it failed to
+// resolve on Vercel it took the whole route down with a minified React 441
+// rather than failing only the PDF it exists for.
+async function launchBrowser() {
+  const onServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (!onServerless) {
+    const { chromium } = await import("playwright");
+    return chromium.launch();
+  }
+
+  const { default: lambdaChromium } = await import("@sparticuz/chromium");
+  const { chromium } = await import("playwright-core");
+  // The certificate embeds its fonts as data URIs (see buildHtml), so the
+  // graphics stack buys nothing here and costs memory and inflate time.
+  lambdaChromium.setGraphicsMode = false;
+  return chromium.launch({
+    args: lambdaChromium.args,
+    executablePath: await lambdaChromium.executablePath(),
+    headless: true,
+  });
+}
+
 export async function renderCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
   const html = await buildHtml(data);
-  // Imported here, not at module scope. certification/service.ts imports
-  // this file, and the admin class screen imports that — so a top-level
-  // `import { chromium } from "playwright"` put a ~300MB browser driver in
-  // the module graph of a page that only enrols candidates. On Vercel that
-  // module fails to resolve at all ("Cannot find module
-  // playwright-core/browsers.json"), which took down the whole route with a
-  // minified React 441 instead of failing only the PDF it's actually for.
-  const { chromium } = await import("playwright");
-  const browser = await chromium.launch();
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 2000, height: 1414 } });
     await page.setContent(html, { waitUntil: "networkidle" });
