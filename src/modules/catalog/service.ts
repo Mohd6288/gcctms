@@ -1,7 +1,7 @@
 // catalog module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cities, courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -281,6 +281,39 @@ export async function createTrainerLogin(context: AuthContext, input: CreateTrai
     await admin.auth.admin.deleteUser(data.user.id);
     throw err;
   }
+}
+
+// Bulk form of the above for onboarding a whole roster at once — the 13
+// seeded from tainers.xlsx would otherwise be 13 separate clicks, each
+// returning a password that has to be captured before the next one.
+// Sequential, not Promise.all: each iteration creates an auth user and
+// writes rows, and concurrent Drizzle calls stall against the pooler.
+//
+// One trainer failing doesn't abandon the rest — the reason comes back per
+// trainer so a missing email or an email already taken in Supabase Auth is
+// visible rather than silently swallowed.
+export async function createAllTrainerLogins(context: AuthContext) {
+  requireTrainerRosterAccess(context);
+
+  const candidates = await db
+    .select({ id: trainers.id, fullName: trainers.fullName })
+    .from(trainers)
+    .where(and(isNull(trainers.userId), isNotNull(trainers.email), eq(trainers.active, true)))
+    .orderBy(asc(trainers.id));
+
+  const created: { fullName: string; email: string; tempPassword: string }[] = [];
+  const failed: { fullName: string; reason: string }[] = [];
+
+  for (const candidate of candidates) {
+    try {
+      const result = await createTrainerLogin(context, { trainerId: candidate.id });
+      created.push({ fullName: candidate.fullName, ...result });
+    } catch (err) {
+      failed.push({ fullName: candidate.fullName, reason: err instanceof Error ? err.message : "Could not create account." });
+    }
+  }
+
+  return { created, failed };
 }
 
 export async function updateTrainer(context: AuthContext, input: UpdateTrainerInput) {

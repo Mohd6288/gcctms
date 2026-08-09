@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import { profiles, trainers } from "../../db/schema";
-import { createTrainerLogin } from "../../modules/catalog/service";
+import { createAllTrainerLogins, createTrainerLogin } from "../../modules/catalog/service";
 import type { AuthContext } from "../../modules/platform/auth/shared";
 
 // The 13 trainers seeded from files_TMS/tainers.xlsx exist with user_id
@@ -78,6 +78,40 @@ describe("createTrainerLogin — links an account to an existing roster trainer"
       .returning({ id: trainers.id });
     await expect(createTrainerLogin(superAdminCtx, { trainerId: noEmail.id })).rejects.toThrow("Add an email");
     await db.delete(trainers).where(eq(trainers.id, noEmail.id));
+  });
+
+  // The roster is onboarded in one go rather than one click per trainer,
+  // and each temp password is shown exactly once — so a partial failure must
+  // report per trainer instead of aborting the batch.
+  it("creates logins for every rostered trainer that still needs one, and is a no-op on re-run", async () => {
+    const emailA = `bulk-a-${suffix}@example.com`;
+    const emailB = `bulk-b-${suffix}@example.com`;
+    const [a] = await db.insert(trainers).values({ fullName: "Bulk A", email: emailA, active: true }).returning({ id: trainers.id });
+    const [b] = await db.insert(trainers).values({ fullName: "Bulk B", email: emailB, active: true }).returning({ id: trainers.id });
+    const [noEmail] = await db.insert(trainers).values({ fullName: "Bulk No Email", active: true }).returning({ id: trainers.id });
+
+    const result = await createAllTrainerLogins(superAdminCtx);
+    const createdEmails = result.created.map((c) => c.email);
+    expect(createdEmails).toContain(emailA);
+    expect(createdEmails).toContain(emailB);
+    // No email to match on, so it isn't even a candidate.
+    expect(result.created.some((c) => c.fullName === "Bulk No Email")).toBe(false);
+    expect(result.failed).toEqual([]);
+
+    const linked = await db.select({ id: trainers.id, userId: trainers.userId }).from(trainers).where(inArray(trainers.id, [a.id, b.id]));
+    expect(linked.every((t) => t.userId !== null)).toBe(true);
+
+    const rerun = await createAllTrainerLogins(superAdminCtx);
+    expect(rerun.created.filter((c) => c.email === emailA || c.email === emailB)).toEqual([]);
+
+    for (const id of [a.id, b.id]) {
+      const [row] = await db.select({ userId: trainers.userId }).from(trainers).where(eq(trainers.id, id));
+      if (row.userId) {
+        await db.delete(profiles).where(eq(profiles.userId, row.userId));
+        await admin.auth.admin.deleteUser(row.userId);
+      }
+    }
+    await db.delete(trainers).where(inArray(trainers.id, [a.id, b.id, noEmail.id]));
   });
 
   it("refuses a caller who isn't super_admin", async () => {

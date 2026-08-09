@@ -833,7 +833,11 @@
       "loginActive": "لديه حساب",
       "loginNeedsEmail": "أضف بريداً إلكترونياً أولاً",
       "loginCreated": "تم إنشاء حساب الدخول لـ {email}",
-      "loginTempPassword": "كلمة مرور مؤقتة — تُعرض مرة واحدة، سلّمها بشكل آمن:"
+      "loginTempPassword": "كلمة مرور مؤقتة — تُعرض مرة واحدة، سلّمها بشكل آمن:",
+      "bulkPrompt": "{count} مدرب في هذه القائمة بلا حساب دخول.",
+      "bulkCreate": "إنشاء حسابات دخول للـ {count}",
+      "bulkCreating": "جارٍ إنشاء الحسابات…",
+      "bulkCreated": "تم إنشاء {count} حساب دخول"
     },
     "cities": {
       "title": "المدن",

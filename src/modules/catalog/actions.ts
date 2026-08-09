@@ -29,6 +29,7 @@ import {
   createPricing,
   createTrainer,
   createTrainerLogin,
+  createAllTrainerLogins,
   createTrainingCenter,
   endPricing,
   setCoursePrerequisites,
@@ -108,6 +109,11 @@ export async function setCityActiveAction(input: SetCityActiveInput) {
 export async function createTrainerLoginAction(input: CreateTrainerLoginInput) {
   const context = await requireContext();
   return createTrainerLogin(context, CreateTrainerLoginInput.parse(input));
+}
+
+export async function createAllTrainerLoginsAction() {
+  const context = await requireContext();
+  return createAllTrainerLogins(context);
 }
 
 export async function createTrainerAction(input: CreateTrainerInput) {

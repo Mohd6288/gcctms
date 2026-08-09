@@ -833,7 +833,11 @@
       "loginActive": "Has login",
       "loginNeedsEmail": "Add an email first",
       "loginCreated": "Login created for {email}",
-      "loginTempPassword": "Temporary password — shown once, hand it over securely:"
+      "loginTempPassword": "Temporary password — shown once, hand it over securely:",
+      "bulkPrompt": "{count} trainer(s) on this roster have no login yet.",
+      "bulkCreate": "Create logins for all {count}",
+      "bulkCreating": "Creating logins…",
+      "bulkCreated": "{count} login(s) created"
     },
     "cities": {
       "title": "Cities",

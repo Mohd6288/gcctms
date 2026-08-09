@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
-import { createTrainerLoginAction, updateTrainerAction } from "@/modules/catalog/actions";
+import { createAllTrainerLoginsAction, createTrainerLoginAction, updateTrainerAction } from "@/modules/catalog/actions";
 
 interface Trainer {
   id: number;
@@ -24,6 +24,8 @@ export function TrainerRoster({ trainers }: { trainers: Trainer[] }) {
   const [creatingId, setCreatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [credentials, setCredentials] = useState<{ email: string; tempPassword: string } | null>(null);
+  const [batch, setBatch] = useState<{ created: { fullName: string; email: string; tempPassword: string }[]; failed: { fullName: string; reason: string }[] } | null>(null);
+  const [creatingAll, setCreatingAll] = useState(false);
 
   function fieldsFor(trainer: Trainer) {
     return (
@@ -72,8 +74,66 @@ export function TrainerRoster({ trainers }: { trainers: Trainer[] }) {
     }
   }
 
+  async function handleCreateAll() {
+    setError(null);
+    setCredentials(null);
+    setCreatingAll(true);
+    try {
+      setBatch(await createAllTrainerLoginsAction());
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("genericError"));
+    } finally {
+      setCreatingAll(false);
+    }
+  }
+
+  const withoutLogin = trainers.filter((tr) => !tr.hasLogin && tr.email);
+
   return (
     <div className="flex flex-col gap-3">
+      {withoutLogin.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
+          <span className="text-sm">{t("bulkPrompt", { count: withoutLogin.length })}</span>
+          <Button type="button" size="sm" disabled={creatingAll} onClick={handleCreateAll}>
+            {creatingAll ? t("bulkCreating") : t("bulkCreate", { count: withoutLogin.length })}
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Every temporary password at once — they are shown exactly once, so
+          this table is the only chance to copy them before handing them
+          out. */}
+      {batch ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+          <p className="font-medium">{t("bulkCreated", { count: batch.created.length })}</p>
+          {batch.created.length > 0 ? (
+            <>
+              <p className="text-muted-foreground">{t("loginTempPassword")}</p>
+              <table className="w-full text-xs">
+                <tbody>
+                  {batch.created.map((c) => (
+                    <tr key={c.email} className="border-b border-border/60 last:border-0">
+                      <td className="py-1 pe-3">{c.fullName}</td>
+                      <td className="py-1 pe-3 text-muted-foreground">{c.email}</td>
+                      <td className="py-1 font-mono">{c.tempPassword}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : null}
+          {batch.failed.length > 0 ? (
+            <ul className="list-inside list-disc text-xs text-destructive">
+              {batch.failed.map((f) => (
+                <li key={f.fullName}>
+                  {f.fullName}: {f.reason}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       {credentials ? (
         <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
           <p className="font-medium">{t("loginCreated", { email: credentials.email })}</p>
