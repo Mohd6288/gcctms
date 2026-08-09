@@ -7,18 +7,28 @@
 -- pricing rows for a region no contractor can be in.
 delete from pricing where region = 'North';
 
--- Fail loudly rather than silently dropping a constraint that live rows
--- would then violate. Nothing but pricing referenced 'North' when this was
--- written; if a later environment has one, it needs a decision, not a
--- default.
+-- Two different kinds of column held 'North', and they deserve different
+-- treatment.
+--
+-- These two are nullable *preferences*, where null already means "none
+-- stated": a contractor's preferred region on a request, and the
+-- scheduling board's not-yet-assigned pooling region. Since North was never
+-- a real SEC area, "no preference" is the truthful value for them — and the
+-- board assigns a real region downstream either way.
+update training_requests set preferred_region = null where preferred_region = 'North';
+update request_items set assigned_region = null where assigned_region = 'North';
+
+-- These three are operational facts, not preferences: where a contractor
+-- operates, where a class is actually being run, which region an admin
+-- administers. There is no safe default for any of them, so fail loudly
+-- rather than silently dropping a constraint that live rows would violate,
+-- or silently blanking a location someone is relying on.
 do $$
 declare offending text;
 begin
   select string_agg(t, ', ') into offending from (
     select 'companies' as t where exists (select 1 from companies where region = 'North')
     union all select 'classes' where exists (select 1 from classes where region = 'North')
-    union all select 'training_requests' where exists (select 1 from training_requests where preferred_region = 'North')
-    union all select 'request_items' where exists (select 1 from request_items where assigned_region = 'North')
     union all select 'regional_admin_assignments' where exists (select 1 from regional_admin_assignments where region = 'North')
   ) s;
   if offending is not null then
@@ -53,5 +63,6 @@ alter table regional_admin_assignments add constraint regional_admin_assignments
 -- Training requests carry a preferred city; constrain it to the four GCC Lab
 -- institute cities (HRBL_0004_FO_001's "مكان تقديم الدورة" list) so a typo
 -- can't route a request to a city that has no institute.
+alter table training_requests drop constraint if exists training_requests_preferred_city_check;
 alter table training_requests add constraint training_requests_preferred_city_check
   check (preferred_city is null or preferred_city in ('Riyadh', 'Dammam', 'Jeddah', 'Abha'));
