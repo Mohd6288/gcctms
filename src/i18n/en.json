@@ -24,7 +24,8 @@
       "exams": "Exams",
       "trainers": "Trainers",
       "users": "Users",
-      "training": "My Training"
+      "training": "My Training",
+      "externalCertificates": "External certificates"
     },
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -138,6 +139,27 @@
       "replaceFile": "Replace file",
       "uploading": "Uploading…",
       "viewFile": "View file"
+    },
+    "externalCertificate": {
+      "title": "External certificates",
+      "description": "Already holds this certificate from elsewhere? Upload it here for admin verification — it counts towards the prerequisite once verified.",
+      "courseLabel": "Certificate is for",
+      "issuedAtLabel": "Issued on",
+      "expiresAtLabel": "Valid until",
+      "upload": "Submit for verification",
+      "uploading": "Uploading…",
+      "incomplete": "Choose the course, a validity date, and a file.",
+      "genericError": "Something went wrong. Please try again.",
+      "pending": "Pending verification",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "expires": "Valid until {date}",
+      "viewFile": "View file",
+      "rejectionReasonLabel": "Rejection reason",
+      "reviewNote": "A platform admin must verify this before the employee can be added to a course that requires it.",
+      "required": "Required",
+      "optional": "Optional",
+      "requiredDescription": "This employee has no OHS General Induction on record with us. Upload the certificate they already hold — a platform admin verifies it before the request can be submitted."
     }
   },
   "contractor": {
@@ -166,9 +188,6 @@
         "trainingTypeOnSite": "On-site",
         "trainingTypeCenter": "Training center",
         "trainingTypeVirtual": "Virtual theory + on-site practical",
-        "startDateLabel": "Preferred start date",
-        "endDateLabel": "Preferred end date",
-        "datesHint": "A preference only — GCC Lab sets the actual class dates at scheduling.",
         "notesLabel": "Notes",
         "employeesHint": "Select employees from your roster to include in this request.",
         "noEmployees": "You have no employees yet.",
@@ -208,7 +227,7 @@
           "title": "Import employees",
           "close": "Close",
           "tabRegistration": "Registration Sheet",
-          "tabHrbl": "Request Form",
+          "tabHrbl": "Registration Request",
           "downloadTemplate": "Download template",
           "registrationHint": "Fill in the candidate rows (Name, Iqama, Job, Activity, Region/City, Phone, Email, Nationality), then upload the same file here.",
           "hrblHint": "This form only captures name, job title, and Iqama number — fill in nationality, phone, and email afterward via Edit Employee.",
@@ -220,13 +239,32 @@
           "createdCount": "{count} employee(s) imported",
           "skippedCount": "{count} row(s) skipped",
           "rowLabel": "Row {row}"
-        }
+        },
+        "regionCentral": "Central Region",
+        "regionEast": "Eastern Region",
+        "regionWest": "Western Region",
+        "regionSouth": "Southern Region",
+        "cityRiyadh": "Riyadh",
+        "cityDammam": "Dammam",
+        "cityJeddah": "Jeddah",
+        "cityAbha": "Abha",
+        "cityNone": "Select a city",
+        "citySelectRegionFirst": "Select a region first",
+        "requiredCourse": "Choose the course you are requesting.",
+        "requiredRegion": "Choose the business area the training is for.",
+        "requiredCity": "Choose the city the training will be delivered in.",
+        "requiredTrainingType": "Choose how the training should be delivered.",
+        "requiredEmployees": "Select at least one employee.",
+        "requiredRequestDocuments": "Attach both the Registration Sheet and the Registration Request form.",
+        "requiredNationalId": "Every selected employee needs their Iqama uploaded.",
+        "requiredOhsCertificate": "Upload the OHS General Induction certificate for: {employees}. If they do not hold one, request that course for them first.",
+        "orFileExistingCertificate": "If they already hold it, file the certificate under Documents."
       },
       "documents": {
         "registrationSheet": "Registration Sheet",
         "registrationSheetDescription": "Download the template, fill in every candidate's details, then upload the completed file here.",
-        "hrblForm": "HRBL_0004_FO_001",
-        "hrblFormDescription": "The official course request form — required to complete this request. Download, fill in and sign, then upload it here.",
+        "hrblForm": "Registration Request",
+        "hrblFormDescription": "The official course request form (HRBL_0004_FO_001) — required to complete this request. Download, fill in and sign, then upload it here.",
         "verified": "Verified",
         "pendingVerification": "Pending verification",
         "notAttached": "Not attached",
@@ -447,7 +485,7 @@
         "saveDecision": "Save",
         "documentsTitle": "Request Documents",
         "registrationSheet": "Registration Sheet",
-        "hrblForm": "HRBL_0004_FO_001",
+        "hrblForm": "Registration Request",
         "verified": "Verified",
         "rejected": "Rejected",
         "pendingVerification": "Pending verification",
@@ -609,6 +647,21 @@
         "scheduled": "Scheduled",
         "completed": "Completed"
       }
+    },
+    "externalCertificates": {
+      "title": "External certificates",
+      "subtitle": "Certificates employees already hold from outside the platform, waiting on verification. Until these are decided, the contractor cannot submit the request they unblock.",
+      "empty": "Nothing waiting for review.",
+      "regionScopedNote": "Showing the {region} region only.",
+      "verify": "Verify",
+      "reject": "Reject",
+      "confirmReject": "Confirm rejection",
+      "cancel": "Cancel",
+      "reasonPlaceholder": "Why is this being rejected?",
+      "issuedAt": "Issued",
+      "expiresAt": "Valid until",
+      "viewFile": "View file",
+      "genericError": "Something went wrong. Please try again."
     }
   },
   "superadmin": {

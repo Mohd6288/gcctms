@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
 import { updateCompanyAction } from "@/modules/companies/actions";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";

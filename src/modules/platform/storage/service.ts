@@ -1,7 +1,7 @@
 // platform/storage — Private Supabase Storage bucket access — signed URL issuance only, never public URLs.
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, documents } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,6 +42,11 @@ export interface UploadDocumentInput {
   requestId?: number | null;
   type: DocumentType;
   file: File;
+  // External-certificate metadata (0027) — only meaningful on a
+  // prior_certificate, and only then does the prerequisite gate read it.
+  courseId?: number | null;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
 }
 
 // Mirrors documents' actual RLS policies exactly (0009_documents.sql):
@@ -78,6 +83,20 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
     throw new Error("File is too large. Maximum size is 10MB.");
   }
 
+  // An external certificate is only a certificate if it says what it
+  // certifies and until when — the DB check constraint enforces the same
+  // shape, this is the friendly-message half of it.
+  const isExternalCertificate = input.type === "prior_certificate" && input.courseId != null;
+  if (isExternalCertificate && !input.expiresAt) {
+    throw new Error("An existing certificate needs its expiry date.");
+  }
+  if (input.courseId != null && input.type !== "prior_certificate") {
+    throw new Error("Only a certificate can be linked to a course.");
+  }
+  const certificateFields = isExternalCertificate
+    ? { courseId: input.courseId ?? null, issuedAt: input.issuedAt ?? null, expiresAt: input.expiresAt ?? null }
+    : { courseId: null, issuedAt: null, expiresAt: null };
+
   const bytes = Buffer.from(await input.file.arrayBuffer());
   const checksum = createHash("sha256").update(bytes).digest("hex");
   const objectKey = randomUUID(); // opaque — no PII, no company/employee id in the key itself
@@ -99,11 +118,24 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
   // documents note. The verification-protecting trigger clears
   // verified_by/verified_at on this UPDATE, which is exactly the wanted
   // behavior here.
-  if (input.requestId != null) {
-    const [existing] = await db
-      .select({ id: documents.id, objectKey: documents.objectKey })
-      .from(documents)
-      .where(and(eq(documents.requestId, input.requestId), eq(documents.type, input.type)));
+  // External certificates get the same replace-in-place treatment, keyed on
+  // (employee, course) instead of (request, type) — 0027's partial unique
+  // index — so re-uploading a corrected scan supersedes the old one and
+  // drops its verification rather than leaving a stale verified row beside
+  // an unverified newer one.
+  const existingSlot =
+    input.requestId != null
+      ? and(eq(documents.requestId, input.requestId), eq(documents.type, input.type))
+      : isExternalCertificate && input.employeeId != null
+        ? and(
+            eq(documents.employeeId, input.employeeId),
+            eq(documents.type, "prior_certificate"),
+            eq(documents.courseId, input.courseId as number)
+          )
+        : null;
+
+  if (existingSlot) {
+    const [existing] = await db.select({ id: documents.id, objectKey: documents.objectKey }).from(documents).where(existingSlot);
     if (existing) {
       await admin.storage.from("documents").remove([existing.objectKey]);
       await db
@@ -115,6 +147,7 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
           checksumSha256: checksum,
           uploadedBy: context.userId,
           objectKey,
+          ...certificateFields,
         })
         .where(eq(documents.id, existing.id));
       await writeAudit({ userId: context.userId, entityType: "document", entityId: existing.id, action: "replace" });
@@ -136,12 +169,60 @@ export async function uploadDocument(context: AuthContext, input: UploadDocument
       sizeBytes: bytes.length,
       checksumSha256: checksum,
       uploadedBy: context.userId,
+      ...certificateFields,
     })
     .returning({ id: documents.id });
 
   await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action: "upload" });
 
   return doc;
+}
+
+// Employee-scoped sibling of requests/service.ts's verifyRequestDocument,
+// keyed on the document id because an external certificate belongs to an
+// employee, not to any one request — a contractor files it before the
+// request it unblocks even exists. Same deliberate trigger bypass: the
+// documents trigger reads auth_role(), which is empty on Drizzle's direct
+// connection and would null verified_by/verified_at straight back out; the
+// authorize() check above is the real gate for this trusted server path.
+async function reviewEmployeeDocument(
+  context: AuthContext,
+  documentId: number,
+  patch: { verifiedBy?: string | null; verifiedAt?: Date | null; rejectedBy?: string | null; rejectedAt?: Date | null; rejectionReason?: string | null },
+  action: "verify" | "reject",
+  note?: string
+) {
+  if (!authorize("review_requests", context)) throw new Error("Not authorized");
+
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc) throw new Error("Document not found");
+  await assertCanTouchCompany(context, doc.companyId);
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`);
+    await tx.update(documents).set(patch).where(eq(documents.id, doc.id));
+  });
+
+  await writeAudit({ userId: context.userId, entityType: "document", entityId: doc.id, action, note });
+}
+
+export async function verifyEmployeeDocument(context: AuthContext, documentId: number) {
+  await reviewEmployeeDocument(
+    context,
+    documentId,
+    { verifiedBy: context.userId, verifiedAt: new Date(), rejectedBy: null, rejectedAt: null, rejectionReason: null },
+    "verify"
+  );
+}
+
+export async function rejectEmployeeDocument(context: AuthContext, documentId: number, reason: string) {
+  await reviewEmployeeDocument(
+    context,
+    documentId,
+    { rejectedBy: context.userId, rejectedAt: new Date(), rejectionReason: reason, verifiedBy: null, verifiedAt: null },
+    "reject",
+    reason
+  );
 }
 
 // Issues a short-lived signed URL after checking the caller actually owns

@@ -4,8 +4,8 @@ import { and, count, countDistinct, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { certificates, courses, payments, requestItems, trainingRequests } from "@/db/schema";
 import { periodRange, type ReportPeriod } from "./period";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const REQUEST_STATUSES = ["draft", "submitted", "info_requested", "rejected", "payment_pending", "ready_for_scheduling", "scheduled", "completed"] as const;
 
 function num(value: string | null | undefined): number {

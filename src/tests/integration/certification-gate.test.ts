@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
+import { grantOhsInduction } from "../helpers/ohs-induction";
 import {
   certificates,
   classEnrollments,
@@ -10,6 +11,7 @@ import {
   courseJobRoles,
   coursePrerequisites,
   courses,
+  documents,
   employees,
   examResults,
   exams,
@@ -70,6 +72,11 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
         status: opts.employeeStatus ?? "active",
       })
       .returning({ id: employees.id });
+
+    // The gated course, like every course, also requires the OHS General
+    // Induction — granted to every case so the cases stay about the one
+    // variable each is meant to isolate.
+    await grantOhsInduction(companyId, employee.id, ownerId);
 
     if (opts.withPrerequisite) {
       // Shared across every case needing one — a fresh per-case class for
@@ -161,6 +168,7 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
     await db.delete(trainingRequests).where(eq(trainingRequests.companyId, companyId));
     await db.delete(classes).where(sql`trainer_id = ${trainerId}`);
     await db.delete(trainers).where(eq(trainers.id, trainerId));
+    await db.delete(documents).where(eq(documents.companyId, companyId)); // the OHS induction grants
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(coursePrerequisites).where(eq(coursePrerequisites.courseId, gatedCourseId));
     await db.delete(courseJobRoles).where(eq(courseJobRoles.courseId, gatedCourseId));

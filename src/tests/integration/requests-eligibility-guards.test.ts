@@ -19,6 +19,7 @@ import {
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
 import type { AuthContext } from "../../modules/platform/auth/shared";
 import { createDraftRequest, submitRequest, syncRequestItems } from "../../modules/requests/service";
+import { grantOhsInduction } from "../helpers/ohs-induction";
 
 // Phase 4 (deliberate strengthening over the validated prototype, per
 // roles-and-workflows.md): job-role eligibility and course prerequisites are
@@ -49,7 +50,7 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
     return `23111${String(n).padStart(5, "0")}`;
   }
 
-  async function makeEmployee(name: string, jobRoleId: number, seq: number) {
+  async function makeEmployeeWithoutOhs(name: string, jobRoleId: number, seq: number) {
     const [employee] = await db
       .insert(employees)
       .values({
@@ -74,6 +75,15 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
       uploadedBy: ownerId,
     });
     return employee.id;
+  }
+
+  // Every course is gated on the OHS General Induction, so the fixtures for
+  // the prerequisite tests would otherwise all fail on that instead of on
+  // the prerequisite each one is actually about.
+  async function makeEmployee(name: string, jobRoleId: number, seq: number) {
+    const employeeId = await makeEmployeeWithoutOhs(name, jobRoleId, seq);
+    await grantOhsInduction(companyId, employeeId, ownerId);
+    return employeeId;
   }
 
   async function issueCertificate(employeeId: number, courseId: number, expiresInDays: number, status: "issued" | "pending_approval" = "issued") {
@@ -190,7 +200,7 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
     const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
     await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [eligibleNoCertEmployeeId] });
     await expect(submitRequest(contractorCtx, draft.id)).rejects.toThrow(
-      "All employees must satisfy this course's prerequisites before submitting."
+      "Every employee needs a valid OHS General Induction certificate"
     );
   });
 
@@ -198,7 +208,7 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
     const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
     await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [expiredPrereqEmployeeId] });
     await expect(submitRequest(contractorCtx, draft.id)).rejects.toThrow(
-      "All employees must satisfy this course's prerequisites before submitting."
+      "Every employee needs a valid OHS General Induction certificate"
     );
   });
 
@@ -214,5 +224,110 @@ describe("submitRequest — job-role eligibility and prerequisite guards, real D
     await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [validPrereqBEmployeeId] });
     const result = await submitRequest(contractorCtx, draft.id);
     expect(result.status).toBe("submitted");
+  });
+
+  // The OHS General Induction gates every course, and a certificate earned
+  // outside the platform only counts once an admin has verified it.
+  describe("OHS General Induction gate + externally-earned certificates", () => {
+    async function externalCertificateFor(employeeId: number, courseId: number, opts: { verified: boolean; expiresInDays?: number }) {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + (opts.expiresInDays ?? 365));
+      const row = {
+        companyId,
+        employeeId,
+        courseId,
+        type: "prior_certificate" as const,
+        expiresAt: expiresAt.toISOString().slice(0, 10),
+        bucket: "documents",
+        objectKey: randomUUID(),
+        originalName: "external.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 10,
+        checksumSha256: "0".repeat(64),
+        uploadedBy: ownerId,
+        ...(opts.verified ? { verifiedBy: ownerId, verifiedAt: new Date() } : {}),
+      };
+      await db.transaction(async (tx) => {
+        // Same bypass the trusted server path uses — auth_role() is empty on
+        // this connection, so the protect-verification trigger would
+        // otherwise null verified_at back out.
+        await tx.execute(sql`set local session_replication_role = replica`);
+        await tx.insert(documents).values(row);
+      });
+    }
+
+    it("blocks an employee who satisfies the listed prerequisite but holds no OHS induction", async () => {
+      const employeeId = await makeEmployeeWithoutOhs("No Induction", eligibleRoleId, 6);
+      await issueCertificate(employeeId, prerequisiteCourseAId, 365);
+
+      const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
+      await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeId] });
+      await expect(submitRequest(contractorCtx, draft.id)).rejects.toThrow(
+        "Every employee needs a valid OHS General Induction certificate"
+      );
+    });
+
+    it("an admin-verified external certificate satisfies the prerequisite in place of an issued one", async () => {
+      const employeeId = await makeEmployee("External Verified", eligibleRoleId, 7);
+      await externalCertificateFor(employeeId, prerequisiteCourseAId, { verified: true });
+
+      const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
+      await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeId] });
+      const result = await submitRequest(contractorCtx, draft.id);
+      expect(result.status).toBe("submitted");
+    });
+
+    it("an external certificate still awaiting verification does NOT satisfy the prerequisite", async () => {
+      const employeeId = await makeEmployee("External Pending", eligibleRoleId, 8);
+      await externalCertificateFor(employeeId, prerequisiteCourseAId, { verified: false });
+
+      const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
+      await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeId] });
+      await expect(submitRequest(contractorCtx, draft.id)).rejects.toThrow(
+        "Every employee needs a valid OHS General Induction certificate"
+      );
+    });
+
+    it("an expired external certificate does NOT satisfy the prerequisite", async () => {
+      const employeeId = await makeEmployee("External Expired", eligibleRoleId, 9);
+      await externalCertificateFor(employeeId, prerequisiteCourseAId, { verified: true, expiresInDays: -1 });
+
+      const draft = await createDraftRequest(contractorCtx, { courseId: gatedCourseId });
+      await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeId] });
+      await expect(submitRequest(contractorCtx, draft.id)).rejects.toThrow(
+        "Every employee needs a valid OHS General Induction certificate"
+      );
+    });
+
+    // Without a BEFORE INSERT trigger (0027) a contractor could insert a
+    // self-verified certificate through the anon key and walk straight past
+    // the gate — the whole feature's security hinges on this.
+    it("a non-admin INSERT cannot self-verify a certificate — the trigger strips verified_at", async () => {
+      const employeeId = await makeEmployee("Self Verify Attempt", eligibleRoleId, 10);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 365);
+      const [inserted] = await db
+        .insert(documents)
+        .values({
+          companyId,
+          employeeId,
+          courseId: prerequisiteCourseAId,
+          type: "prior_certificate",
+          expiresAt: expiresAt.toISOString().slice(0, 10),
+          bucket: "documents",
+          objectKey: randomUUID(),
+          originalName: "forged.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 10,
+          checksumSha256: "0".repeat(64),
+          uploadedBy: ownerId,
+          verifiedBy: ownerId,
+          verifiedAt: new Date(),
+        })
+        .returning({ id: documents.id, verifiedAt: documents.verifiedAt, verifiedBy: documents.verifiedBy });
+
+      expect(inserted.verifiedAt).toBeNull();
+      expect(inserted.verifiedBy).toBeNull();
+    });
   });
 });

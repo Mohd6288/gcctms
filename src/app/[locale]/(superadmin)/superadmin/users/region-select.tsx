@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { setAdminRegionAction } from "@/modules/scheduling/actions";
+import { REGIONS, type Region } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
-type Region = (typeof REGIONS)[number];
 
 export function RegionSelect({ adminUserId, currentRegion }: { adminUserId: string; currentRegion: string | null }) {
   const t = useTranslations("superadmin.users");

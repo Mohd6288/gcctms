@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const TRAINING_TYPES = ["on_site", "training_center", "virtual_theory_onsite_practical"] as const;
 
 export const DraftRequestFields = z.object({

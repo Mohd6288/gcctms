@@ -42,6 +42,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   platform_admin: [
     { key: "overview", href: "/admin", icon: LayoutDashboard, end: true },
     { key: "requests", href: "/admin/requests", icon: ClipboardList },
+    { key: "externalCertificates", href: "/admin/certificates", icon: Award },
     { key: "payments", href: "/admin/payments", icon: CreditCard },
     { key: "scheduling", href: "/admin/scheduling", icon: CalendarRange },
     { key: "calendar", href: "/admin/calendar", icon: CalendarDays },

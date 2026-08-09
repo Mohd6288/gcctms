@@ -35,7 +35,7 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
   let courseId: number;
   let trainerId: number;
   let centerId: number;
-  let classNorthId: number;
+  let classWestId: number;
   let classSouthId: number;
   let certificateId: number;
   let requestAId: number;
@@ -54,7 +54,7 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
     const [companyA] = await db
       .insert(companies)
       .values({
-        name: "Overview Test Contractor A (North)",
+        name: "Overview Test Contractor A (West)",
         crNumber: `CR-OVW-A-${suffix}`,
         contactName: "A Contact",
         contactEmail: `ovw-a-${suffix}@example.com`,
@@ -107,13 +107,13 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
 
     // Two regions, only one class "in_progress" (the only status the
     // dashboard counts as "active").
-    const [classNorth] = await db
+    const [classWest] = await db
       .insert(classes)
       .values({
         courseId,
         trainerId,
         centerId,
-        region: "North",
+        region: "West",
         type: "public",
         startDate: "2026-01-01",
         endDate: "2026-01-02",
@@ -121,7 +121,7 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
         status: "in_progress",
       })
       .returning({ id: classes.id });
-    classNorthId = classNorth.id;
+    classWestId = classWest.id;
 
     const [classSouth] = await db
       .insert(classes)
@@ -144,7 +144,7 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
       .values({
         employeeId: employeeAId,
         courseId,
-        classId: classNorthId,
+        classId: classWestId,
         companyId: companyAId,
         status: "issued",
         eligibility: {},
@@ -176,7 +176,7 @@ describe("getPlatformOverviewStats — seeded multi-company/region fixture", () 
     await db.delete(certificates).where(eq(certificates.id, certificateId));
     await db.delete(trainingRequests).where(eq(trainingRequests.id, requestAId));
     await db.delete(trainingRequests).where(eq(trainingRequests.id, requestBId));
-    await db.delete(classes).where(eq(classes.id, classNorthId));
+    await db.delete(classes).where(eq(classes.id, classWestId));
     await db.delete(classes).where(eq(classes.id, classSouthId));
     await db.delete(trainingCenters).where(eq(trainingCenters.id, centerId));
     await db.delete(trainers).where(eq(trainers.id, trainerId));

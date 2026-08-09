@@ -1,7 +1,7 @@
 // scheduling module — Zod validation schemas for this module's mutations.
 import { z } from "zod";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CLASS_TYPES = ["private", "public"] as const;
 
 export const AssignRequestItemRegionInput = z.object({

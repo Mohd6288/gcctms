@@ -24,7 +24,18 @@ const db = drizzle(client, { schema });
 const { courses, courseJobRoles, coursePrerequisites, pricing } = catalogSchema;
 const { jobRoles } = authSchema;
 
-const REGIONAL_DAY_RATES = { Central: 500, East: 450, West: 550, South: 550, North: 500 };
+// Per-region day rate from the three GCC Lab schedule workbooks
+// ("جدولة الاعداد للمقاولين" — Eastern / Central / Southern+Western). Every
+// price in those sheets is exactly durationDays * this rate, VAT excluded.
+const REGIONAL_DAY_RATES = { Central: 500, East: 450, West: 550, South: 550 };
+
+// Where a workbook prices a course off the day-rate formula, its own number
+// wins — pricing is per region and the sheets are the contractual document.
+// CSCC23: the Eastern workbook runs Defensive Driving over 2 days (SAR 900)
+// while Central and Southern+Western run it over 1. Duration stays 1 day
+// (2 of 3 sheets plus both role matrices agree); only the Eastern price is
+// overridden. Admins can revise any of these from the catalog screen.
+const REGIONAL_PRICE_OVERRIDES = { CSCC23: { East: 900 } };
 const VALIDITY_MONTHS = 24; // matches certification/service.ts's +730 day cert expiry
 
 const DIST_TITLES = [
@@ -287,12 +298,13 @@ async function main() {
 
   console.log("Seeding regional pricing...");
   const today = new Date().toISOString().slice(0, 10);
-  for (const [protoId, , , , durationDays] of COURSES) {
+  for (const [protoId, code, , , durationDays] of COURSES) {
     const courseId = courseIdByProtoId.get(protoId);
     for (const [region, dayRate] of Object.entries(REGIONAL_DAY_RATES)) {
+      const price = REGIONAL_PRICE_OVERRIDES[code]?.[region] ?? durationDays * dayRate;
       await db
         .insert(pricing)
-        .values({ courseId, region, price: String(durationDays * dayRate), currency: "SAR", effectiveFrom: today })
+        .values({ courseId, region, price: String(price), currency: "SAR", effectiveFrom: today })
         .onConflictDoNothing();
     }
   }

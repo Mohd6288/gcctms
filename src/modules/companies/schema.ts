@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 
 // The contact email doubles as the contractor_manager login — one email,

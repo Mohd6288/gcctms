@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
+import { grantOhsInduction } from "../helpers/ohs-induction";
 import { companies, courses, documents, employees, jobRoles, profiles, regionalAdminAssignments, requestItems, trainingRequests } from "../../db/schema";
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
 import type { AuthContext } from "../../modules/platform/auth/shared";
@@ -101,6 +102,8 @@ describe("regional admin scoping — real DB", () => {
       checksumSha256: "0".repeat(64),
       uploadedBy: ownerEastId,
     });
+    // Every course is gated on the OHS General Induction.
+    await grantOhsInduction(companyEastId, employeeEastId, ownerEastId);
 
     contractorEastCtx = { userId: ownerEastId, role: "contractor_manager", companyId: companyEastId, trainerId: null, region: null, aal: "aal2" };
 

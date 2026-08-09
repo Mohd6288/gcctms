@@ -1,6 +1,6 @@
 // catalog module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   certificates,
@@ -9,6 +9,7 @@ import {
   courseJobRoles,
   coursePrerequisites,
   courses,
+  documents,
   employees,
   exams,
   jobRoles,
@@ -52,28 +53,96 @@ export async function listCoursePrerequisiteIds(courseId: number): Promise<Set<n
   return new Set(rows.map((r) => r.prerequisiteCourseId));
 }
 
-// OR-semantics: satisfied if the employee holds a valid (issued,
-// non-expired) certificate for ANY ONE listed prerequisite. Used by both
-// the request-submission guard (bulk, see requests/service.ts) and the
-// certificate eligibility gate (single-employee, see
-// certification/service.ts) — this is the single-employee shape.
-export async function employeeSatisfiesPrerequisites(employeeId: number, courseId: number): Promise<boolean> {
-  const prerequisiteCourseIds = await listCoursePrerequisiteIds(courseId);
-  if (prerequisiteCourseIds.size === 0) return true;
+// The OHS General Induction. SEC's rule is that nobody trains at all without
+// it, so it gates every other course — CSCC00, or CSCC09 (the same induction
+// extended with office safety) for office-based roles, whichever the
+// employee holds. The seeded catalog already names CSCC00 as a direct
+// prerequisite for most courses, but not for those sitting behind a
+// CSCC08/CSCC01/CSCC02 chain, and a course reached with an externally-earned
+// mid-chain certificate would otherwise skip the induction entirely.
+// Enforced here once for every course rather than by editing ~40
+// course_prerequisites rows that would then drift from the source matrices.
+const OHS_INDUCTION_CODES = ["CSCC00", "CSCC09"];
 
-  const [valid] = await db
-    .select({ id: certificates.id })
+async function listOhsInductionCourseIds(): Promise<Set<number>> {
+  const rows = await db.select({ id: courses.id }).from(courses).where(inArray(courses.code, OHS_INDUCTION_CODES));
+  return new Set(rows.map((r) => r.id));
+}
+
+// Each group is OR-semantics internally (any one course in it satisfies it);
+// ALL groups must be satisfied. Group 1 = the course's own listed
+// prerequisites, group 2 = the OHS induction — except for the induction
+// courses themselves, which are where every employee starts.
+export async function getPrerequisiteGroups(courseId: number): Promise<number[][]> {
+  const listed = await listCoursePrerequisiteIds(courseId);
+  const induction = await listOhsInductionCourseIds();
+
+  const groups: number[][] = [];
+  if (listed.size > 0) groups.push(Array.from(listed));
+  if (induction.size > 0 && !induction.has(courseId)) groups.push(Array.from(induction));
+  return groups;
+}
+
+// A course is "held" by an employee via an internally-issued, non-expired
+// certificate OR via an admin-verified external certificate the contractor
+// filed (documents.type='prior_certificate' carrying a course link and its
+// own expiry — 0027). Without the second half, an employee holding a real
+// OHS card earned elsewhere could never pass the gate. Uploads that are
+// still pending review, or were rejected, never count.
+export async function employeesHoldingValidCertificate(employeeIds: number[], courseIds: number[]): Promise<Set<number>> {
+  if (employeeIds.length === 0 || courseIds.length === 0) return new Set<number>();
+
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // pooler under load (see catalog/queries.ts's getPlatformOverviewStats).
+  const issued = await db
+    .select({ employeeId: certificates.employeeId })
     .from(certificates)
     .where(
       and(
-        eq(certificates.employeeId, employeeId),
-        inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
+        inArray(certificates.employeeId, employeeIds),
+        inArray(certificates.courseId, courseIds),
         eq(certificates.status, "issued"),
         gte(certificates.expiresAt, new Date())
       )
-    )
-    .limit(1);
-  return Boolean(valid);
+    );
+
+  const external = await db
+    .select({ employeeId: documents.employeeId })
+    .from(documents)
+    .where(
+      and(
+        inArray(documents.employeeId, employeeIds),
+        inArray(documents.courseId, courseIds),
+        eq(documents.type, "prior_certificate"),
+        isNotNull(documents.verifiedAt),
+        gte(documents.expiresAt, new Date().toISOString().slice(0, 10))
+      )
+    );
+
+  const holders = new Set(issued.map((r) => r.employeeId));
+  for (const row of external) if (row.employeeId !== null) holders.add(row.employeeId);
+  return holders;
+}
+
+// Bulk shape, used by the request-submission guard (requests/service.ts) and
+// the wizard's advisory badges. Narrows the candidate set group by group, so
+// an employee has to clear every group to survive.
+export async function employeesSatisfyingPrerequisites(employeeIds: number[], courseId: number): Promise<Set<number>> {
+  const groups = await getPrerequisiteGroups(courseId);
+  let satisfied = new Set(employeeIds);
+  for (const group of groups) {
+    if (satisfied.size === 0) break;
+    const holders = await employeesHoldingValidCertificate(Array.from(satisfied), group);
+    satisfied = new Set(Array.from(satisfied).filter((id) => holders.has(id)));
+  }
+  return satisfied;
+}
+
+// Single-employee shape, used by the certificate eligibility gate
+// (certification/service.ts).
+export async function employeeSatisfiesPrerequisites(employeeId: number, courseId: number): Promise<boolean> {
+  const satisfied = await employeesSatisfyingPrerequisites([employeeId], courseId);
+  return satisfied.has(employeeId);
 }
 
 // Advisory-only snapshot for the request wizard's employee table (matches
@@ -81,43 +150,45 @@ export async function employeeSatisfiesPrerequisites(employeeId: number, courseI
 // blocks adding an employee or submitting, just informs). One query for the
 // role-restriction set, one for prerequisite ids, one for the employees'
 // own job roles, then a per-employee prerequisite certificate check.
-export async function getEmployeeEligibilitySnapshot(courseId: number, employeeIds: number[]) {
-  if (employeeIds.length === 0) return new Map<number, { jobRoleEligible: boolean; hasRoleRestriction: boolean; missingPrerequisites: boolean; hasPrerequisiteRequirement: boolean }>();
+export interface EligibilityInfo {
+  jobRoleEligible: boolean;
+  hasRoleRestriction: boolean;
+  missingPrerequisites: boolean;
+  hasPrerequisiteRequirement: boolean;
+  // Every course that would satisfy this course's gate — what the wizard
+  // offers the contractor to file an existing certificate against.
+  prerequisiteCourseIds: number[];
+}
 
-  const [eligibleJobRoleIds, prerequisiteCourseIds, employeeRoles] = await Promise.all([
-    listCourseJobRoleIds(courseId),
-    listCoursePrerequisiteIds(courseId),
-    db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds)),
-  ]);
+export async function getEmployeeEligibilitySnapshot(courseId: number, employeeIds: number[]) {
+  if (employeeIds.length === 0) return new Map<number, EligibilityInfo>();
+
+  // Sequential, not Promise.all: concurrent Drizzle calls stall against the
+  // pooler under load and a mid-flight cancellation on a shared connection
+  // surfaces as an uncatchable socket error (see getPlatformOverviewStats).
+  const eligibleJobRoleIds = await listCourseJobRoleIds(courseId);
+  const prerequisiteGroups = await getPrerequisiteGroups(courseId);
+  const employeeRoles = await db
+    .select({ id: employees.id, jobRoleId: employees.jobRoleId })
+    .from(employees)
+    .where(inArray(employees.id, employeeIds));
 
   const hasRoleRestriction = eligibleJobRoleIds.size > 0;
-  const hasPrerequisiteRequirement = prerequisiteCourseIds.size > 0;
+  const hasPrerequisiteRequirement = prerequisiteGroups.length > 0;
+  const prerequisiteCourseIds = Array.from(new Set(prerequisiteGroups.flat()));
 
   const satisfiedIds = hasPrerequisiteRequirement
-    ? new Set(
-        (
-          await db
-            .select({ employeeId: certificates.employeeId })
-            .from(certificates)
-            .where(
-              and(
-                inArray(certificates.employeeId, employeeIds),
-                inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
-                eq(certificates.status, "issued"),
-                gte(certificates.expiresAt, new Date())
-              )
-            )
-        ).map((r) => r.employeeId)
-      )
+    ? await employeesSatisfyingPrerequisites(employeeIds, courseId)
     : new Set<number>();
 
-  const result = new Map<number, { jobRoleEligible: boolean; hasRoleRestriction: boolean; missingPrerequisites: boolean; hasPrerequisiteRequirement: boolean }>();
+  const result = new Map<number, EligibilityInfo>();
   for (const { id, jobRoleId } of employeeRoles) {
     result.set(id, {
       hasRoleRestriction,
       jobRoleEligible: !hasRoleRestriction || eligibleJobRoleIds.has(jobRoleId),
       hasPrerequisiteRequirement,
       missingPrerequisites: hasPrerequisiteRequirement && !satisfiedIds.has(id),
+      prerequisiteCourseIds,
     });
   }
   return result;

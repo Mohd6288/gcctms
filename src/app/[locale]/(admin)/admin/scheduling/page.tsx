@@ -3,12 +3,12 @@ import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listActiveEnrollmentRequestItemIds, listPlatformAdmins, listRegionalAdminAssignments, listSchedulableRequestItems } from "@/modules/scheduling/queries";
 import { SchedulingBoard } from "./scheduling-board";
+import { REGIONS } from "@/lib/regions";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 
 export default async function AdminSchedulingPage({
   params,

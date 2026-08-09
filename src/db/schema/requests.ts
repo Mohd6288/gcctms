@@ -78,6 +78,12 @@ export const documents = pgTable(
     employeeId: bigint("employee_id", { mode: "number" }).references(() => employees.id),
     requestId: bigint("request_id", { mode: "number" }).references(() => trainingRequests.id),
     type: text("type").notNull(),
+    // Set only on a prior_certificate that the contractor filed as a
+    // structured external certificate (0027) — course it certifies plus its
+    // own validity window, so the prerequisite gate can read it.
+    courseId: bigint("course_id", { mode: "number" }).references(() => courses.id),
+    issuedAt: date("issued_at"),
+    expiresAt: date("expires_at"),
     bucket: text("bucket").notNull(),
     objectKey: text("object_key").notNull().unique(),
     originalName: text("original_name").notNull(),
@@ -102,6 +108,11 @@ export const documents = pgTable(
       sql`${t.type} in ('national_id', 'prior_certificate', 'sadad_invoice', 'generated_certificate', 'registration_sheet', 'hrbl_request_form', 'other')`
     ),
     check("documents_not_verified_and_rejected", sql`${t.verifiedAt} is null or ${t.rejectedAt} is null`),
+    check(
+      "documents_external_cert_shape",
+      sql`(${t.courseId} is null and ${t.issuedAt} is null and ${t.expiresAt} is null)
+        or (${t.type} = 'prior_certificate' and ${t.courseId} is not null and ${t.expiresAt} is not null)`
+    ),
   ]
 );
 

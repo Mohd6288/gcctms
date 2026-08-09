@@ -4,12 +4,11 @@ import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { classEnrollments, classes, companies, employees, regionalAdminAssignments, requestItems, trainingRequests } from "@/db/schema";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
+import { REGIONS as REGIONS_ORDER } from "@/lib/regions";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { getTrainerEmail, queueNotification } from "@/modules/platform/notifications/service";
 import { listActiveEnrollmentRequestItemIds, listSchedulableRequestItems } from "./queries";
 import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, SetAdminRegionInput, UpdateClassInput } from "./schema";
-
-const REGIONS_ORDER = ["North", "South", "East", "West", "Central"] as const;
 
 function requireScheduleAccess(context: AuthContext | null) {
   if (!authorize("schedule_classes", context)) throw new Error("Not authorized");

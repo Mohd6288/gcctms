@@ -24,7 +24,8 @@
       "exams": "الاختبارات",
       "trainers": "المدربون",
       "users": "المستخدمون",
-      "training": "تدريبي"
+      "training": "تدريبي",
+      "externalCertificates": "الشهادات الخارجية"
     },
     "openMenu": "فتح قائمة التنقل",
     "closeMenu": "إغلاق قائمة التنقل",
@@ -138,6 +139,27 @@
       "replaceFile": "استبدال الملف",
       "uploading": "جارٍ الرفع…",
       "viewFile": "عرض الملف"
+    },
+    "externalCertificate": {
+      "title": "شهادات سابقة",
+      "description": "هل يحمل الموظف هذه الشهادة من جهة أخرى؟ ارفعها هنا لاعتمادها من الإدارة — وتُحتسب ضمن المتطلبات بعد الاعتماد.",
+      "courseLabel": "الشهادة خاصة بدورة",
+      "issuedAtLabel": "تاريخ الإصدار",
+      "expiresAtLabel": "صالحة حتى",
+      "upload": "إرسال للاعتماد",
+      "uploading": "جارٍ الرفع…",
+      "incomplete": "اختر الدورة وتاريخ الصلاحية والملف.",
+      "genericError": "حدث خطأ. حاول مرة أخرى.",
+      "pending": "بانتظار الاعتماد",
+      "verified": "معتمدة",
+      "rejected": "مرفوضة",
+      "expires": "صالحة حتى {date}",
+      "viewFile": "عرض الملف",
+      "rejectionReasonLabel": "سبب الرفض",
+      "reviewNote": "يجب اعتمادها من مسؤول المنصة قبل إضافة الموظف إلى دورة تشترطها.",
+      "required": "مطلوب",
+      "optional": "اختياري",
+      "requiredDescription": "لا توجد لدينا شهادة السلامة العامة لهذا الموظف. ارفع الشهادة التي يحملها بالفعل — يعتمدها مسؤول المنصة قبل إرسال الطلب."
     }
   },
   "contractor": {
@@ -166,9 +188,6 @@
         "trainingTypeOnSite": "في الموقع",
         "trainingTypeCenter": "مركز تدريب",
         "trainingTypeVirtual": "نظري عن بُعد + عملي في الموقع",
-        "startDateLabel": "تاريخ البدء المفضل",
-        "endDateLabel": "تاريخ الانتهاء المفضل",
-        "datesHint": "مجرد تفضيل — يحدد مختبر الخليج تواريخ الدورة الفعلية عند الجدولة.",
         "notesLabel": "ملاحظات",
         "employeesHint": "اختر الموظفين من قائمتك لإضافتهم إلى هذا الطلب.",
         "noEmployees": "ليس لديك موظفون بعد.",
@@ -208,7 +227,7 @@
           "title": "استيراد موظفين",
           "close": "إغلاق",
           "tabRegistration": "ورقة التسجيل",
-          "tabHrbl": "نموذج الطلب",
+          "tabHrbl": "طلب التسجيل",
           "downloadTemplate": "تحميل النموذج",
           "registrationHint": "املأ صفوف المرشحين (الاسم، الإقامة، الوظيفة، النشاط، المنطقة/المدينة، الهاتف، البريد الإلكتروني، الجنسية)، ثم ارفع الملف نفسه هنا.",
           "hrblHint": "يلتقط هذا النموذج فقط الاسم والمسمى الوظيفي ورقم الإقامة — أكمل الجنسية والهاتف والبريد الإلكتروني لاحقًا عبر تعديل الموظف.",
@@ -220,13 +239,32 @@
           "createdCount": "تم استيراد {count} موظف",
           "skippedCount": "تم تخطي {count} صف",
           "rowLabel": "الصف {row}"
-        }
+        },
+        "regionCentral": "المنطقة الوسطى",
+        "regionEast": "المنطقة الشرقية",
+        "regionWest": "المنطقة الغربية",
+        "regionSouth": "المنطقة الجنوبية",
+        "cityRiyadh": "الرياض",
+        "cityDammam": "الدمام",
+        "cityJeddah": "جدة",
+        "cityAbha": "أبها",
+        "cityNone": "اختر المدينة",
+        "citySelectRegionFirst": "اختر المنطقة أولاً",
+        "requiredCourse": "اختر الدورة المطلوبة.",
+        "requiredRegion": "اختر منطقة الأعمال التابع لها التدريب.",
+        "requiredCity": "اختر المدينة التي سيُقدَّم فيها التدريب.",
+        "requiredTrainingType": "اختر طريقة تقديم التدريب.",
+        "requiredEmployees": "اختر موظفاً واحداً على الأقل.",
+        "requiredRequestDocuments": "أرفق كشف التسجيل ونموذج طلب التسجيل معاً.",
+        "requiredNationalId": "يجب رفع الإقامة لكل موظف مختار.",
+        "requiredOhsCertificate": "ارفع شهادة السلامة العامة (OHS General Induction) لـ: {employees}. وإن لم تكن لديهم، اطلب هذه الدورة لهم أولاً.",
+        "orFileExistingCertificate": "وإن كانت لديه الشهادة مسبقاً، فأرفقها في خطوة المستندات."
       },
       "documents": {
         "registrationSheet": "ورقة التسجيل",
         "registrationSheetDescription": "نزّل النموذج، واملأ بيانات كل مرشح، ثم ارفع الملف المكتمل هنا.",
-        "hrblForm": "HRBL_0004_FO_001",
-        "hrblFormDescription": "نموذج طلب الدورة الرسمي — مطلوب لإكمال هذا الطلب. نزّله، واملأه ووقّعه، ثم ارفعه هنا.",
+        "hrblForm": "طلب التسجيل",
+        "hrblFormDescription": "نموذج طلب الدورة الرسمي (HRBL_0004_FO_001) — مطلوب لإتمام الطلب. حمّل النموذج واملأه ووقّعه ثم ارفعه هنا.",
         "verified": "تم التحقق",
         "pendingVerification": "بانتظار التحقق",
         "notAttached": "لم يتم الإرفاق",
@@ -447,7 +485,7 @@
         "saveDecision": "حفظ",
         "documentsTitle": "مستندات الطلب",
         "registrationSheet": "ورقة التسجيل",
-        "hrblForm": "HRBL_0004_FO_001",
+        "hrblForm": "طلب التسجيل",
         "verified": "تم التحقق",
         "rejected": "مرفوض",
         "pendingVerification": "بانتظار التحقق",
@@ -609,6 +647,21 @@
         "scheduled": "مجدول",
         "completed": "مكتمل"
       }
+    },
+    "externalCertificates": {
+      "title": "الشهادات الخارجية",
+      "subtitle": "شهادات يحملها الموظفون من خارج المنصة وبانتظار الاعتماد. لا يستطيع المقاول إرسال الطلب المرتبط بها حتى يتم البت فيها.",
+      "empty": "لا توجد شهادات بانتظار المراجعة.",
+      "regionScopedNote": "تُعرض منطقة {region} فقط.",
+      "verify": "اعتماد",
+      "reject": "رفض",
+      "confirmReject": "تأكيد الرفض",
+      "cancel": "إلغاء",
+      "reasonPlaceholder": "ما سبب الرفض؟",
+      "issuedAt": "صدرت في",
+      "expiresAt": "صالحة حتى",
+      "viewFile": "عرض الملف",
+      "genericError": "حدث خطأ. حاول مرة أخرى."
     }
   },
   "superadmin": {

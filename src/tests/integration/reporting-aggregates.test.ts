@@ -212,14 +212,13 @@ describe("reporting aggregates — pinned against a seeded fixture", () => {
     expect(byId.get(course2Id)).toBeCloseTo(0, 2);
   });
 
-  it("getRequestsByRegion returns all 5 regions with in-period counts", async () => {
+  it("getRequestsByRegion returns all 4 regions with in-period counts", async () => {
     const rows = await getRequestsByRegion(PERIOD);
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(4);
 
     const byRegion = Object.fromEntries(rows.map((r) => [r.region, r.value]));
     expect(byRegion.Central).toBe(2);
     expect(byRegion.East).toBe(1);
-    expect(byRegion.North).toBe(0);
     expect(byRegion.South).toBe(0);
     expect(byRegion.West).toBe(0);
   });

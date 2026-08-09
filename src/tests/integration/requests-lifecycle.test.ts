@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
+import { grantOhsInduction } from "../helpers/ohs-induction";
 import { companies, courses, documents, employees, jobRoles, jobs, payments, pricing, profiles, requestItems, trainingRequests } from "../../db/schema";
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
 import type { AuthContext } from "../../modules/platform/auth/shared";
@@ -111,6 +112,9 @@ describe("training request lifecycle — real DB", () => {
       checksumSha256: "0".repeat(64),
       uploadedBy: ownerId,
     });
+    // Every course is gated on the OHS General Induction — without it these
+    // lifecycle cases fail at submit for a reason none of them is testing.
+    await grantOhsInduction(companyId, employeeWithDocId, ownerId);
 
     const [empNoDoc] = await db
       .insert(employees)

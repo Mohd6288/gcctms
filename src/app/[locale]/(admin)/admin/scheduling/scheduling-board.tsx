@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useRouter } from "@/i18n/navigation";
 import { assignRequestItemRegionAction, autoAssignPooledByPreferenceAction, unassignRequestItemRegionAction } from "@/modules/scheduling/actions";
+import { REGIONS, type Region } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
-type Region = (typeof REGIONS)[number];
 const selectClassName =
   "h-8 rounded-lg border border-input bg-transparent px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 

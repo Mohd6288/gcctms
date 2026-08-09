@@ -3,7 +3,9 @@ import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
 import { getEmployeeById, listActiveJobRoles } from "@/modules/employees/queries";
-import { listDocumentsForEmployee } from "@/modules/platform/storage/queries";
+import { listDocumentsForEmployee, listExternalCertificatesForCompany } from "@/modules/platform/storage/queries";
+import { listActiveCourses } from "@/modules/requests/queries";
+import { ExternalCertificatePanel } from "@/components/documents/external-certificate-panel";
 import { EditEmployeeForm } from "./edit-employee-form";
 import { DocumentUpload } from "./document-upload";
 
@@ -36,6 +38,11 @@ export default async function EmployeeDetailPage({
   }
 
   const [jobRoles, documents] = await Promise.all([listActiveJobRoles(context.companyId), listDocumentsForEmployee(employee.id)]);
+  // Filing an existing certificate has to work outside a request too: it
+  // needs admin verification before it counts, and a contractor blocked at
+  // submit shouldn't have to keep a half-built request open while waiting.
+  const courses = await listActiveCourses(context.companyId);
+  const externalCertificates = await listExternalCertificatesForCompany(context.companyId);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-6">
@@ -46,6 +53,15 @@ export default async function EmployeeDetailPage({
       </div>
       <EditEmployeeForm employee={employee} jobRoles={jobRoles} locale={locale} />
       <DocumentUpload companyId={context.companyId} employeeId={employee.id} documents={documents} />
+      <div className="w-full max-w-lg">
+        <ExternalCertificatePanel
+          companyId={context.companyId}
+          employeeId={employee.id}
+          locale={locale}
+          courses={courses}
+          certificates={externalCertificates.filter((c) => c.employeeId === employee.id)}
+        />
+      </div>
     </div>
   );
 }

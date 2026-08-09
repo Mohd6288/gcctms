@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { registerCompanyAction } from "@/modules/companies/actions";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 
 const initialState = {

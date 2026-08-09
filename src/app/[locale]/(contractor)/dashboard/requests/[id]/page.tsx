@@ -4,7 +4,7 @@ import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
 import { listActiveCourses, getRequestById, getRequestItems, getRequestLevelDocuments } from "@/modules/requests/queries";
 import { listActiveJobRoles, listEmployeesForCompany } from "@/modules/employees/queries";
-import { listEmployeeDocumentsForCompany } from "@/modules/platform/storage/queries";
+import { listEmployeeDocumentsForCompany, listExternalCertificatesForCompany } from "@/modules/platform/storage/queries";
 import { getPaymentForRequest } from "@/modules/payments/queries";
 import { RequestWizard } from "./request-wizard";
 import { RequestSummary } from "./request-summary";
@@ -93,6 +93,9 @@ export default async function RequestDetailPage({
     listEmployeeDocumentsForCompany(context.companyId),
     listActiveJobRoles(context.companyId),
   ]);
+  // Sequential, not a fifth entry in the Promise.all above — concurrent
+  // Drizzle calls stall against the pooler under load.
+  const externalCertificates = await listExternalCertificatesForCompany(context.companyId);
 
   return (
     <div className="flex flex-1 items-center justify-center p-6">
@@ -103,8 +106,6 @@ export default async function RequestDetailPage({
           preferredRegion: request.preferredRegion,
           preferredCity: request.preferredCity,
           preferredTrainingType: request.preferredTrainingType,
-          preferredStartDate: request.preferredStartDate,
-          preferredEndDate: request.preferredEndDate,
           notes: request.notes,
         }}
         companyId={context.companyId}
@@ -128,6 +129,7 @@ export default async function RequestDetailPage({
             rejectionReason: d.rejectionReason,
           }))}
         employeeDocuments={employeeDocuments}
+        externalCertificates={externalCertificates}
         jobRoles={jobRoles}
         locale={locale}
       />

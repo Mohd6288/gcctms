@@ -5,12 +5,12 @@ import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
 import { listCompanies } from "@/modules/companies/queries";
 import { NewClassForm } from "./new-class-form";
+import { REGIONS } from "@/lib/regions";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 
 export default async function NewClassPage({
   params,

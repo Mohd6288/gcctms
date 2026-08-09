@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
+import { grantOhsInduction } from "../helpers/ohs-induction";
 import {
   auditLog,
   companies,
@@ -144,6 +145,8 @@ describe("payment lifecycle — real DB", () => {
       checksumSha256: "0".repeat(64),
       uploadedBy: ownerAId,
     });
+    // Every course is gated on the OHS General Induction.
+    await grantOhsInduction(companyAId, employeeId, ownerAId);
 
     contractorA = { userId: ownerAId, role: "contractor_manager", companyId: companyAId, trainerId: null, region: null, aal: "aal2" };
     contractorB = { userId: ownerBId, role: "contractor_manager", companyId: companyBId, trainerId: null, region: null, aal: "aal2" };

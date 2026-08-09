@@ -1,9 +1,9 @@
 // requests module — business logic (Server Actions call into here, never touch db/ directly for RLS-scoped ops).
 import "server-only";
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { certificates, companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
-import { listCourseJobRoleIds, listCoursePrerequisiteIds } from "@/modules/catalog/queries";
+import { companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
+import { employeesSatisfyingPrerequisites, listCourseJobRoleIds } from "@/modules/catalog/queries";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
@@ -147,28 +147,18 @@ export async function submitRequest(context: AuthContext, requestId: number) {
     }
   }
 
-  // Prerequisites: OR-semantics — an employee satisfies the gate by holding a
-  // valid (issued, non-expired) certificate for ANY ONE listed prerequisite
-  // course. Also a deliberate strengthening over the validated prototype's
-  // advisory-only wizard badge — see roles-and-workflows.md.
-  const prerequisiteCourseIds = await listCoursePrerequisiteIds(request.courseId);
-  if (prerequisiteCourseIds.size > 0) {
-    const validCerts = await db
-      .select({ employeeId: certificates.employeeId })
-      .from(certificates)
-      .where(
-        and(
-          inArray(certificates.employeeId, employeeIds),
-          inArray(certificates.courseId, Array.from(prerequisiteCourseIds)),
-          eq(certificates.status, "issued"),
-          gte(certificates.expiresAt, new Date())
-        )
-      );
-    const satisfied = new Set(validCerts.map((c) => c.employeeId));
-    const missingPrerequisites = employeeIds.filter((id) => !satisfied.has(id));
-    if (missingPrerequisites.length > 0) {
-      throw new Error("All employees must satisfy this course's prerequisites before submitting.");
-    }
+  // Prerequisites: OR-semantics within each group, AND across groups — the
+  // course's own listed prerequisites, plus the OHS General Induction that
+  // gates every course. Satisfied by an internally-issued certificate or an
+  // admin-verified external one (catalog/queries.ts). A deliberate
+  // strengthening over the validated prototype's advisory-only wizard badge —
+  // see roles-and-workflows.md.
+  const satisfied = await employeesSatisfyingPrerequisites(employeeIds, request.courseId);
+  const missingPrerequisites = employeeIds.filter((id) => !satisfied.has(id));
+  if (missingPrerequisites.length > 0) {
+    throw new Error(
+      "Every employee needs a valid OHS General Induction certificate, plus this course's own prerequisites, before submitting. Add the missing course to a request, or upload the employee's existing certificate for admin verification."
+    );
   }
 
   // Matches the validated prototype's submitRequest(): resubmitting from

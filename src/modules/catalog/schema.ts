@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { REGIONS } from "@/lib/regions";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 
 // contractorCategory: unset = universal course (shown to every company);

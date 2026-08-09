@@ -11,15 +11,15 @@ import { createDraftRequestAction, submitRequestAction, syncRequestItemsAction, 
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
 import { getEmployeeEligibilitySnapshotAction } from "@/modules/catalog/actions";
 import { DocumentUploadSlot, type DocumentSlotStatus } from "@/components/documents/document-upload-slot";
+import { ExternalCertificatePanel, type ExternalCertificate } from "@/components/documents/external-certificate-panel";
 import { AddEmployeePanel } from "./add-employee-panel";
 import { ImportEmployeesPanel } from "./import-employees-panel";
+import { REGIONS, citiesForRegion, type Region } from "@/lib/regions";
 
 const XLSX_ACCEPT = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const IMAGE_ACCEPT = "image/jpeg,image/png,application/pdf";
 
-const REGIONS = ["North", "South", "East", "West", "Central"] as const;
 const TRAINING_TYPES = ["on_site", "training_center", "virtual_theory_onsite_practical"] as const;
-type Region = (typeof REGIONS)[number];
 type TrainingType = (typeof TRAINING_TYPES)[number];
 
 interface CourseOption {
@@ -64,6 +64,7 @@ interface EligibilityInfo {
   hasRoleRestriction: boolean;
   missingPrerequisites: boolean;
   hasPrerequisiteRequirement: boolean;
+  prerequisiteCourseIds: number[];
 }
 
 interface RequestWizardFields {
@@ -71,8 +72,6 @@ interface RequestWizardFields {
   preferredRegion: string | null;
   preferredCity: string | null;
   preferredTrainingType: string | null;
-  preferredStartDate: string | null;
-  preferredEndDate: string | null;
   notes: string | null;
 }
 
@@ -85,6 +84,7 @@ export function RequestWizard({
   initialSelectedEmployeeIds,
   initialRequestDocs,
   employeeDocuments,
+  externalCertificates,
   jobRoles,
   locale,
 }: {
@@ -96,6 +96,7 @@ export function RequestWizard({
   initialSelectedEmployeeIds: number[];
   employeeDocuments: EmployeeDocument[];
   initialRequestDocs: RequestDocInfo[];
+  externalCertificates: ExternalCertificate[];
   jobRoles: JobRoleOption[];
   locale: string;
 }) {
@@ -114,8 +115,6 @@ export function RequestWizard({
   const [preferredTrainingType, setPreferredTrainingType] = useState<TrainingType | "">(
     (initialFields.preferredTrainingType as TrainingType) ?? ""
   );
-  const [preferredStartDate, setPreferredStartDate] = useState(initialFields.preferredStartDate ?? "");
-  const [preferredEndDate, setPreferredEndDate] = useState(initialFields.preferredEndDate ?? "");
   const [notes, setNotes] = useState(initialFields.notes ?? "");
 
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(new Set(initialSelectedEmployeeIds));
@@ -124,6 +123,10 @@ export function RequestWizard({
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [eligibility, setEligibility] = useState<Map<number, EligibilityInfo>>(new Map());
+  // Bumped after an external certificate is filed — router.refresh() alone
+  // re-renders the server tree but wouldn't re-run the eligibility fetch
+  // below, leaving a stale "missing prerequisite" badge on screen.
+  const [eligibilityNonce, setEligibilityNonce] = useState(0);
 
   // Advisory-only badges (never block adding an employee or submitting —
   // matches the validated prototype's Step2Employees.tsx exactly).
@@ -131,7 +134,9 @@ export function RequestWizard({
     // Stale badges just stop being fetched (not actively cleared) once these
     // conditions no longer hold — they naturally get overwritten next time
     // step 2 is reached with a course and at least one employee selected.
-    if (step !== 2 || !courseId || selectedEmployeeIds.size === 0) return;
+    // Steps 2 and 3 both need it: step 2 for the badges, step 3 to decide
+    // which employees must have a prior certificate on file before Next.
+    if ((step !== 2 && step !== 3) || !courseId || selectedEmployeeIds.size === 0) return;
     let cancelled = false;
     getEmployeeEligibilitySnapshotAction(courseId, Array.from(selectedEmployeeIds)).then((rows) => {
       if (cancelled) return;
@@ -140,7 +145,7 @@ export function RequestWizard({
     return () => {
       cancelled = true;
     };
-  }, [step, courseId, selectedEmployeeIds]);
+  }, [step, courseId, selectedEmployeeIds, eligibilityNonce]);
 
   function toggleEmployee(id: number) {
     setSelectedEmployeeIds((prev) => {
@@ -152,20 +157,18 @@ export function RequestWizard({
   }
 
   async function handleStep1Next() {
-    if (!courseId) {
-      setError(t("genericError"));
+    if (stepBlockedReason) {
+      setError(stepBlockedReason);
       return;
     }
     setError(null);
     setLoading(true);
     try {
       const fields = {
-        courseId,
+        courseId: courseId as number,
         preferredRegion: preferredRegion || undefined,
         preferredCity: preferredCity || undefined,
         preferredTrainingType: preferredTrainingType || undefined,
-        preferredStartDate: preferredStartDate || undefined,
-        preferredEndDate: preferredEndDate || undefined,
         notes: notes || undefined,
       } as const;
 
@@ -185,6 +188,10 @@ export function RequestWizard({
 
   async function handleStep2Next() {
     if (!requestId) return;
+    if (stepBlockedReason) {
+      setError(stepBlockedReason);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -257,6 +264,44 @@ export function RequestWizard({
   const selectedCourse = courses.find((c) => c.id === courseId);
   const ohsCourse = courses.find((c) => c.code === OHS_COURSE_CODE);
 
+  // An employee who doesn't already hold the OHS General Induction has to
+  // have a certificate on file before the request can go anywhere — either
+  // one filed here or an internal one. Pending admin verification is enough
+  // to move through the wizard; submitRequest is the hard gate.
+  const employeesNeedingOhsCertificate = selectedEmployees.filter(
+    (e) => eligibility.get(e.id)?.missingPrerequisites && !externalCertificates.some((c) => c.employeeId === e.id && !c.rejectedAt)
+  );
+
+  // One place decides whether the current step may be left, so the Next
+  // button's disabled state and the message under it can never disagree.
+  const stepBlockedReason = (() => {
+    if (step === 1) {
+      if (!courseId) return t("requiredCourse");
+      if (!preferredRegion) return t("requiredRegion");
+      if (!preferredCity) return t("requiredCity");
+      if (!preferredTrainingType) return t("requiredTrainingType");
+      return null;
+    }
+    if (step === 2) {
+      return selectedEmployeeIds.size === 0 ? t("requiredEmployees") : null;
+    }
+    if (step === 3) {
+      const missingRequestDoc = (["registration_sheet", "hrbl_request_form"] as const).some(
+        (type) => !requestDocs.some((d) => d.type === type && !d.rejectedAt)
+      );
+      if (missingRequestDoc) return t("requiredRequestDocuments");
+      const missingNationalId = selectedEmployees.some((e) => !employeeDocuments.some((d) => d.employeeId === e.id && d.type === "national_id"));
+      if (missingNationalId) return t("requiredNationalId");
+      if (employeesNeedingOhsCertificate.length > 0) {
+        return t("requiredOhsCertificate", {
+          employees: employeesNeedingOhsCertificate.map((e) => (locale === "ar" ? e.fullNameAr : e.fullNameEn)).join("، "),
+        });
+      }
+      return null;
+    }
+    return null;
+  })();
+
   const steps = [t("stepInfo"), t("stepEmployees"), t("stepDocuments"), t("stepReview")];
 
   return (
@@ -290,27 +335,54 @@ export function RequestWizard({
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="preferredRegion">{t("regionLabel")}</Label>
+              <Label htmlFor="preferredRegion">
+                {t("regionLabel")} <span className="text-destructive">*</span>
+              </Label>
               <select
                 id="preferredRegion"
                 className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 value={preferredRegion}
-                onChange={(e) => setPreferredRegion(e.target.value as Region | "")}
+                onChange={(e) => {
+                  const region = e.target.value as Region | "";
+                  setPreferredRegion(region);
+                  // The city list is derived from the region, so a stale city
+                  // from the previous region must not survive the switch.
+                  // A region with exactly one institute city picks it itself.
+                  const cities = citiesForRegion(region);
+                  setPreferredCity(cities.length === 1 ? cities[0] : "");
+                }}
               >
                 <option value="">{t("regionNone")}</option>
                 {REGIONS.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {t(`region${r}`)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="preferredCity">{t("cityLabel")}</Label>
-              <Input id="preferredCity" value={preferredCity} onChange={(e) => setPreferredCity(e.target.value)} />
+              <Label htmlFor="preferredCity">
+                {t("cityLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <select
+                id="preferredCity"
+                disabled={!preferredRegion}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+                value={preferredCity}
+                onChange={(e) => setPreferredCity(e.target.value)}
+              >
+                <option value="">{preferredRegion ? t("cityNone") : t("citySelectRegionFirst")}</option>
+                {citiesForRegion(preferredRegion).map((city) => (
+                  <option key={city} value={city}>
+                    {t(`city${city}`)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="preferredTrainingType">{t("trainingTypeLabel")}</Label>
+              <Label htmlFor="preferredTrainingType">
+                {t("trainingTypeLabel")} <span className="text-destructive">*</span>
+              </Label>
               <select
                 id="preferredTrainingType"
                 className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
@@ -325,17 +397,6 @@ export function RequestWizard({
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="preferredStartDate">{t("startDateLabel")}</Label>
-                <Input id="preferredStartDate" type="date" value={preferredStartDate} onChange={(e) => setPreferredStartDate(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="preferredEndDate">{t("endDateLabel")}</Label>
-                <Input id="preferredEndDate" type="date" value={preferredEndDate} onChange={(e) => setPreferredEndDate(e.target.value)} />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("datesHint")}</p>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="notes">{t("notesLabel")}</Label>
               <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -447,7 +508,8 @@ export function RequestWizard({
                             className="text-primary hover:underline"
                           >
                             {t("startOhsRequest")}
-                          </Link>
+                          </Link>{" "}
+                          {t("orFileExistingCertificate")}
                         </p>
                       ) : null}
                     </li>
@@ -491,19 +553,15 @@ export function RequestWizard({
               ) : (
                 selectedEmployees.map((employee) => {
                   const docs = employeeDocuments.filter((d) => d.employeeId === employee.id);
+                  const info = eligibility.get(employee.id);
+                  const needsCertificate = employeesNeedingOhsCertificate.some((e) => e.id === employee.id);
                   return (
-                    <div key={employee.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+                    <div key={employee.id} className="flex flex-col gap-3 rounded-lg border border-border p-3">
                       <p className="text-sm font-medium">{locale === "ar" ? employee.fullNameAr : employee.fullNameEn}</p>
-                      <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {(
                           [
                             { type: "national_id" as const, label: tDocs("nationalId"), description: tDocs("nationalIdDescription"), required: true },
-                            {
-                              type: "prior_certificate" as const,
-                              label: tDocs("priorCertificate"),
-                              description: tDocs("priorCertificateDescription"),
-                              required: false,
-                            },
                             { type: "other" as const, label: tDocs("other"), description: tDocs("otherDescription"), required: false },
                           ]
                         ).map(({ type, label, description, required }) => {
@@ -526,6 +584,25 @@ export function RequestWizard({
                           );
                         })}
                       </div>
+                      {/* Required only for employees who don't already hold
+                          the induction (or the course's own prerequisite)
+                          through us — the ones stepBlockedReason names. */}
+                      {info?.hasPrerequisiteRequirement ? (
+                        <div className={needsCertificate ? "rounded-lg ring-1 ring-destructive/40" : undefined}>
+                          <ExternalCertificatePanel
+                            companyId={companyId}
+                            employeeId={employee.id}
+                            locale={locale}
+                            required={needsCertificate}
+                            courses={courses.filter((c) => info.prerequisiteCourseIds.includes(c.id))}
+                            certificates={externalCertificates.filter((c) => c.employeeId === employee.id)}
+                            onUploaded={() => {
+                              setEligibilityNonce((n) => n + 1);
+                              router.refresh();
+                            }}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })
@@ -549,13 +626,18 @@ export function RequestWizard({
         ) : null}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {!error && stepBlockedReason ? <p className="text-sm text-muted-foreground">{stepBlockedReason}</p> : null}
 
         <div className="flex items-center justify-between pt-2">
           <Button type="button" variant="outline" disabled={step === 1 || loading} onClick={() => setStep((s) => s - 1)}>
             {t("back")}
           </Button>
           {step < 4 ? (
-            <Button type="button" disabled={loading} onClick={step === 1 ? handleStep1Next : step === 2 ? handleStep2Next : () => setStep(4)}>
+            <Button
+              type="button"
+              disabled={loading || stepBlockedReason !== null}
+              onClick={step === 1 ? handleStep1Next : step === 2 ? handleStep2Next : () => setStep(4)}
+            >
               {t("next")}
             </Button>
           ) : (
