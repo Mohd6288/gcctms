@@ -81,6 +81,17 @@ jobs:
       - name: RLS check (fails if any public table lacks Row Level Security)
         run: npm run rls-check
 
+      # The stack starts empty, but the integration suites need the real
+      # catalog: every course is gated on the OHS General Induction, so
+      # tests/helpers/ohs-induction.ts looks CSCC00 up by code and fails
+      # loudly without it. Seeding here also means CI exercises the same
+      # seeder deploy-migrations.yml runs against dev/staging/prod, so a
+      # broken seed script fails a PR instead of a deploy.
+      - name: Seed catalog data
+        run: npm run seed:catalog
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
       - name: Test (unit + DB-backed integration/RLS suites)
         run: npm run test
 
