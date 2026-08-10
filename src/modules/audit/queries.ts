@@ -6,7 +6,7 @@
 // row-level: it can withhold a row but not a column. Auditors have no RLS
 // policies at all (0033), so this module is the only path to the data.
 import "server-only";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { certificates, classes, companies, courses, employees, profiles, requestItems, trainingRequests } from "@/db/schema";
 import { auditLog } from "@/db/schema";
@@ -77,10 +77,52 @@ export async function listAuditCertificates(limit = 500) {
 }
 
 // The append-only trail of who changed what — the record an audit actually
-// turns on. Actor resolved to a name so the export is readable without
-// joining user ids by hand.
-export async function listAuditActivity(limit = 500) {
-  return db
+// turns on. Filtered, paged and counted, because at several thousand users
+// this table is the largest thing in the product and "the last 500 entries"
+// is not an investigation, it is a sample.
+//
+// Actor resolved to a name so the export is readable without joining user
+// ids by hand.
+export interface ActivityFilters {
+  actorUserId?: string | null;
+  entityType?: string | null;
+  action?: string | null;
+  /** Inclusive date bounds, "YYYY-MM-DD" as they arrive from a date input. */
+  from?: string | null;
+  to?: string | null;
+  q?: string | null;
+  page?: number;
+  pageSize?: number;
+}
+
+export const ACTIVITY_PAGE_SIZE = 100;
+
+function activityWhere(filters: ActivityFilters) {
+  const parts = [
+    filters.actorUserId ? eq(auditLog.userId, filters.actorUserId) : undefined,
+    filters.entityType ? eq(auditLog.entityType, filters.entityType) : undefined,
+    filters.action ? eq(auditLog.action, filters.action) : undefined,
+    filters.from ? gte(auditLog.createdAt, new Date(`${filters.from}T00:00:00Z`)) : undefined,
+    // The "to" bound is inclusive of the whole day: an investigator picking
+    // today and seeing nothing from today would reasonably call it broken.
+    filters.to ? lte(auditLog.createdAt, new Date(`${filters.to}T23:59:59.999Z`)) : undefined,
+    // Free text covers the note and the entity id, which is how somebody
+    // arrives here holding a request number.
+    filters.q?.trim()
+      ? sql`(${auditLog.note} ilike ${`%${filters.q.trim()}%`} or ${auditLog.entityId}::text = ${filters.q.trim()})`
+      : undefined,
+  ].filter(Boolean);
+  return parts.length > 0 ? and(...parts) : undefined;
+}
+
+export async function listAuditActivity(filters: ActivityFilters = {}) {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = filters.pageSize ?? ACTIVITY_PAGE_SIZE;
+  const where = activityWhere(filters);
+
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(auditLog).where(where);
+
+  const rows = await db
     .select({
       id: auditLog.id,
       actor: profiles.fullName,
@@ -95,6 +137,44 @@ export async function listAuditActivity(limit = 500) {
     })
     .from(auditLog)
     .leftJoin(profiles, eq(profiles.userId, auditLog.userId))
-    .orderBy(desc(auditLog.createdAt))
-    .limit(limit);
+    .where(where)
+    // Tie-broken on id: without it, rows sharing a millisecond can repeat or
+    // vanish across page boundaries, which in an audit trail is a hole.
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return { rows, total, page, pageSize };
+}
+
+// Every matching row, for the CSV. Separate and explicit so nobody renders
+// the whole trail into a page by accident.
+export async function listAuditActivityForExport(filters: ActivityFilters = {}) {
+  return db
+    .select({
+      createdAt: auditLog.createdAt,
+      actor: profiles.fullName,
+      actorRole: profiles.role,
+      entityType: auditLog.entityType,
+      entityId: auditLog.entityId,
+      action: auditLog.action,
+      fromStatus: auditLog.fromStatus,
+      toStatus: auditLog.toStatus,
+      note: auditLog.note,
+    })
+    .from(auditLog)
+    .leftJoin(profiles, eq(profiles.userId, auditLog.userId))
+    .where(activityWhere(filters))
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id));
+}
+
+// What to offer in the filter dropdowns — derived from the log itself, so a
+// verb added by a new feature appears without anyone maintaining a list.
+export async function listActivityFilterOptions() {
+  const entityTypes = await db
+    .selectDistinct({ value: auditLog.entityType })
+    .from(auditLog)
+    .orderBy(auditLog.entityType);
+  const actions = await db.selectDistinct({ value: auditLog.action }).from(auditLog).orderBy(auditLog.action);
+  return { entityTypes: entityTypes.map((r) => r.value), actions: actions.map((r) => r.value) };
 }

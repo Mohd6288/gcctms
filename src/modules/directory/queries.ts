@@ -294,7 +294,7 @@ export async function listAccountActivity(userId: string, limit = 100) {
     })
     .from(auditLog)
     .where(eq(auditLog.userId, userId))
-    .orderBy(desc(auditLog.createdAt))
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
     .limit(limit);
 }
 
@@ -316,7 +316,10 @@ export async function getEntityHistory(entityType: string, entityId: number, lim
     .from(auditLog)
     .leftJoin(profiles, eq(profiles.userId, auditLog.userId))
     .where(and(eq(auditLog.entityType, entityType), eq(auditLog.entityId, entityId)))
-    .orderBy(desc(auditLog.createdAt))
+    // id breaks the tie: several audit rows routinely land in the same
+    // millisecond (approve writes two), and ordering on the timestamp alone
+    // left their order to the planner.
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
     .limit(limit);
 }
 
