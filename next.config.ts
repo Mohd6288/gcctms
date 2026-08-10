@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -58,4 +59,23 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Sentry wraps outermost so it can see the finished config, including the
+// file-tracing rules above. Source map upload is what turns a minified stack
+// into a file and a line number; it needs SENTRY_AUTH_TOKEN, which the
+// Marketplace integration injects on Vercel and which is absent locally — so
+// local builds simply skip the upload rather than fail.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // The build log is not where anyone looks for Sentry news.
+  silent: !process.env.CI,
+  // Hide the source maps themselves from the public bundle after upload —
+  // this app's client code should not be readable from the browser.
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  // Routes ad-blocked "sentry.io" calls through our own origin, so browser
+  // errors from a contractor behind a corporate filter still arrive.
+  tunnelRoute: "/monitoring",
+  // disableLogger deliberately omitted: deprecated, and its replacement
+  // (webpack.treeshake.removeDebugLogging) is a webpack option this project
+  // cannot use — it builds with Turbopack.
+});

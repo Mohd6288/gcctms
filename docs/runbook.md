@@ -135,13 +135,48 @@ Required environment variables in production:
 
 | Variable | Where it comes from | Notes |
 | --- | --- | --- |
-| `RESEND_API_KEY` | Vercel Marketplace → Resend integration | injected automatically on install |
-| `EMAIL_FROM` | you | must be a domain verified in Resend; until then mail only reaches the account owner |
+| `RESEND_API_KEY` | Vercel Marketplace → Resend integration | injected on install (done 10 Aug) |
+| `EMAIL_FROM` | you | set to `GCC Lab TMS <no-reply@tms.gccelab.com>` **once the domain verifies**; until then leave unset and mail only reaches the Resend account owner |
 | `CRON_SECRET` | you | any long random string; without it `/api/cron/jobs` refuses every request |
 | `NEXT_PUBLIC_SITE_URL` | already set | the "Open in GCC Lab TMS" link is omitted if unset |
 
+The sending domain is **`tms.gccelab.com`** (Resend, `eu-west-1`), a subdomain
+so this platform's sending reputation is separate from GCC Lab's corporate
+mail. It stays `not_started` until these DNS records exist on `gccelab.com`:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| TXT | `resend._domainkey.tms` | the DKIM public key from the Resend dashboard |
+| MX | `send.tms` (priority 10) | `feedback-smtp.eu-west-1.amazonses.com` |
+| TXT | `send.tms` | `v=spf1 include:amazonses.com ~all` |
+
 Sends are idempotent on the job id (`Idempotency-Key: job-<id>`), so a retry
 after a timeout cannot deliver the same message twice within 24h.
+
+## Error tracking (Sentry)
+
+Installed from the Vercel Marketplace, so `NEXT_PUBLIC_SENTRY_DSN`,
+`SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are injected on Preview
+and Production. There is no DSN on development or in CI, and the SDK is inert
+without one — local runs stay silent rather than filling the project with
+noise.
+
+Config lives in `sentry.server.config.ts`, `sentry.edge.config.ts`,
+`instrumentation.ts` (which exports `onRequestError`, without which a Server
+Component error never reaches Sentry) and `instrumentation-client.ts`.
+
+**`sendDefaultPii` is false everywhere, and `beforeSend` strips cookies, request
+bodies and the Authorization header.** This platform holds Iqama numbers and
+identity scans; shipping request payloads to a third party would quietly undo
+the masking the rest of the codebase enforces. Session Replay is deliberately
+not enabled for the same reason.
+
+Errors are tunnelled through `/monitoring` so a contractor behind a corporate
+ad-blocker still reports. Source maps upload at build time and are deleted from
+the bundle afterwards.
+
+Verified 10 Aug: an exception raised against the production DSN was accepted by
+ingest (`Sentry.flush()` resolved true).
 
 ## Content Security Policy — measured, currently Report-Only
 
