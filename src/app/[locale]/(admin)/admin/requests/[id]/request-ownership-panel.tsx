@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
+import { refusalMessage } from "@/modules/platform/guard-error";
 import { changeRequestCourseAction, reassignRequestAction } from "@/modules/requests/actions";
 
 // The two corrections that used to mean rejecting the request and starting
@@ -53,11 +54,18 @@ export function RequestOwnershipPanel({
     setNotice(null);
     setPending(key);
     try {
-      await work();
+      // A refusal comes back as a value; only a real failure throws. In
+      // production a thrown Error is replaced by React's minified #441 text,
+      // so the reason has to travel as data.
+      const refusal = refusalMessage(await work());
+      if (refusal) {
+        setError(refusal);
+        return;
+      }
       setNotice(done);
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("genericError"));
+    } catch {
+      setError(t("genericError"));
     } finally {
       setPending(null);
     }

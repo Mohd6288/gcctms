@@ -6,6 +6,7 @@ import { companies, courses, documents, employees, payments, profiles, regionalA
 import { employeesSatisfyingPrerequisites, listCourseJobRoleIds } from "@/modules/catalog/queries";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
+import { GuardError } from "@/modules/platform/guard-error";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
 import { pickAdminForRegion } from "./assignment";
 import { assertTransition, type RequestStatus } from "./machine";
@@ -134,7 +135,7 @@ async function assertCourseFitsEmployees(employeeIds: number[], courseId: number
     const employeeRoles = await db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds));
     const ineligible = employeeRoles.filter((e) => !eligibleRoleIds.has(e.jobRoleId));
     if (ineligible.length > 0) {
-      throw new Error("All employees must hold a job role eligible for this course before submitting.");
+      throw new GuardError("All employees must hold a job role eligible for this course before submitting.");
     }
   }
 
@@ -145,7 +146,7 @@ async function assertCourseFitsEmployees(employeeIds: number[], courseId: number
   const satisfied = await employeesSatisfyingPrerequisites(employeeIds, courseId);
   const missing = employeeIds.filter((id) => !satisfied.has(id));
   if (missing.length > 0) {
-    throw new Error(
+    throw new GuardError(
       "Every employee needs a valid OHS General Induction certificate, plus this course's own prerequisites, before submitting. Add the missing course to a request, or upload the employee's existing certificate for admin verification."
     );
   }
@@ -225,7 +226,7 @@ export async function reassignRequest(context: AuthContext, input: ReassignReque
     .from(profiles)
     .where(eq(profiles.userId, input.adminUserId));
   if (!target || target.role !== "platform_admin" || !target.active) {
-    throw new Error("Requests can only be assigned to an active platform admin.");
+    throw new GuardError("Requests can only be assigned to an active platform admin.");
   }
 
   // A region-scoped admin cannot open a request outside their region, so
@@ -237,7 +238,7 @@ export async function reassignRequest(context: AuthContext, input: ReassignReque
     .from(regionalAdminAssignments)
     .where(eq(regionalAdminAssignments.adminUserId, input.adminUserId));
   if (assignment && company && assignment.region !== company.region) {
-    throw new Error(`That admin only covers ${assignment.region}, and this request is in ${company.region}.`);
+    throw new GuardError(`That admin only covers ${assignment.region}, and this request is in ${company.region}.`);
   }
 
   await db.update(trainingRequests).set({ assignedAdminUserId: input.adminUserId }).where(eq(trainingRequests.id, input.requestId));
@@ -263,14 +264,14 @@ export async function changeRequestCourse(context: AuthContext, input: ChangeReq
   }
 
   if (!COURSE_CHANGEABLE_STATUSES.has(request.status)) {
-    throw new Error(
+    throw new GuardError(
       "The course can only be changed before the request is approved — a quotation and a price already exist for this one. Reject it and start a new request instead."
     );
   }
   if (request.courseId === input.courseId) return;
 
   const [course] = await db.select({ id: courses.id, active: courses.active, code: courses.code }).from(courses).where(eq(courses.id, input.courseId));
-  if (!course || !course.active) throw new Error("That course is not available.");
+  if (!course || !course.active) throw new GuardError("That course is not available.");
 
   const items = await db.select({ employeeId: requestItems.employeeId }).from(requestItems).where(eq(requestItems.requestId, input.requestId));
   if (items.length > 0) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { getContext } from "@/modules/platform/auth/service";
+import { runGuarded } from "@/modules/platform/guard-error";
 import {
   ApproveRequestInput,
   ChangeRequestCourseInput,
@@ -58,12 +59,12 @@ export async function submitRequestAction(requestId: number) {
 
 export async function reassignRequestAction(input: ReassignRequestInput) {
   const context = await requireContext();
-  return reassignRequest(context, ReassignRequestInput.parse(input));
+  return runGuarded(() => reassignRequest(context, ReassignRequestInput.parse(input)));
 }
 
 export async function changeRequestCourseAction(input: ChangeRequestCourseInput) {
   const context = await requireContext();
-  return changeRequestCourse(context, ChangeRequestCourseInput.parse(input));
+  return runGuarded(() => changeRequestCourse(context, ChangeRequestCourseInput.parse(input)));
 }
 
 export async function setEmployeeDecisionAction(input: SetEmployeeDecisionInput) {

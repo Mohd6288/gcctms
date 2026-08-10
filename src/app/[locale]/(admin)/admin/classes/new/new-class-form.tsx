@@ -136,7 +136,7 @@ export function NewClassForm({
     setError(null);
     setLoading(true);
     try {
-      const created = await createClassAction({
+      const result = await createClassAction({
         courseId: Number(courseId),
         trainerId: Number(trainerId),
         centerId: centerId ? Number(centerId) : undefined,
@@ -147,9 +147,17 @@ export function NewClassForm({
         endDate,
         capacity: Number(capacity),
       });
-      router.push(`/admin/classes/${created.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("genericError"));
+      // The guard's own words, not whatever survived the Server Action
+      // boundary — in production a thrown Error arrives as "Minified React
+      // error #441", which is what an admin used to see when the
+      // double-booking check stopped them.
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      router.push(`/admin/classes/${result.data.id}`);
+    } catch {
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }

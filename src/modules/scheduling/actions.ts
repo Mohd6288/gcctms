@@ -1,6 +1,7 @@
 "use server";
 
 import { getContext } from "@/modules/platform/auth/service";
+import { runGuarded } from "@/modules/platform/guard-error";
 import {
   AssignRequestItemRegionInput,
   CancelClassInput,
@@ -33,7 +34,7 @@ async function requireContext() {
 
 export async function moveEnrollmentAction(input: MoveEnrollmentInput) {
   const context = await requireContext();
-  return moveEnrollment(context, MoveEnrollmentInput.parse(input));
+  return runGuarded(() => moveEnrollment(context, MoveEnrollmentInput.parse(input)));
 }
 
 export async function assignRequestItemRegionAction(input: AssignRequestItemRegionInput) {
@@ -56,14 +57,16 @@ export async function setAdminRegionAction(input: SetAdminRegionInput) {
   return setAdminRegion(context, SetAdminRegionInput.parse(input));
 }
 
+// Returns a result rather than throwing, so the refusal survives the Server
+// Action boundary — see platform/guard-error.ts.
 export async function createClassAction(input: CreateClassInput) {
   const context = await requireContext();
-  return createClass(context, CreateClassInput.parse(input));
+  return runGuarded(() => createClass(context, CreateClassInput.parse(input)));
 }
 
 export async function updateClassAction(input: UpdateClassInput) {
   const context = await requireContext();
-  return updateClass(context, UpdateClassInput.parse(input));
+  return runGuarded(() => updateClass(context, UpdateClassInput.parse(input)));
 }
 
 export async function startClassAction(classId: number) {

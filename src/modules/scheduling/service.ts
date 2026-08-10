@@ -6,6 +6,7 @@ import { attendance, certificates, classEnrollments, classes, companies, employe
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { REGIONS as REGIONS_ORDER } from "@/lib/regions";
 import { writeAudit } from "@/modules/platform/audit/service";
+import { GuardError } from "@/modules/platform/guard-error";
 import { getTrainerEmail, queueNotification } from "@/modules/platform/notifications/service";
 import { listActiveEnrollmentRequestItemIds, listSchedulableRequestItems } from "./queries";
 import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, MoveEnrollmentInput, SetAdminRegionInput, UpdateClassInput } from "./schema";
@@ -93,7 +94,7 @@ async function unqualifiedOverrideNote(trainerId: number, courseId: number): Pro
 export async function createClass(context: AuthContext, input: CreateClassInput) {
   requireScheduleAccess(context);
   if (input.type === "private" && !input.companyId) {
-    throw new Error("A private class requires a company.");
+    throw new GuardError("A private class requires a company.");
   }
 
   try {
@@ -122,7 +123,7 @@ export async function createClass(context: AuthContext, input: CreateClassInput)
     return cls;
   } catch (err) {
     if (isExclusionViolation(err)) {
-      throw new Error("This trainer already has another class scheduled with overlapping dates.");
+      throw new GuardError("This trainer already has another class scheduled with overlapping dates.");
     }
     throw err;
   }
@@ -132,7 +133,7 @@ export async function updateClass(context: AuthContext, input: UpdateClassInput)
   requireScheduleAccess(context);
   const cls = await getClassOrThrow(input.classId);
   if (cls.status === "cancelled" || cls.status === "completed") {
-    throw new Error(`Can't edit a class that's ${cls.status}.`);
+    throw new GuardError(`Can't edit a class that's ${cls.status}.`);
   }
 
   const [{ value: enrolledCount }] = await db
@@ -140,7 +141,7 @@ export async function updateClass(context: AuthContext, input: UpdateClassInput)
     .from(classEnrollments)
     .where(and(eq(classEnrollments.classId, input.classId), eq(classEnrollments.status, "enrolled")));
   if (input.capacity < enrolledCount) {
-    throw new Error(`Capacity can't be less than the ${enrolledCount} employees already enrolled.`);
+    throw new GuardError(`Capacity can't be less than the ${enrolledCount} employees already enrolled.`);
   }
 
   try {
@@ -150,7 +151,7 @@ export async function updateClass(context: AuthContext, input: UpdateClassInput)
       .where(eq(classes.id, input.classId));
   } catch (err) {
     if (isExclusionViolation(err)) {
-      throw new Error("This trainer already has another class scheduled with overlapping dates.");
+      throw new GuardError("This trainer already has another class scheduled with overlapping dates.");
     }
     throw err;
   }
@@ -341,10 +342,10 @@ export async function moveEnrollment(context: AuthContext, input: MoveEnrollment
   const from = await getClassOrThrow(enrollment.classId);
   const to = await getClassOrThrow(input.toClassId);
   if (to.status === "cancelled" || to.status === "completed") {
-    throw new Error(`Can't move anyone into a class that's ${to.status}.`);
+    throw new GuardError(`Can't move anyone into a class that's ${to.status}.`);
   }
   if (to.courseId !== from.courseId) {
-    throw new Error("The other class teaches a different course. Withdraw the employee and enroll them from the scheduling board instead.");
+    throw new GuardError("The other class teaches a different course. Withdraw the employee and enroll them from the scheduling board instead.");
   }
 
   const [attendanceRow] = await db
@@ -353,12 +354,12 @@ export async function moveEnrollment(context: AuthContext, input: MoveEnrollment
     .where(and(eq(attendance.classId, enrollment.classId), eq(attendance.employeeId, enrollment.employeeId)))
     .limit(1);
   if (attendanceRow) {
-    throw new Error("This employee already has attendance recorded on this class. Withdraw them instead, then enroll them in the new class.");
+    throw new GuardError("This employee already has attendance recorded on this class. Withdraw them instead, then enroll them in the new class.");
   }
 
   const [resultRow] = await db.select({ id: examResults.id }).from(examResults).where(eq(examResults.enrollmentId, enrollment.id)).limit(1);
   if (resultRow) {
-    throw new Error("This employee already has an exam result on this class. Withdraw them instead, then enroll them in the new class.");
+    throw new GuardError("This employee already has an exam result on this class. Withdraw them instead, then enroll them in the new class.");
   }
 
   const [certificateRow] = await db
@@ -366,7 +367,7 @@ export async function moveEnrollment(context: AuthContext, input: MoveEnrollment
     .from(certificates)
     .where(and(eq(certificates.classId, enrollment.classId), eq(certificates.employeeId, enrollment.employeeId)))
     .limit(1);
-  if (certificateRow) throw new Error("A certificate already exists for this employee on this class.");
+  if (certificateRow) throw new GuardError("A certificate already exists for this employee on this class.");
 
   // Refuse a full class rather than silently landing them on its waitlist —
   // a move that quietly becomes a waitlist entry reads as "done" and isn't.
@@ -375,7 +376,7 @@ export async function moveEnrollment(context: AuthContext, input: MoveEnrollment
     .from(classEnrollments)
     .where(and(eq(classEnrollments.classId, input.toClassId), eq(classEnrollments.status, "enrolled")));
   if (enrolledCount >= to.capacity) {
-    throw new Error(`That class is full (${enrolledCount}/${to.capacity}). Raise its capacity first, or pick another.`);
+    throw new GuardError(`That class is full (${enrolledCount}/${to.capacity}). Raise its capacity first, or pick another.`);
   }
 
   // class_enrollments has unique (class_id, employee_id).
@@ -383,7 +384,7 @@ export async function moveEnrollment(context: AuthContext, input: MoveEnrollment
     .select({ id: classEnrollments.id })
     .from(classEnrollments)
     .where(and(eq(classEnrollments.classId, input.toClassId), eq(classEnrollments.employeeId, enrollment.employeeId)));
-  if (clash) throw new Error("This employee is already on that class.");
+  if (clash) throw new GuardError("This employee is already on that class.");
 
   await db
     .update(classEnrollments)

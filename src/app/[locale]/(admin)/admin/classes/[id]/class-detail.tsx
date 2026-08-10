@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
+import { refusalMessage } from "@/modules/platform/guard-error";
 import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
 import { courseDurationDays, endDateFor } from "@/lib/course-duration";
 import { approveAllPendingForClassAction, approveCertificateAction } from "@/modules/certification/actions";
@@ -119,14 +120,22 @@ export function ClassDetail({
   const enrolled = enrollments.filter((e) => e.status === "enrolled");
   const waitlisted = enrollments.filter((e) => e.status === "waitlisted");
 
+  // Guarded actions return their refusal rather than throwing it, so the
+  // reason survives the Server Action boundary — a thrown Error arrives in
+  // production as "Minified React error #441" and nothing else. Anything
+  // still thrown here is a genuine failure and keeps the generic message.
   async function run(key: string, fn: () => Promise<unknown>) {
     setError(null);
     setLoading(key);
     try {
-      await fn();
+      const refusal = refusalMessage(await fn());
+      if (refusal) {
+        setError(refusal);
+        return;
+      }
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("genericError"));
+    } catch {
+      setError(t("genericError"));
     } finally {
       setLoading(null);
     }
