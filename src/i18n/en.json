@@ -695,7 +695,10 @@
         "release": "Release",
         "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}",
         "moveTo": "Move to…",
-        "releasing": "Releasing… this renders the PDF and can take a few seconds"
+        "releasing": "Releasing… this renders the PDF and can take a few seconds",
+        "issuedCertsTitle": "Issued certificates ({count})",
+        "certIssued": "Issued",
+        "certRevoked": "Revoked"
       },
       "regionScopedNote": "Showing only classes in the {region} region.",
       "trainerSelect": {

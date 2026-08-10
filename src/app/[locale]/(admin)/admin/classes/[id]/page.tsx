@@ -3,7 +3,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listTrainerCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
-import { listPendingApprovalCertificatesForClass } from "@/modules/certification/queries";
+import { listPendingApprovalCertificatesForClass, listIssuedCertificatesForClass } from "@/modules/certification/queries";
 import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems, listMoveTargets } from "@/modules/scheduling/queries";
 import { ClassDetail } from "./class-detail";
 
@@ -54,6 +54,7 @@ export default async function AdminClassDetailPage({
   const activeIds = await listActiveEnrollmentRequestItemIds();
   const pendingCertificates = await listPendingApprovalCertificatesForClass(classId);
   const moveTargets = await listMoveTargets(classId);
+  const issuedCertificates = await listIssuedCertificatesForClass(classId);
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
@@ -75,6 +76,7 @@ export default async function AdminClassDetailPage({
         availablePool={availablePool}
         pendingCertificates={pendingCertificates}
         moveTargets={moveTargets}
+        issuedCertificates={issuedCertificates.map((c) => ({ ...c, issuedAt: c.issuedAt ? c.issuedAt.toISOString() : null }))}
         locale={locale}
       />
     </div>

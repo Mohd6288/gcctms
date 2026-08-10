@@ -1,9 +1,14 @@
 // certification module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { certificates, classes, companies, courses, employees } from "@/db/schema";
 
+// The name promised a filter the query never applied: it selected every
+// certificate for the class, so an issued one stayed in the "pending" list
+// forever. An admin released a certificate, watched it sit exactly where it
+// was, released it again — and got refused, because the second release was
+// for a certificate that had already been issued.
 export async function listPendingApprovalCertificatesForClass(classId: number) {
   return db
     .select({
@@ -15,7 +20,26 @@ export async function listPendingApprovalCertificatesForClass(classId: number) {
     })
     .from(certificates)
     .innerJoin(employees, eq(certificates.employeeId, employees.id))
-    .where(eq(certificates.classId, classId));
+    .where(and(eq(certificates.classId, classId), eq(certificates.status, "pending_approval")));
+}
+
+// The other half of the same screen: what releasing actually produced. Without
+// it the pending card simply empties and the admin is left inferring success.
+export async function listIssuedCertificatesForClass(classId: number) {
+  return db
+    .select({
+      id: certificates.id,
+      serial: certificates.serial,
+      employeeFullNameEn: employees.fullNameEn,
+      employeeFullNameAr: employees.fullNameAr,
+      issuedAt: certificates.issuedAt,
+      expiresAt: certificates.expiresAt,
+      status: certificates.status,
+    })
+    .from(certificates)
+    .innerJoin(employees, eq(certificates.employeeId, employees.id))
+    .where(and(eq(certificates.classId, classId), inArray(certificates.status, ["issued", "revoked"])))
+    .orderBy(desc(certificates.issuedAt));
 }
 
 export async function listCertificatesForCompany(companyId: number) {

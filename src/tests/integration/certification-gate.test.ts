@@ -23,6 +23,7 @@ import {
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
 import type { AuthContext } from "../../modules/platform/auth/shared";
 import { approveCertificate, evaluateClassEligibility, revokeCertificate } from "../../modules/certification/service";
+import { listIssuedCertificatesForClass, listPendingApprovalCertificatesForClass } from "../../modules/certification/queries";
 import { getIssuedCertificateBySerial } from "../../modules/certification/queries";
 
 // Phase 8 — real DB. The eligibility gate's 6 conditions and the resulting
@@ -214,8 +215,20 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
     const [pending] = await db.select().from(certificates).where(and(eq(certificates.classId, classId), eq(certificates.status, "pending_approval")));
     expect(pending).toBeTruthy();
 
+    // The admin screen's "pending" list is this query. It used to filter on
+    // the class alone, so a released certificate stayed on the list looking
+    // unreleased — the admin pressed release again and was refused for a
+    // certificate that had already been issued.
+    const pendingBefore = await listPendingApprovalCertificatesForClass(classId);
+    expect(pendingBefore.map((c) => c.id)).toContain(pending.id);
+
     const before = Date.now();
     await approveCertificate(adminCtx, pending.id);
+
+    const pendingAfter = await listPendingApprovalCertificatesForClass(classId);
+    expect(pendingAfter.map((c) => c.id)).not.toContain(pending.id);
+    // …and it appears as issued instead, so the screen can show the outcome.
+    expect((await listIssuedCertificatesForClass(classId)).map((c) => c.id)).toContain(pending.id);
 
     const [issued] = await db.select().from(certificates).where(eq(certificates.id, pending.id));
     expect(issued.status).toBe("issued");

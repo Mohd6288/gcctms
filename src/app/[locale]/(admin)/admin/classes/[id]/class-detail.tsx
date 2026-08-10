@@ -76,6 +76,7 @@ export function ClassDetail({
   availablePool,
   pendingCertificates,
   moveTargets,
+  issuedCertificates,
   locale,
 }: {
   cls: ClassData;
@@ -87,6 +88,16 @@ export function ClassDetail({
   pendingCertificates: PendingCertificate[];
   /** Other open classes for this same course an employee can be moved to. */
   moveTargets: { id: number; startDate: string; trainerName: string; enrolled: number; capacity: number }[];
+  issuedCertificates: {
+    id: number;
+    // Nullable in the schema: a certificate gets its serial when it is
+    // issued, and a revoked one keeps it.
+    serial: string | null;
+    employeeFullNameEn: string;
+    employeeFullNameAr: string;
+    issuedAt: string | null;
+    status: string;
+  }[];
   locale: string;
 }) {
   const t = useTranslations("admin.classes.detail");
@@ -376,6 +387,36 @@ export function ClassDetail({
                   >
                     {t("enroll")}
                   </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Positive confirmation. Until now the pending card just emptied and
+          the admin had to infer that anything had happened. */}
+      {issuedCertificates.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("issuedCertsTitle", { count: issuedCertificates.length })}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2">
+              {issuedCertificates.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2 text-sm">
+                  <span>{locale === "ar" ? c.employeeFullNameAr : c.employeeFullNameEn}</span>
+                  <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {c.serial ? <span className="font-mono">{c.serial}</span> : null}
+                    {c.issuedAt ? <span>{new Date(c.issuedAt).toLocaleDateString(locale)}</span> : null}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        c.status === "issued" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                      }`}
+                    >
+                      {c.status === "issued" ? t("certIssued") : t("certRevoked")}
+                    </span>
+                  </span>
                 </li>
               ))}
             </ul>
