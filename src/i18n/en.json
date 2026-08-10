@@ -434,6 +434,23 @@
       "statusScheduled": "Scheduled",
       "statusInProgress": "In progress",
       "statusCompleted": "Completed"
+    },
+    "overview": {
+      "title": "Overview",
+      "needsAttention": "Needs your action",
+      "allClear": "Nothing needs your attention right now.",
+      "queueInfoRequested": "Requests needing more information",
+      "queueRejectedDocuments": "Documents rejected — re-upload needed",
+      "queuePaymentDue": "Invoices awaiting payment",
+      "queueDrafts": "Unfinished draft requests",
+      "queueMissingIqama": "Employees with no Iqama uploaded",
+      "queueExpiring": "Certificates expiring within 90 days",
+      "linkRequests": "Training requests",
+      "linkTraining": "Scheduled training",
+      "linkEmployees": "Employees",
+      "linkPayments": "Payments",
+      "linkCertificates": "Certificates",
+      "linkProfile": "Company profile"
     }
   },
   "admin": {
@@ -691,6 +708,27 @@
       "genericError": "Something went wrong. Please try again.",
       "typeIqama": "Iqama",
       "typeCertificate": "Certificate"
+    },
+    "overview": {
+      "title": "Admin overview",
+      "needsAttention": "Needs attention",
+      "allClear": "Nothing is waiting on you right now.",
+      "regionScopedNote": "Showing the {region} region only.",
+      "queueRequests": "Requests awaiting review",
+      "queueDocuments": "Employee documents to verify",
+      "queuePayments": "Payments awaiting verification",
+      "queueScheduling": "Paid and awaiting scheduling",
+      "queueCertificates": "Certificates awaiting approval",
+      "linkRequests": "Review queue",
+      "linkPayments": "Payment verification",
+      "linkScheduling": "Scheduling board",
+      "linkCalendar": "Calendar",
+      "linkClasses": "Classes",
+      "linkCompanies": "Company directory",
+      "linkEmployees": "Employee browser",
+      "linkDocuments": "Employee documents",
+      "linkReports": "Reports",
+      "certificateHint": "Certificate release lives on each class's detail page."
     }
   },
   "superadmin": {

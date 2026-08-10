@@ -228,6 +228,63 @@ export async function getAttentionCounts() {
   return row;
 }
 
+// Same idea as getAttentionCounts, scoped the way a platform_admin actually
+// works: a region-assigned admin (0026) must not be shown another region's
+// backlog, or they will either act on it or assume someone else has.
+// region null means unassigned, which means the whole platform.
+export async function getAdminAttentionCounts(region?: string | null) {
+  const scoped = (companyAlias: string) => (region ? sql`and ${sql.raw(companyAlias)}.region = ${region}` : sql``);
+  const [row] = await db.execute<{
+    requests_to_review: number;
+    payments_to_verify: number;
+    documents_to_verify: number;
+    certificates_to_approve: number;
+    awaiting_scheduling: number;
+  }>(sql`
+    select
+      (select count(*)::int from training_requests tr join companies c on c.id = tr.company_id
+        where tr.status = 'submitted' ${scoped("c")}) as requests_to_review,
+      (select count(*)::int from payments p
+         join training_requests tr on tr.id = p.request_id join companies c on c.id = tr.company_id
+        where p.status = 'uploaded' and p.document_id is not null ${scoped("c")}) as payments_to_verify,
+      (select count(*)::int from documents d join companies c on c.id = d.company_id
+        where d.verified_at is null and d.rejected_at is null
+          and (d.type = 'national_id' or (d.type = 'prior_certificate' and d.course_id is not null))
+          ${scoped("c")}) as documents_to_verify,
+      (select count(*)::int from certificates ct join companies c on c.id = ct.company_id
+        where ct.status = 'pending_approval' ${scoped("c")}) as certificates_to_approve,
+      (select count(*)::int from training_requests tr join companies c on c.id = tr.company_id
+        where tr.status = 'ready_for_scheduling' ${scoped("c")}) as awaiting_scheduling
+  `);
+  return row;
+}
+
+// The contractor's own queue: only things they can act on themselves. An
+// item waiting on GCC Lab is deliberately absent — telling a contractor
+// their request is "with the admin" invites them to chase it, not to do
+// anything.
+export async function getContractorAttentionCounts(companyId: number) {
+  const [row] = await db.execute<{
+    drafts: number;
+    info_requested: number;
+    payment_due: number;
+    rejected_documents: number;
+    employees_without_iqama: number;
+    certificates_expiring: number;
+  }>(sql`
+    select
+      (select count(*)::int from training_requests where company_id = ${companyId} and status = 'draft') as drafts,
+      (select count(*)::int from training_requests where company_id = ${companyId} and status = 'info_requested') as info_requested,
+      (select count(*)::int from training_requests where company_id = ${companyId} and status = 'payment_pending') as payment_due,
+      (select count(*)::int from documents where company_id = ${companyId} and rejected_at is not null) as rejected_documents,
+      (select count(*)::int from employees e where e.company_id = ${companyId} and e.status = 'active'
+         and not exists (select 1 from documents d where d.employee_id = e.id and d.type = 'national_id')) as employees_without_iqama,
+      (select count(*)::int from certificates where company_id = ${companyId} and status = 'issued'
+         and expires_at is not null and expires_at between now() and now() + interval '90 days') as certificates_expiring
+  `);
+  return row;
+}
+
 export async function listCities() {
   return db
     .select({ name: cities.name, region: cities.region, nameAr: cities.nameAr, active: cities.active })

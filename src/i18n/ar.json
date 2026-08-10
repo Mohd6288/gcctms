@@ -434,6 +434,23 @@
       "statusScheduled": "مجدول",
       "statusInProgress": "قيد التنفيذ",
       "statusCompleted": "مكتمل"
+    },
+    "overview": {
+      "title": "نظرة عامة",
+      "needsAttention": "يحتاج إلى إجراء منك",
+      "allClear": "لا يوجد ما يحتاج إلى إجراء حالياً.",
+      "queueInfoRequested": "طلبات تحتاج معلومات إضافية",
+      "queueRejectedDocuments": "مستندات مرفوضة — يلزم إعادة الرفع",
+      "queuePaymentDue": "فواتير بانتظار السداد",
+      "queueDrafts": "طلبات مسودة غير مكتملة",
+      "queueMissingIqama": "موظفون بلا إقامة مرفوعة",
+      "queueExpiring": "شهادات تنتهي خلال 90 يوماً",
+      "linkRequests": "طلبات التدريب",
+      "linkTraining": "التدريب المجدول",
+      "linkEmployees": "الموظفون",
+      "linkPayments": "المدفوعات",
+      "linkCertificates": "الشهادات",
+      "linkProfile": "ملف الشركة"
     }
   },
   "admin": {
@@ -691,6 +708,27 @@
       "genericError": "حدث خطأ. حاول مرة أخرى.",
       "typeIqama": "الإقامة",
       "typeCertificate": "شهادة"
+    },
+    "overview": {
+      "title": "نظرة عامة للإدارة",
+      "needsAttention": "يحتاج إلى إجراء",
+      "allClear": "لا يوجد ما ينتظر إجراءك حالياً.",
+      "regionScopedNote": "تُعرض منطقة {region} فقط.",
+      "queueRequests": "طلبات بانتظار المراجعة",
+      "queueDocuments": "مستندات موظفين بانتظار الاعتماد",
+      "queuePayments": "مدفوعات بانتظار الاعتماد",
+      "queueScheduling": "مدفوعة وبانتظار الجدولة",
+      "queueCertificates": "شهادات بانتظار الاعتماد",
+      "linkRequests": "قائمة المراجعة",
+      "linkPayments": "اعتماد المدفوعات",
+      "linkScheduling": "لوحة الجدولة",
+      "linkCalendar": "التقويم",
+      "linkClasses": "الدورات",
+      "linkCompanies": "دليل الشركات",
+      "linkEmployees": "الموظفون",
+      "linkDocuments": "مستندات الموظفين",
+      "linkReports": "التقارير",
+      "certificateHint": "إصدار الشهادات يتم من صفحة تفاصيل كل دورة."
     }
   },
   "superadmin": {
