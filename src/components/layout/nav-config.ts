@@ -49,6 +49,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { key: "scheduling", href: "/admin/scheduling", icon: CalendarRange },
     { key: "calendar", href: "/admin/calendar", icon: CalendarDays },
     { key: "classes", href: "/admin/classes", icon: BookOpen },
+    { key: "trainers", href: "/admin/trainers", icon: GraduationCap },
     { key: "companies", href: "/admin/companies", icon: Building2 },
     { key: "employees", href: "/admin/employees", icon: Users },
     { key: "reports", href: "/admin/reports", icon: BarChart3 },

@@ -17,6 +17,7 @@ const EXPECTED: Record<Capability, Record<Role, boolean>> = {
   verify_payments: { super_admin: false, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
   manage_catalog: { super_admin: true, platform_admin: false, contractor_manager: false, trainer: false, auditor: false },
   manage_trainer_roster: { super_admin: true, platform_admin: false, contractor_manager: false, trainer: false, auditor: false },
+  view_trainer_roster: { super_admin: true, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
   schedule_classes: { super_admin: false, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
   record_attendance: { super_admin: false, platform_admin: true, contractor_manager: false, trainer: true, auditor: false },
   record_results: { super_admin: false, platform_admin: true, contractor_manager: false, trainer: true, auditor: false },
@@ -73,6 +74,7 @@ describe("authorize() — full 5-role x 20-capability matrix", () => {
       "view_certificates",
       "view_pricing",
       "view_reports",
+      "view_trainer_roster",
     ]);
   });
 });

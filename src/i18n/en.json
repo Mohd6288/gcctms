@@ -742,6 +742,21 @@
       "linkDocuments": "Employee documents",
       "linkReports": "Reports",
       "certificateHint": "Certificate release lives on each class's detail page."
+    },
+    "trainers": {
+      "title": "Trainers",
+      "intro": "Who can deliver which course, and how to reach them. The roster and its course competencies are maintained by the super admin.",
+      "tableName": "Trainer",
+      "tableContact": "Contact",
+      "tableCourses": "Qualified to teach",
+      "tableQualifications": "Qualifications",
+      "tableStatus": "Status",
+      "noCourses": "No courses assigned",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "hasLogin": "Has a portal login",
+      "noLogin": "No portal login",
+      "empty": "No trainers on the roster yet."
     }
   },
   "superadmin": {

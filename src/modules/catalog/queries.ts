@@ -16,6 +16,7 @@ import {
   jobRoles,
   payments,
   pricing,
+  trainerCourses,
   trainers,
   trainingCenters,
 } from "@/db/schema";
@@ -342,6 +343,25 @@ export async function listTrainers() {
     })
     .from(trainers)
     .orderBy(asc(trainers.fullName));
+}
+
+// Trainer -> the courses they are certified to deliver. Flat rows for the
+// caller to group, not a json_agg: an aggregate comes back from postgres.js
+// as a string and sql<Course[]> would cheerfully assert otherwise (same trap
+// as the ::int above). Sorted by trainer then code so grouping is stable.
+export async function listTrainerCourses() {
+  return db
+    .select({
+      trainerId: trainerCourses.trainerId,
+      courseId: courses.id,
+      code: courses.code,
+      titleEn: courses.titleEn,
+      titleAr: courses.titleAr,
+      contractorCategory: courses.contractorCategory,
+    })
+    .from(trainerCourses)
+    .innerJoin(courses, eq(courses.id, trainerCourses.courseId))
+    .orderBy(asc(trainerCourses.trainerId), asc(courses.code));
 }
 
 // Cross-company/cross-region counts — super_admin only screen. One round trip

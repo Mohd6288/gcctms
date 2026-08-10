@@ -67,6 +67,10 @@ export const CAPABILITY_ROLES = {
   verify_payments: ["platform_admin"],
   manage_catalog: ["super_admin"],
   manage_trainer_roster: ["super_admin"],
+  // Read-only counterpart: an admin schedules classes, so they need to know
+  // who can teach what and how to reach them. Editing the roster and its
+  // competencies stays super_admin.
+  view_trainer_roster: ["super_admin", "platform_admin"],
   schedule_classes: ["platform_admin"],
   record_attendance: ["platform_admin", "trainer"],
   record_results: ["platform_admin", "trainer"],
