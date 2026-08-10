@@ -1,6 +1,7 @@
 "use server";
 
 import { getContext } from "@/modules/platform/auth/service";
+import { runGuarded } from "@/modules/platform/guard-error";
 import { RevokeCertificateInput } from "./schema";
 import { approveAllPendingForClass, approveCertificate, revokeCertificate } from "./service";
 
@@ -10,17 +11,20 @@ async function requireContext() {
   return context;
 }
 
+// Returned, not thrown — "this certificate is already issued" is a sentence
+// the admin needs to read, and a thrown Error reaches production as React's
+// minified #441 text. See platform/guard-error.ts.
 export async function approveCertificateAction(certificateId: number) {
   const context = await requireContext();
-  return approveCertificate(context, certificateId);
+  return runGuarded(() => approveCertificate(context, certificateId));
 }
 
 export async function approveAllPendingForClassAction(classId: number) {
   const context = await requireContext();
-  return approveAllPendingForClass(context, classId);
+  return runGuarded(() => approveAllPendingForClass(context, classId));
 }
 
 export async function revokeCertificateAction(input: RevokeCertificateInput) {
   const context = await requireContext();
-  return revokeCertificate(context, RevokeCertificateInput.parse(input));
+  return runGuarded(() => revokeCertificate(context, RevokeCertificateInput.parse(input)));
 }

@@ -9,6 +9,7 @@ import { getCertificateRenderData } from "./queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
+import { GuardError } from "@/modules/platform/guard-error";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
 import { decryptNationalId } from "@/modules/platform/security/national-id";
 import { renderCertificatePdf } from "@/modules/platform/pdf/service";
@@ -105,7 +106,7 @@ export async function approveCertificate(context: AuthContext, certificateId: nu
   if (!authorize("approve_certificates", context)) throw new Error("Not authorized");
   const [cert] = await db.select().from(certificates).where(eq(certificates.id, certificateId));
   if (!cert) throw new Error("Certificate not found.");
-  if (cert.status !== "pending_approval") throw new Error(`Can't approve a certificate that's ${cert.status}.`);
+  if (cert.status !== "pending_approval") throw new GuardError(`Can't approve a certificate that's ${cert.status}.`);
 
   const data = await getCertificateRenderData(certificateId);
   if (!data) throw new Error("Certificate data not found.");
@@ -132,7 +133,7 @@ export async function approveCertificate(context: AuthContext, certificateId: nu
   const objectKey = randomUUID();
   const admin = createAdminClient();
   const { error: uploadError } = await admin.storage.from("certificates").upload(objectKey, pdf, { contentType: "application/pdf", upsert: false });
-  if (uploadError) throw new Error("Could not generate the certificate PDF. Please try again.");
+  if (uploadError) throw new GuardError("Could not generate the certificate PDF. Please try again.");
 
   await db
     .update(certificates)
@@ -163,7 +164,7 @@ export async function revokeCertificate(context: AuthContext, input: RevokeCerti
   if (!authorize("approve_certificates", context)) throw new Error("Not authorized");
   const [cert] = await db.select().from(certificates).where(eq(certificates.id, input.certificateId));
   if (!cert) throw new Error("Certificate not found.");
-  if (cert.status !== "issued") throw new Error(`Can't revoke a certificate that's ${cert.status}.`);
+  if (cert.status !== "issued") throw new GuardError(`Can't revoke a certificate that's ${cert.status}.`);
 
   await db.update(certificates).set({ status: "revoked", revokedReason: input.reason }).where(eq(certificates.id, input.certificateId));
   await writeAudit({ userId: context.userId, entityType: "certificate", entityId: input.certificateId, action: "revoke", fromStatus: "issued", toStatus: "revoked", note: input.reason });

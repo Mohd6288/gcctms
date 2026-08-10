@@ -387,8 +387,15 @@ export function ClassDetail({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{t("pendingCertsTitle", { count: pendingCertificates.length })}</CardTitle>
-            <Button type="button" size="sm" disabled={loading === "release-all"} onClick={() => run("release-all", () => approveAllPendingForClassAction(cls.id))}>
-              {t("releaseAll")}
+            {/* Every release button is disabled while ANY release is running,
+                not just the one clicked. Rendering a certificate boots a
+                Chromium in the serverless function and can take ten or twenty
+                seconds; with only the clicked button disabled, an admin
+                seeing nothing happen would press the next one — and the
+                second press landed on an already-issued certificate and was
+                refused. */}
+            <Button type="button" size="sm" disabled={loading !== null} onClick={() => run("release-all", () => approveAllPendingForClassAction(cls.id))}>
+              {loading === "release-all" ? t("releasing") : t("releaseAll")}
             </Button>
           </CardHeader>
           <CardContent>
@@ -396,8 +403,8 @@ export function ClassDetail({
               {pendingCertificates.map((c) => (
                 <li key={c.id} className="flex items-center justify-between rounded-lg border border-border p-2 text-sm">
                   <span>{locale === "ar" ? c.employeeFullNameAr : c.employeeFullNameEn}</span>
-                  <Button type="button" size="sm" variant="outline" disabled={loading === `release-${c.id}`} onClick={() => run(`release-${c.id}`, () => approveCertificateAction(c.id))}>
-                    {t("release")}
+                  <Button type="button" size="sm" variant="outline" disabled={loading !== null} onClick={() => run(`release-${c.id}`, () => approveCertificateAction(c.id))}>
+                    {loading === `release-${c.id}` ? t("releasing") : t("release")}
                   </Button>
                 </li>
               ))}
