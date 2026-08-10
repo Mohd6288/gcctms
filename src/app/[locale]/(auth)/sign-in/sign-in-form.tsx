@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isMfaBypassEmail, isRole, mfaRequiredFor, roleHomePath } from "@/modules/platform/auth/shared";
 
@@ -95,6 +95,9 @@ export function SignInForm() {
           <Button type="submit" disabled={loading}>
             {loading ? t("submitting") : t("submit")}
           </Button>
+          <Link href="/forgot-password" className="self-center text-xs text-primary hover:underline">
+            {t("forgotPassword")}
+          </Link>
         </form>
       </CardContent>
     </Card>

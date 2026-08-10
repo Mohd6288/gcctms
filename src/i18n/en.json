@@ -63,7 +63,8 @@
       "submit": "Sign in",
       "submitting": "Signing in…",
       "invalidCredentials": "Invalid email or password.",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "forgotPassword": "Forgot your password?"
     },
     "mfaEnroll": {
       "title": "Set up two-factor authentication",
@@ -111,6 +112,16 @@
       "submitting": "Registering…",
       "genericError": "Could not complete registration. Please try again.",
       "signInLink": "Already have an account? Sign in"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "intro": "Enter your email and we will send you a link to set a new password.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sent": "If that email has an account, a reset link is on its way.",
+      "sentHint": "The link expires shortly. Check spam if it does not arrive.",
+      "backToSignIn": "Back to sign in"
     }
   },
   "requestStatus": {
@@ -708,7 +719,15 @@
       "regionLabel": "Region",
       "regionAll": "All regions (unscoped)",
       "regionAllHint": "This admin will see every region's data. Assign a region to limit them.",
-      "regionScopedHint": "This admin will only see {region} region data."
+      "regionScopedHint": "This admin will only see {region} region data.",
+      "tableActions": "Recovery",
+      "resetPassword": "Reset password",
+      "resetMfa": "Reset MFA",
+      "confirmResetPassword": "Issue a new temporary password for {name}? Their current password stops working immediately.",
+      "confirmResetMfa": "Clear {name}'s MFA? They will enrol a new authenticator on next sign-in.",
+      "mfaCleared": "{count} factor(s) cleared — they enrol again on next sign-in.",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
     },
     "overview": {
       "title": "Platform Overview",

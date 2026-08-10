@@ -39,6 +39,48 @@ const CreatePrivilegedAccountInput = z.object({
 
 export type CreatePrivilegedAccountInput = z.infer<typeof CreatePrivilegedAccountInput>;
 
+// Hands a user a fresh temporary password, shown once to the super_admin
+// to pass on. Deliberately not an email: recovery mail depends on SMTP being
+// configured and on the address being one the person can actually read,
+// neither of which holds for every account here — and a super_admin locked
+// out of their own account can't use this at all, which is what the
+// self-serve "forgot password" flow is for.
+export async function resetUserPassword(input: { userId: string }) {
+  const context = await getContext();
+  if (!authorize("manage_users", context)) throw new Error("Not authorized");
+  const { userId } = z.object({ userId: z.string().uuid() }).parse(input);
+
+  const tempPassword = randomBytes(12).toString("base64url");
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: tempPassword });
+  if (error) throw new Error("Could not reset the password.");
+
+  await writeAudit({ userId: context!.userId, entityType: "profile", entityId: 0, action: "reset_password", note: userId });
+  return { tempPassword };
+}
+
+// Clears every enrolled MFA factor so the user can enrol again on next
+// sign-in. Supabase refuses a second enrolment while a verified factor
+// exists, so someone who reinstalls their authenticator is locked out
+// permanently without this.
+export async function resetUserMfa(input: { userId: string }) {
+  const context = await getContext();
+  if (!authorize("manage_users", context)) throw new Error("Not authorized");
+  const { userId } = z.object({ userId: z.string().uuid() }).parse(input);
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.mfa.listFactors({ userId });
+  if (error) throw new Error("Could not read the user's MFA factors.");
+
+  for (const factor of data?.factors ?? []) {
+    const { error: deleteError } = await admin.auth.admin.mfa.deleteFactor({ userId, id: factor.id });
+    if (deleteError) throw new Error("Could not clear the user's MFA.");
+  }
+
+  await writeAudit({ userId: context!.userId, entityType: "profile", entityId: 0, action: "reset_mfa", note: userId });
+  return { cleared: data?.factors?.length ?? 0 };
+}
+
 export async function createPrivilegedAccount(input: CreatePrivilegedAccountInput) {
   const context = await getContext();
   if (!authorize("manage_users", context)) {

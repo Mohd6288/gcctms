@@ -4,6 +4,7 @@ import { authorize, getContext, listPrivilegedAccounts } from "@/modules/platfor
 import { listRegionalAdminAssignments } from "@/modules/scheduling/queries";
 import { CreateAccountForm } from "./create-account-form";
 import { RegionSelect } from "./region-select";
+import { AccountActions } from "./account-actions";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -48,12 +49,13 @@ export default async function SuperAdminUsersPage({
                 <th className="p-3 text-start font-medium">{t("tableRegion")}</th>
                 <th className="p-3 text-start font-medium">{t("tableStatus")}</th>
                 <th className="p-3 text-start font-medium">{t("tableCreated")}</th>
+                <th className="p-3 text-start font-medium">{t("tableActions")}</th>
               </tr>
             </thead>
             <tbody>
               {accounts.length === 0 ? (
                 <tr>
-                  <td className="p-3 text-muted-foreground" colSpan={5}>
+                  <td className="p-3 text-muted-foreground" colSpan={6}>
                     {t("empty")}
                   </td>
                 </tr>
@@ -71,6 +73,9 @@ export default async function SuperAdminUsersPage({
                     </td>
                     <td className="p-3">{account.active ? t("statusActive") : t("statusInactive")}</td>
                     <td className="p-3">{new Date(account.createdAt).toLocaleDateString(locale)}</td>
+                    <td className="p-3">
+                      <AccountActions userId={account.userId} fullName={account.fullName} />
+                    </td>
                   </tr>
                 ))
               )}
