@@ -1179,7 +1179,17 @@
       "rolePlatformAdmin": "مسؤول المنصة",
       "roleContractorManager": "مدير المقاول",
       "roleTrainer": "مدرب",
-      "roleAuditor": "مدقق"
+      "roleAuditor": "مدقق",
+      "searchPlaceholder": "ابحث بالاسم أو الشركة أو رقم الإقامة كاملاً",
+      "searchAction": "بحث",
+      "clearSearch": "مسح",
+      "searchHint": "رقم الإقامة الكامل يطابق تماماً — يُشفَّر للبحث فقط ولا يُخزَّن ولا يُعرض.",
+      "showingRange": "عرض {from}–{to} من {total}",
+      "pageOf": "صفحة {page} من {last}",
+      "prevPage": "السابق",
+      "nextPage": "التالي",
+      "noMatches": "لا توجد نتائج مطابقة لـ ”{q}“.",
+      "exportMatching": "تصدير النتائج المطابقة (CSV)"
     }
   },
   "common": {

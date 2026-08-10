@@ -114,6 +114,10 @@ export const employees = pgTable(
   (t) => [
     uniqueIndex("employees_national_id_hash_key").on(t.nationalIdHash),
     index("employees_company_id_idx").on(t.companyId),
+    // The directory's default ordering, and every page of it (0036). The
+    // trigram indexes for name search live in SQL only — Drizzle has no
+    // gin_trgm_ops builder.
+    index("employees_company_name_idx").on(t.companyId, t.fullNameEn),
     index("employees_job_role_id_idx").on(t.jobRoleId),
     index("employees_status_idx").on(t.status),
     check("employees_status_check", sql`${t.status} in ('active', 'inactive')`),

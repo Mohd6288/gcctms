@@ -19,5 +19,7 @@ export const auditLog = pgTable(
     index("audit_log_entity_idx").on(t.entityType, t.entityId),
     index("audit_log_user_id_idx").on(t.userId),
     index("audit_log_created_at_idx").on(t.createdAt),
+    // The composite the filtered activity feed scans (0036).
+    index("audit_log_action_created_idx").on(t.action, t.createdAt),
   ]
 );

@@ -26,7 +26,7 @@ import {
   requestItems,
   trainingRequests,
 } from "@/db/schema";
-import { maskNationalId } from "@/modules/platform/security/national-id";
+import { hashNationalId, maskNationalId } from "@/modules/platform/security/national-id";
 
 // Certificates falling due inside this window are the ones worth chasing —
 // long enough to book a class and run it, short enough to still be news.
@@ -320,9 +320,73 @@ export async function getEntityHistory(entityType: string, entityId: number, lim
     .limit(limit);
 }
 
-// Every employee on the platform, for the auditor's directory. Region-scoped
-// for an admin; the auditor passes null and sees all of it.
-export async function listDirectoryEmployees(region?: string | null, limit = 1000) {
+// Paged and searchable, because 3,000 people do not fit on a screen or in a
+// single RSC payload.
+//
+// The old version took `limit 1000` and said nothing about the rest, so an
+// auditor looking at 3,000 employees saw 1,000 and had no way to know. A cap
+// that lies is worse than a slow page: it looks complete.
+export interface DirectoryPage<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const DIRECTORY_PAGE_SIZE = 50;
+
+function employeeSearch(q?: string | null) {
+  const term = q?.trim();
+  if (!term) return undefined;
+  const needle = `%${term}%`;
+
+  // A full Iqama matches exactly, without the number ever being stored or
+  // shown: national_id_hash is a deterministic HMAC, so hashing what was
+  // typed and comparing is the same lookup the uniqueness constraint uses.
+  // This is the investigator's real question — "who is 2401239876?" — and it
+  // is answerable here without weakening the masking anywhere else.
+  const looksLikeIqama = /^\d{8,}$/.test(term);
+
+  return looksLikeIqama
+    ? sql`(${employees.fullNameEn} ilike ${needle}
+        or ${employees.fullNameAr} ilike ${needle}
+        or ${companies.name} ilike ${needle}
+        or ${employees.nationalIdHash} = ${hashNationalId(term)})`
+    : sql`(${employees.fullNameEn} ilike ${needle}
+        or ${employees.fullNameAr} ilike ${needle}
+        or ${companies.name} ilike ${needle})`;
+}
+
+export async function listDirectoryEmployees(options: {
+  region?: string | null;
+  q?: string | null;
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<DirectoryPage<{
+  id: number;
+  fullNameEn: string;
+  fullNameAr: string;
+  nationalIdMasked: string | null;
+  companyId: number;
+  companyName: string;
+  companyRegion: string | null;
+  jobRoleName: string | null;
+  status: string;
+  validCertificates: number;
+}>> {
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = options.pageSize ?? DIRECTORY_PAGE_SIZE;
+  const filters = [options.region ? eq(companies.region, options.region) : undefined, employeeSearch(options.q)].filter(Boolean);
+  const where = filters.length > 0 ? and(...filters) : undefined;
+
+  // Count first so the page can say "showing 50 of 3,000" rather than imply
+  // the list is everything.
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(employees)
+    .innerJoin(companies, eq(companies.id, employees.companyId))
+    .where(where);
+
   const rows = await db
     .select({
       id: employees.id,
@@ -341,9 +405,42 @@ export async function listDirectoryEmployees(region?: string | null, limit = 100
     .from(employees)
     .innerJoin(companies, eq(companies.id, employees.companyId))
     .leftJoin(jobRoles, eq(jobRoles.id, employees.jobRoleId))
-    .where(region ? eq(companies.region, region) : undefined)
+    .where(where)
     .orderBy(companies.name, employees.fullNameEn)
-    .limit(limit);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return {
+    rows: rows.map(({ nationalIdEnc, ...rest }) => ({ ...rest, nationalIdMasked: maskNationalId(nationalIdEnc) })),
+    total,
+    page,
+    pageSize,
+  };
+}
+
+// The same rows without paging, for the CSV export. Kept separate and
+// explicit so nobody accidentally renders 3,000 rows into a page: this one
+// exists to be streamed to a file, never to a screen.
+export async function listAllDirectoryEmployeesForExport(options: { region?: string | null; q?: string | null } = {}) {
+  const filters = [options.region ? eq(companies.region, options.region) : undefined, employeeSearch(options.q)].filter(Boolean);
+  const rows = await db
+    .select({
+      fullNameEn: employees.fullNameEn,
+      fullNameAr: employees.fullNameAr,
+      nationalIdEnc: employees.nationalIdEnc,
+      companyName: companies.name,
+      companyRegion: companies.region,
+      jobRoleName: jobRoles.nameEn,
+      status: employees.status,
+      validCertificates: sql<number>`(select count(*)::int from certificates c
+        where c.employee_id = ${employees.id} and c.status = 'issued'
+          and (c.expires_at is null or c.expires_at >= current_date))`,
+    })
+    .from(employees)
+    .innerJoin(companies, eq(companies.id, employees.companyId))
+    .leftJoin(jobRoles, eq(jobRoles.id, employees.jobRoleId))
+    .where(filters.length > 0 ? and(...filters) : undefined)
+    .orderBy(companies.name, employees.fullNameEn);
   return rows.map(({ nationalIdEnc, ...rest }) => ({ ...rest, nationalIdMasked: maskNationalId(nationalIdEnc) }));
 }
 

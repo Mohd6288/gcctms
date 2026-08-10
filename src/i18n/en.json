@@ -1179,7 +1179,17 @@
       "rolePlatformAdmin": "Platform admin",
       "roleContractorManager": "Contractor manager",
       "roleTrainer": "Trainer",
-      "roleAuditor": "Auditor"
+      "roleAuditor": "Auditor",
+      "searchPlaceholder": "Search by name, company, or full Iqama",
+      "searchAction": "Search",
+      "clearSearch": "Clear",
+      "searchHint": "A full Iqama matches exactly — it is hashed for the lookup, never stored or shown.",
+      "showingRange": "Showing {from}–{to} of {total}",
+      "pageOf": "Page {page} of {last}",
+      "prevPage": "Previous",
+      "nextPage": "Next",
+      "noMatches": "Nothing matches “{q}”.",
+      "exportMatching": "Export matching rows (CSV)"
     }
   },
   "common": {
