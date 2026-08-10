@@ -8,6 +8,27 @@ const nextConfig: NextConfig = {
   // it resolves its own browser driver from node_modules at runtime, and
   // bundling silently drops the data files it needs.
   serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium"],
+  // …and being external is exactly why the deployed function then couldn't
+  // find it. Nothing imports playwright-core statically (pdf/service.ts loads
+  // it inside the function to keep a browser driver out of the page's module
+  // graph), so file tracing saw no reason to ship its data files. Approving a
+  // certificate on Vercel died with "Cannot find module
+  // '/var/task/node_modules/playwright-core/browsers.json'" — a packaging
+  // failure that reached the admin as "Something went wrong."
+  //
+  // The key is a route glob matched by picomatch with `contains: true`
+  // against the normalized route (`/[locale]/admin/classes/[id]` — route
+  // groups are stripped), so it matches on a substring and the route's own
+  // brackets would otherwise read as a character class. `?` sidesteps them
+  // entirely: it matches the single `[` and `]` around `id` and nothing else.
+  //
+  // Narrow on purpose. `/*/admin/classes/*` also matched the class list and
+  // the new-class route, dragging ~95MB of browser into two functions that
+  // never render a PDF. Certificate approval lives on the class detail
+  // screen and nowhere else.
+  outputFileTracingIncludes: {
+    "admin/classes/?id?": ["./node_modules/playwright-core/**/*", "./node_modules/@sparticuz/chromium/**/*"],
+  },
   experimental: {
     // Uploads go through a Server Action (uploadDocumentAction), whose body
     // defaults to 1MB — so storage/service.ts's documented 10MB limit was a
