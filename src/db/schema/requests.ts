@@ -105,7 +105,7 @@ export const documents = pgTable(
     index("documents_request_id_idx").on(t.requestId),
     check(
       "documents_type_check",
-      sql`${t.type} in ('national_id', 'prior_certificate', 'sadad_invoice', 'generated_certificate', 'registration_sheet', 'hrbl_request_form', 'other')`
+      sql`${t.type} in ('national_id', 'prior_certificate', 'sadad_invoice', 'generated_certificate', 'registration_sheet', 'hrbl_request_form', 'quotation', 'other')`
     ),
     check("documents_not_verified_and_rejected", sql`${t.verifiedAt} is null or ${t.rejectedAt} is null`),
     check(
@@ -128,6 +128,9 @@ export const payments = pgTable(
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     requestId: bigint("request_id", { mode: "number" }).notNull().references(() => trainingRequests.id),
+    // Deprecated (0034): was a fabricated `SADAD-nnnn-nnnn` rendered to
+    // contractors as the payment instruction. The uploaded quotation now
+    // carries the real instructions; nothing writes this column.
     sadadInvoiceRef: text("sadad_invoice_ref"),
     dueDate: date("due_date"),
     description: text("description").notNull(),

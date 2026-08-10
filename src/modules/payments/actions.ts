@@ -1,13 +1,24 @@
 "use server";
 
+import { z } from "zod";
 import { getContext } from "@/modules/platform/auth/service";
 import { RejectPaymentInput, UploadPaymentReceiptInput } from "./schema";
-import { rejectPayment, uploadPaymentReceipt, verifyPayment } from "./service";
+import { rejectPayment, uploadPaymentReceipt, uploadQuotation, verifyPayment } from "./service";
 
 async function requireContext() {
   const context = await getContext();
   if (!context) throw new Error("Not authorized");
   return context;
+}
+
+export async function uploadQuotationAction(formData: FormData) {
+  const context = await requireContext();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) throw new Error("No file provided");
+  const requestId = z.coerce.number().int().positive().parse(formData.get("requestId"));
+
+  return uploadQuotation(context, { requestId, file });
 }
 
 export async function uploadPaymentReceiptAction(formData: FormData) {

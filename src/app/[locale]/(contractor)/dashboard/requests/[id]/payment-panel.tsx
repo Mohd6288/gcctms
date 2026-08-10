@@ -10,12 +10,14 @@ import { DocumentPreview } from "@/components/documents/document-preview";
 
 interface Payment {
   id: number;
-  sadadInvoiceRef: string | null;
   dueDate: string | null;
   totalAmount: string | null;
   status: "uploaded" | "verified" | "rejected";
   documentId: number | null;
   documentMimeType: string | null;
+  quotationDocumentId: number | null;
+  quotationMimeType: string | null;
+  quotationName: string | null;
   rejectionReason: string | null;
 }
 
@@ -26,7 +28,9 @@ export function PaymentPanel({ requestId, payment }: { requestId: number; paymen
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const canUpload = payment.status !== "verified";
+  // No quotation, nothing to pay against: the receipt upload only appears
+  // once the contractor has the document that says what to pay and how.
+  const canUpload = payment.status !== "verified" && payment.quotationDocumentId !== null;
 
   async function handleUpload() {
     const file = fileInput.current?.files?.[0];
@@ -61,16 +65,33 @@ export function PaymentPanel({ requestId, payment }: { requestId: number; paymen
         <p className="text-sm">
           <span className="font-medium">{t("totalDue")}:</span> {payment.totalAmount ?? "—"} SAR
         </p>
-        {payment.sadadInvoiceRef ? (
-          <p className="text-sm">
-            <span className="font-medium">{t("sadadReference")}:</span> {payment.sadadInvoiceRef}
-          </p>
-        ) : null}
+
         {payment.dueDate ? (
           <p className="text-sm">
             <span className="font-medium">{t("dueDate")}:</span> {payment.dueDate}
           </p>
         ) : null}
+        {/* Until the quotation arrives the figure above is the portal's own
+            estimate, and there are no payment instructions to act on — so say
+            that plainly rather than leaving a total sitting next to an upload
+            box, which reads as "pay this now". */}
+        {payment.quotationDocumentId ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+            <span className="text-sm font-medium">{t("quotationTitle")}</span>
+            <p className="text-xs text-muted-foreground">{t("quotationHint")}</p>
+            <DocumentPreview
+              documentId={payment.quotationDocumentId}
+              mimeType={payment.quotationMimeType}
+              fileName={payment.quotationName}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1 rounded-lg border border-warning/40 bg-warning/10 p-3">
+            <span className="text-sm font-medium text-warning">{t("awaitingQuotationTitle")}</span>
+            <p className="text-xs text-muted-foreground">{t("awaitingQuotationHint")}</p>
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground">{statusLabel}</p>
         {payment.status === "rejected" && payment.rejectionReason ? (
           <p className="text-sm text-destructive">

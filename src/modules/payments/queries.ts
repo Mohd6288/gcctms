@@ -1,6 +1,6 @@
 // payments module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, courses, documents, payments, trainingRequests } from "@/db/schema";
 
@@ -18,6 +18,21 @@ export async function getPaymentForRequest(requestId: number) {
       totalAmount: payments.totalAmount,
       documentId: payments.documentId,
       documentMimeType: documents.mimeType,
+      // The admin-uploaded Dynamics quotation for this request. Left-joined
+      // separately from the receipt: one is what GCC Lab issued, the other
+      // is what the contractor paid against it, and both can be absent.
+      quotationDocumentId: sql<number | null>`(
+        select d.id::int from documents d
+        where d.request_id = ${payments.requestId} and d.type = 'quotation' limit 1
+      )`,
+      quotationMimeType: sql<string | null>`(
+        select d.mime_type from documents d
+        where d.request_id = ${payments.requestId} and d.type = 'quotation' limit 1
+      )`,
+      quotationName: sql<string | null>`(
+        select d.original_name from documents d
+        where d.request_id = ${payments.requestId} and d.type = 'quotation' limit 1
+      )`,
       status: payments.status,
       rejectionReason: payments.rejectionReason,
       verifiedAt: payments.verifiedAt,

@@ -342,18 +342,20 @@ export async function approveRequest(context: AuthContext, requestId: number, un
   const unitPrice = unitPriceOverride != null ? String(unitPriceOverride) : await resolvePrice(request.courseId, request.preferredRegion);
   const [course] = await db.select({ titleEn: courses.titleEn }).from(courses).where(eq(courses.id, request.courseId));
 
-  // Matches the validated prototype's Invoice: dueDate = issueDate + 14 days,
-  // and a SADAD reference generated once at approval and shown to the
-  // contractor as the literal payment instruction.
+  // dueDate = issueDate + 14 days, from the validated prototype's Invoice.
+  //
+  // The prototype also generated a `SADAD-nnnn-nnnn` reference here from two
+  // random numbers and the contractor panel rendered it as the literal
+  // payment instruction — a reference no SADAD bill ever existed behind.
+  // Removed in 0034: the quotation the admin uploads after approval carries
+  // the real amount and payment instructions.
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 14);
-  const sadadInvoiceRef = `SADAD-${Math.floor(1000 + Math.random() * 8999)}-${Math.floor(1000 + Math.random() * 8999)}`;
 
   const [payment] = await db
     .insert(payments)
     .values({
       requestId,
-      sadadInvoiceRef,
       dueDate: dueDate.toISOString().slice(0, 10),
       description: course?.titleEn ?? "Training course",
       qty: billable.length,

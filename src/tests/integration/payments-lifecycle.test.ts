@@ -27,7 +27,7 @@ import {
   verifyRequestDocument,
 } from "../../modules/requests/service";
 import { uploadDocument, verifyEmployeeDocument } from "../../modules/platform/storage/service";
-import { rejectPayment, uploadPaymentReceipt, verifyPayment } from "../../modules/payments/service";
+import { rejectPayment, uploadPaymentReceipt, uploadQuotation, verifyPayment } from "../../modules/payments/service";
 
 // Full SADAD payment lifecycle against the real local Supabase Postgres —
 // Phase 5 acceptance criteria: end-to-end incl. reject/re-upload, a
@@ -246,5 +246,49 @@ describe("payment lifecycle — real DB", () => {
   it("company B is denied uploading a receipt for company A's request", async () => {
     const { requestId } = await driveRequestToPaymentPending();
     await expect(uploadPaymentReceipt(contractorB, requestId, pdf("intruder.pdf"))).rejects.toThrow("Not authorized");
+  });
+
+  // 0034 — the quotation comes out of Dynamics 365 and is the only document
+  // that travels admin -> contractor. It is priced on the approved candidate
+  // count, so it cannot exist before approval, and a contractor must never be
+  // able to produce their own.
+  it("an admin attaches the quotation after approval and the contractor sees it", async () => {
+    const { requestId } = await driveRequestToPaymentPending();
+    const doc = await uploadQuotation(adminCtx, { requestId, file: pdf("quotation.pdf") });
+
+    const [row] = await db
+      .select({ type: documents.type, companyId: documents.companyId, verifiedAt: documents.verifiedAt })
+      .from(documents)
+      .where(eq(documents.id, doc.id));
+    expect(row.type).toBe("quotation");
+    // Company-scoped to the requesting contractor, which is what makes it
+    // readable by them through the ordinary document path.
+    expect(row.companyId).toBe(companyAId);
+    // Nobody verifies a quotation — GCC Lab issued it.
+    expect(row.verifiedAt).toBeNull();
+
+    const audit = await db
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(sql`entity_type = 'training_request' and entity_id = ${requestId} and action = 'upload_quotation'`);
+    expect(audit).toHaveLength(1);
+  });
+
+  it("refuses a quotation before the request is approved, and from a contractor at any point", async () => {
+    const draft = await createDraftRequest(contractorA, { courseId });
+    await syncRequestItems(contractorA, { requestId: draft.id, employeeIds: [employeeId] });
+    await submitRequest(contractorA, draft.id);
+    await expect(uploadQuotation(adminCtx, { requestId: draft.id, file: pdf("early.pdf") })).rejects.toThrow(
+      "Approve the request first"
+    );
+
+    const { requestId } = await driveRequestToPaymentPending();
+    await expect(uploadQuotation(contractorA, { requestId, file: pdf("self-issued.pdf") })).rejects.toThrow("Not authorized");
+  });
+
+  it("stops writing the fabricated SADAD reference", async () => {
+    const { requestId } = await driveRequestToPaymentPending();
+    const [payment] = await db.select({ ref: payments.sadadInvoiceRef }).from(payments).where(eq(payments.requestId, requestId));
+    expect(payment.ref).toBeNull();
   });
 });

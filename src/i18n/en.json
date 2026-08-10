@@ -322,7 +322,6 @@
       "payment": {
         "title": "Payment",
         "totalDue": "Total due",
-        "sadadReference": "SADAD reference",
         "dueDate": "Due date",
         "statusUploaded": "Awaiting review",
         "statusVerified": "Verified",
@@ -334,7 +333,11 @@
         "reupload": "Upload a new receipt",
         "download": "Download current receipt",
         "genericError": "Upload failed. Please try again.",
-        "noReceiptYet": "No receipt uploaded yet."
+        "noReceiptYet": "No receipt uploaded yet.",
+        "quotationTitle": "Quotation",
+        "quotationHint": "This is the official quotation from GCC Lab. Pay the amount it states using the payment details it contains, then upload your receipt below.",
+        "awaitingQuotationTitle": "Waiting for your quotation",
+        "awaitingQuotationHint": "The amount above is an estimate from the course price list. GCC Lab is preparing your official quotation — it will appear here with the final amount and the payment details. You can upload your receipt once it arrives."
       }
     },
     "employees": {
@@ -568,7 +571,6 @@
       "detail": {
         "title": "Payment",
         "totalDue": "Total due",
-        "sadadReference": "SADAD reference",
         "dueDate": "Due date",
         "statusUploaded": "Awaiting review",
         "statusVerified": "Verified",
@@ -580,7 +582,12 @@
         "rejectReasonLabel": "Rejection reason",
         "rejectConfirm": "Confirm rejection",
         "cancel": "Cancel",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "quotationTitle": "Quotation",
+        "quotationAttached": "Sent to contractor",
+        "quotationMissing": "Not uploaded yet",
+        "quotationHint": "Upload the quotation generated in Dynamics 365. The contractor cannot upload a payment receipt until it is here — the amount above is only the portal's estimate.",
+        "quotationUploading": "Uploading…"
       },
       "regionScopedNote": "Showing only payments in the {region} region."
     },

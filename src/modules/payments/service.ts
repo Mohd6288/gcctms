@@ -58,6 +58,40 @@ export async function uploadPaymentReceipt(context: AuthContext, requestId: numb
 // Requires a receipt to actually be attached — can't verify an invoice that
 // has nothing to check yet. Verifying additionally moves the covering
 // request payment_pending -> ready_for_scheduling (roles-and-workflows.md).
+// The Dynamics 365 quotation, uploaded by an admin so the contractor can see
+// what to pay and how. Two independent gates keep this off the generic
+// upload path: 'quotation' is absent from uploadDocumentAction's Zod enum,
+// and this is the only caller that passes the type — behind verify_payments,
+// which is platform_admin only.
+//
+// Attached AFTER approval on purpose: the quotation is priced on the
+// approved headcount, and approval is what decides it. uploadDocument's
+// request-slot logic gives replace-in-place for free, so a reissued
+// quotation supersedes the old one and deletes the stale file.
+export async function uploadQuotation(context: AuthContext, input: { requestId: number; file: File }) {
+  if (!authorize("verify_payments", context)) throw new Error("Not authorized");
+
+  const [request] = await db
+    .select({ companyId: trainingRequests.companyId, status: trainingRequests.status })
+    .from(trainingRequests)
+    .where(eq(trainingRequests.id, input.requestId));
+  if (!request) throw new Error("Request not found");
+  if (request.status === "draft" || request.status === "submitted" || request.status === "info_requested") {
+    throw new Error("Approve the request first — the quotation is priced on the approved number of candidates.");
+  }
+
+  // uploadDocument re-checks the region scope for a region-assigned admin.
+  const doc = await uploadDocument(context, {
+    companyId: request.companyId,
+    requestId: input.requestId,
+    type: "quotation",
+    file: input.file,
+  });
+
+  await writeAudit({ userId: context.userId, entityType: "training_request", entityId: input.requestId, action: "upload_quotation" });
+  return doc;
+}
+
 export async function verifyPayment(context: AuthContext, paymentId: number) {
   if (!authorize("verify_payments", context)) throw new Error("Not authorized");
 

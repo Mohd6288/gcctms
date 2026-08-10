@@ -23,7 +23,19 @@ const SIGNED_URL_TTL_SECONDS = 300; // <= 5 min, per security-and-hosting.md
 // admin-verified before a request can be approved (Phase 4 — see
 // database-schema.md's documents note). sadad_invoice is also
 // request-scoped — the contractor's SADAD receipt (Phase 5).
-export type DocumentType = "national_id" | "prior_certificate" | "other" | "registration_sheet" | "hrbl_request_form" | "sadad_invoice";
+// 'quotation' is admin-uploaded and contractor-read — the only type that
+// travels that direction. It is deliberately absent from
+// uploadDocumentAction's Zod enum: the generic upload path must not be able
+// to produce one. It is reachable only through payments/service.ts's
+// uploadQuotation, which checks verify_payments first.
+export type DocumentType =
+  | "national_id"
+  | "prior_certificate"
+  | "other"
+  | "registration_sheet"
+  | "hrbl_request_form"
+  | "sadad_invoice"
+  | "quotation";
 
 // Some browsers/OS combos report .xlsx uploads as application/octet-stream
 // (or no type at all) when MIME sniffing fails — fall back to the file

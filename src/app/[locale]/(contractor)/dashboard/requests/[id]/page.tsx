@@ -77,12 +77,14 @@ export default async function RequestDetailPage({
             requestId={requestId}
             payment={{
               id: payment.id,
-              sadadInvoiceRef: payment.sadadInvoiceRef,
               dueDate: payment.dueDate,
               totalAmount: payment.totalAmount,
               status: payment.status as "uploaded" | "verified" | "rejected",
               documentId: payment.documentId,
               documentMimeType: payment.documentMimeType,
+              quotationDocumentId: payment.quotationDocumentId,
+              quotationMimeType: payment.quotationMimeType,
+              quotationName: payment.quotationName,
               rejectionReason: payment.rejectionReason,
             }}
           />

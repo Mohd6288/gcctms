@@ -79,14 +79,17 @@ export default async function AdminRequestDetailPage({
       ) : null}
       {payment ? (
         <PaymentReviewPanel
+          requestId={request.id}
           payment={{
             id: payment.id,
-            sadadInvoiceRef: payment.sadadInvoiceRef,
             dueDate: payment.dueDate,
             totalAmount: payment.totalAmount,
             status: payment.status as "uploaded" | "verified" | "rejected",
             documentId: payment.documentId,
             documentMimeType: payment.documentMimeType,
+            quotationDocumentId: payment.quotationDocumentId,
+            quotationMimeType: payment.quotationMimeType,
+            quotationName: payment.quotationName,
           }}
         />
       ) : null}

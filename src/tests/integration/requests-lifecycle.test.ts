@@ -177,7 +177,9 @@ describe("training request lifecycle — real DB", () => {
     expect(payment.qty).toBe(1);
     expect(payment.unitPrice).toBe("500.00");
     expect(payment.totalAmount).toBe("575.00"); // 500 * 1.15 VAT
-    expect(payment.sadadInvoiceRef).toMatch(/^SADAD-\d{4}-\d{4}$/);
+    // 0034 retired the fabricated SADAD reference — the uploaded quotation
+    // carries the real payment instructions now, so nothing writes this.
+    expect(payment.sadadInvoiceRef).toBeNull();
     expect(payment.dueDate).not.toBeNull();
 
     const [request] = await db.select({ totalAmount: trainingRequests.totalAmount }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
