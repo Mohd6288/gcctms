@@ -76,15 +76,19 @@ async function main() {
       console.warn(`skipping ${t.fullName}: no email to match on`);
       continue;
     }
-    const email = EMAIL_MODE === "real" ? realEmail : placeholderEmail(t.fullName, index);
+    const placeholder = placeholderEmail(t.fullName, index);
+    const email = EMAIL_MODE === "real" ? realEmail : placeholder;
 
-    // Match on either address, so the run that first switches an environment
-    // over finds the row holding the real one and rewrites it in place
-    // instead of inserting a duplicate.
+    // Match on BOTH addresses, always — not on whichever one this run
+    // happens to want. Looking up by `email` made the lookup
+    // `in (real, real)` in real mode, so a switch back from placeholders
+    // matched nothing and inserted a duplicate of all 13 instead of
+    // rewriting them. The row is the same trainer whichever address it
+    // currently holds, so the search has to cover both directions.
     const [existing] = await db
       .select({ id: trainers.id, email: trainers.email, userId: trainers.userId })
       .from(trainers)
-      .where(sql`lower(${trainers.email}) in (${realEmail.toLowerCase()}, ${email.toLowerCase()})`);
+      .where(sql`lower(${trainers.email}) in (${realEmail.toLowerCase()}, ${placeholder.toLowerCase()})`);
 
     let trainerId = existing?.id;
     if (trainerId) {
