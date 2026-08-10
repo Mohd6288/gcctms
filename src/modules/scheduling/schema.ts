@@ -22,7 +22,15 @@ export type SetAdminRegionInput = z.infer<typeof SetAdminRegionInput>;
 
 // course and region are set once at creation and never change — see
 // UpdateClassInput below, which structurally excludes both.
+// A link people travel to, so it has to be one. An empty string is allowed
+// and means "clear it" — what an admin emptying the field and saving expects.
+// The service turns "" into null rather than a transform here, which would
+// make the key required in the inferred type.
+const LocationUrl = z.union([z.literal(""), z.string().url().startsWith("http")]).optional();
+
 export const CreateClassInput = z.object({
+  locationUrl: LocationUrl,
+  locationNote: z.string().max(500).optional(),
   courseId: z.number().int().positive(),
   trainerId: z.number().int().positive(),
   centerId: z.number().int().positive().optional(),
@@ -36,6 +44,8 @@ export const CreateClassInput = z.object({
 export type CreateClassInput = z.infer<typeof CreateClassInput>;
 
 export const UpdateClassInput = z.object({
+  locationUrl: LocationUrl,
+  locationNote: z.string().max(500).optional(),
   classId: z.number().int().positive(),
   trainerId: z.number().int().positive(),
   centerId: z.number().int().positive().optional(),

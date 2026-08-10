@@ -118,6 +118,10 @@ export function NewClassForm({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [capacity, setCapacity] = useState("20");
+  // No course has a fixed venue — GCC Lab coordinates one per class and
+  // shares it as a link.
+  const [locationUrl, setLocationUrl] = useState("");
+  const [locationNote, setLocationNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -146,6 +150,8 @@ export function NewClassForm({
         startDate,
         endDate,
         capacity: Number(capacity),
+        locationUrl: locationUrl.trim() || undefined,
+        locationNote: locationNote.trim() || undefined,
       });
       // The guard's own words, not whatever survived the Server Action
       // boundary — in production a thrown Error arrives as "Minified React
@@ -293,6 +299,22 @@ export function NewClassForm({
             hours: Number(selectedCourse?.durationHours ?? 0),
           })}
         </p>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="locationUrl">{t("locationUrlLabel")}</Label>
+          <Input
+            id="locationUrl"
+            type="url"
+            inputMode="url"
+            placeholder="https://maps.app.goo.gl/…"
+            value={locationUrl}
+            onChange={(e) => setLocationUrl(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">{t("locationUrlHint")}</p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="locationNote">{t("locationNoteLabel")}</Label>
+          <Input id="locationNote" value={locationNote} onChange={(e) => setLocationNote(e.target.value)} placeholder={t("locationNotePlaceholder")} />
+        </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="capacity">{t("capacityLabel")}</Label>
           <Input

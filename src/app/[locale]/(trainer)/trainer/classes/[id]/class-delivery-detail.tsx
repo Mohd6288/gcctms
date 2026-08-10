@@ -14,6 +14,8 @@ interface ClassData {
   courseTitleEn: string;
   courseTitleAr: string;
   startDate: string;
+  locationUrl: string | null;
+  locationNote: string | null;
   endDate: string;
   status: string;
 }
@@ -102,6 +104,18 @@ export function ClassDeliveryDetail({
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
             {cls.startDate} – {cls.endDate} · {cls.status}
+          </p>
+          <p className="text-sm">
+            {/* The trainer has to get there too, and until now the address
+                lived in a WhatsApp message. */}
+            {cls.locationUrl ? (
+              <a href={cls.locationUrl} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">
+                {t("openLocation")}
+              </a>
+            ) : (
+              <span className="text-muted-foreground">{t("noLocation")}</span>
+            )}
+            {cls.locationNote ? <span className="ms-2 text-xs text-muted-foreground">{cls.locationNote}</span> : null}
           </p>
           <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">{t("attirePolicy")}</p>
           {notStarted ? <p className="rounded-lg bg-muted p-3 text-sm">{t("notStarted")}</p> : null}

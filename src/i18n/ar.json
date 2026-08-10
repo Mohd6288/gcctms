@@ -450,7 +450,9 @@
       "attendance": "نسبة الحضور {pct}%",
       "statusScheduled": "مجدول",
       "statusInProgress": "قيد التنفيذ",
-      "statusCompleted": "مكتمل"
+      "statusCompleted": "مكتمل",
+      "openLocation": "فتح الموقع",
+      "noLocation": "سيتم تأكيد الموقع"
     },
     "overview": {
       "title": "نظرة عامة",
@@ -665,7 +667,11 @@
         "submit": "إنشاء الفصل",
         "submitting": "جارٍ الإنشاء…",
         "genericError": "تعذّر إنشاء الفصل. يرجى المحاولة مرة أخرى.",
-        "durationHint": "{days, plural, =1 {دورة ليوم واحد ({hours} ساعة تدريبية) — يُحدَّد تاريخ الانتهاء تلقائياً ويمكن تعديله.} other {# أيام تدريبية ({hours} ساعة) — يُحدَّد تاريخ الانتهاء تلقائياً ويمكن تعديله.}}"
+        "durationHint": "{days, plural, =1 {دورة ليوم واحد ({hours} ساعة تدريبية) — يُحدَّد تاريخ الانتهاء تلقائياً ويمكن تعديله.} other {# أيام تدريبية ({hours} ساعة) — يُحدَّد تاريخ الانتهاء تلقائياً ويمكن تعديله.}}",
+        "locationUrlLabel": "رابط الموقع",
+        "locationNoteLabel": "ملاحظة عن الموقع",
+        "locationUrlHint": "رابط خريطة أو رابط اجتماع. يظهر للمدرب ولكل شركة مسجّلة.",
+        "locationNotePlaceholder": "البوابة 3، الدور الثاني — أحضر أحذية السلامة"
       },
       "detail": {
         "backToList": "العودة إلى الفصول",
@@ -701,7 +707,11 @@
         "releasing": "جارٍ الإصدار… يتم إنشاء ملف PDF وقد يستغرق بضع ثوانٍ",
         "issuedCertsTitle": "الشهادات الصادرة ({count})",
         "certIssued": "صادرة",
-        "certRevoked": "ملغاة"
+        "certRevoked": "ملغاة",
+        "locationUrlLabel": "رابط الموقع",
+        "locationNoteLabel": "ملاحظة عن الموقع",
+        "locationUrlHint": "رابط خريطة أو رابط اجتماع. يظهر للمدرب ولكل شركة مسجّلة.",
+        "locationNotePlaceholder": "البوابة 3، الدور الثاني — أحضر أحذية السلامة"
       },
       "regionScopedNote": "تُعرض هنا فصول منطقة {region} فقط.",
       "trainerSelect": {
@@ -1067,7 +1077,9 @@
       "submit": "إرسال النتائج",
       "submitting": "جارٍ الإرسال…",
       "saveScore": "حفظ الدرجة",
-      "passMarkNote": "النجاح ≥ {mark}"
+      "passMarkNote": "النجاح ≥ {mark}",
+      "openLocation": "فتح الموقع",
+      "noLocation": "لم يُحدَّد الموقع بعد"
     }
   },
   "auditor": {

@@ -450,7 +450,9 @@
       "attendance": "{pct}% attendance",
       "statusScheduled": "Scheduled",
       "statusInProgress": "In progress",
-      "statusCompleted": "Completed"
+      "statusCompleted": "Completed",
+      "openLocation": "Open location",
+      "noLocation": "Location to be confirmed"
     },
     "overview": {
       "title": "Overview",
@@ -665,7 +667,11 @@
         "submit": "Create class",
         "submitting": "Creating…",
         "genericError": "Could not create class. Please try again.",
-        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}"
+        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}",
+        "locationUrlLabel": "Location link",
+        "locationNoteLabel": "Location note",
+        "locationUrlHint": "A map pin or meeting link. Shown to the trainer and to every enrolled company.",
+        "locationNotePlaceholder": "Gate 3, second floor — bring safety boots"
       },
       "detail": {
         "backToList": "Back to classes",
@@ -701,7 +707,11 @@
         "releasing": "Releasing… this renders the PDF and can take a few seconds",
         "issuedCertsTitle": "Issued certificates ({count})",
         "certIssued": "Issued",
-        "certRevoked": "Revoked"
+        "certRevoked": "Revoked",
+        "locationUrlLabel": "Location link",
+        "locationNoteLabel": "Location note",
+        "locationUrlHint": "A map pin or meeting link. Shown to the trainer and to every enrolled company.",
+        "locationNotePlaceholder": "Gate 3, second floor — bring safety boots"
       },
       "regionScopedNote": "Showing only classes in the {region} region.",
       "trainerSelect": {
@@ -1067,7 +1077,9 @@
       "submit": "Submit Results",
       "submitting": "Submitting…",
       "saveScore": "Save score",
-      "passMarkNote": "pass ≥ {mark}"
+      "passMarkNote": "pass ≥ {mark}",
+      "openLocation": "Open location",
+      "noLocation": "No location set yet"
     }
   },
   "auditor": {

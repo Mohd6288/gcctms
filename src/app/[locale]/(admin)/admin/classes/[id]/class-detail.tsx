@@ -31,6 +31,8 @@ interface ClassData {
   courseTitleEn: string;
   courseTitleAr: string;
   courseDurationHours: string;
+  locationUrl: string | null;
+  locationNote: string | null;
   trainerId: number;
   centerId: number | null;
   region: string;
@@ -113,6 +115,8 @@ export function ClassDetail({
   const [startDate, setStartDate] = useState(cls.startDate);
   const [endDate, setEndDate] = useState(cls.endDate);
   const [capacity, setCapacity] = useState(String(cls.capacity));
+  const [locationUrl, setLocationUrl] = useState(cls.locationUrl ?? "");
+  const [locationNote, setLocationNote] = useState(cls.locationNote ?? "");
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +224,23 @@ export function ClassDetail({
               />
             </div>
             <div className="flex flex-col gap-1.5">
+              <Label htmlFor="locationUrl">{t("locationUrlLabel")}</Label>
+              <Input
+                id="locationUrl"
+                type="url"
+                inputMode="url"
+                placeholder="https://maps.app.goo.gl/…"
+                value={locationUrl}
+                disabled={isLocked}
+                onChange={(e) => setLocationUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t("locationUrlHint")}</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="locationNote">{t("locationNoteLabel")}</Label>
+              <Input id="locationNote" value={locationNote} disabled={isLocked} onChange={(e) => setLocationNote(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="capacity">{t("capacityLabel")}</Label>
               <Input id="capacity" type="number" min={enrolled.length} value={capacity} disabled={isLocked} onChange={(e) => setCapacity(e.target.value)} />
               <p className="text-xs text-muted-foreground">{t("capacityHint", { count: enrolled.length })}</p>
@@ -243,6 +264,8 @@ export function ClassDetail({
                       classId: cls.id,
                       trainerId,
                       centerId: centerId ? Number(centerId) : undefined,
+                      locationUrl: locationUrl.trim(),
+                      locationNote: locationNote.trim() || undefined,
                       startDate,
                       endDate,
                       capacity: Number(capacity),

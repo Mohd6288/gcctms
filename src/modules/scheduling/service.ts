@@ -110,6 +110,8 @@ export async function createClass(context: AuthContext, input: CreateClassInput)
         startDate: input.startDate,
         endDate: input.endDate,
         capacity: input.capacity,
+        locationUrl: input.locationUrl || null,
+        locationNote: input.locationNote || null,
       })
       .returning({ id: classes.id });
     await writeAudit({
@@ -147,7 +149,16 @@ export async function updateClass(context: AuthContext, input: UpdateClassInput)
   try {
     await db
       .update(classes)
-      .set({ trainerId: input.trainerId, centerId: input.centerId, startDate: input.startDate, endDate: input.endDate, capacity: input.capacity })
+      .set({
+        trainerId: input.trainerId,
+        centerId: input.centerId,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        capacity: input.capacity,
+        // undefined would leave a stale link on a class that moved venue.
+        locationUrl: input.locationUrl || null,
+        locationNote: input.locationNote || null,
+      })
       .where(eq(classes.id, input.classId));
   } catch (err) {
     if (isExclusionViolation(err)) {

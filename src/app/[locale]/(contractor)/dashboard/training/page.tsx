@@ -18,6 +18,8 @@ interface ClassGroup {
   trainerFullName: string;
   centerName: string | null;
   region: string;
+  locationUrl: string | null;
+  locationNote: string | null;
   startDate: string;
   endDate: string;
   classStatus: string;
@@ -42,6 +44,8 @@ function groupByClass(rows: Row[]): ClassGroup[] {
 interface Labels {
   dates: string;
   location: string;
+  openLocation: string;
+  noLocation: string;
   trainer: string;
   employees: (count: number) => string;
   waitlisted: (count: number) => string;
@@ -72,10 +76,22 @@ function ClassCard({ group, locale, labels }: { group: ClassGroup; locale: strin
             {group.startDate} – {group.endDate}
           </dd>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <dt>{labels.location}</dt>
           {/* Centre is optional on a class; fall back to the region rather than an empty row. */}
           <dd className="text-foreground">{group.centerName ?? group.region}</dd>
+          {/* The pin the admin coordinated for this class — the thing a
+              candidate actually needs on the morning. */}
+          {group.locationUrl ? (
+            <dd>
+              <a href={group.locationUrl} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline">
+                {labels.openLocation}
+              </a>
+            </dd>
+          ) : (
+            <dd className="text-muted-foreground">{labels.noLocation}</dd>
+          )}
+          {group.locationNote ? <dd className="w-full text-xs text-muted-foreground">{group.locationNote}</dd> : null}
         </div>
         <div className="flex gap-2">
           <dt>{labels.trainer}</dt>
@@ -159,6 +175,8 @@ export default async function ContractorTrainingPage({
   const labels: Labels = {
     dates: t("dates"),
     location: t("location"),
+    openLocation: t("openLocation"),
+    noLocation: t("noLocation"),
     trainer: t("trainer"),
     employees: (count) => t("employees", { count }),
     waitlisted: (count) => t("waitlisted", { count }),

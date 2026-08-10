@@ -18,6 +18,10 @@ export const classes = pgTable(
     startDate: date("start_date").notNull(),
     endDate: date("end_date").notNull(),
     sessions: jsonb("sessions").notNull().default([]),
+    // Coordinated per class, not per course (0037): a map pin or meeting
+    // link, plus whatever the gate/floor detail is.
+    locationUrl: text("location_url"),
+    locationNote: text("location_note"),
     capacity: integer("capacity").notNull(),
     status: text("status").notNull().default("scheduled"),
     cancelReason: text("cancel_reason"),

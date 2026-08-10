@@ -137,6 +137,8 @@ export async function getClassById(classId: number) {
       endDate: classes.endDate,
       capacity: classes.capacity,
       status: classes.status,
+      locationUrl: classes.locationUrl,
+      locationNote: classes.locationNote,
     })
     .from(classes)
     .innerJoin(courses, eq(classes.courseId, courses.id))
@@ -184,6 +186,9 @@ export async function listClassEnrollmentsForCompany(companyId: number) {
       trainerFullName: trainers.fullName,
       centerName: trainingCenters.name,
       region: classes.region,
+      // The candidates travelling to it need this more than anyone.
+      locationUrl: classes.locationUrl,
+      locationNote: classes.locationNote,
       startDate: classes.startDate,
       endDate: classes.endDate,
       classStatus: classes.status,
