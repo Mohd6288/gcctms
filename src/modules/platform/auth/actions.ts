@@ -28,7 +28,7 @@ export async function signOut(locale: Locale) {
 const CreatePrivilegedAccountInput = z.object({
   email: z.string().email(),
   fullName: z.string().min(1),
-  role: z.enum(["super_admin", "platform_admin", "trainer"]),
+  role: z.enum(["super_admin", "platform_admin", "trainer", "auditor"]),
   // Assigned in the same call for platform_admin, because an admin with no
   // region is UNSCOPED, not unprivileged — auth_region() being null means
   // "sees every region" (0026_regional_admin_scoping.sql). Creating a batch

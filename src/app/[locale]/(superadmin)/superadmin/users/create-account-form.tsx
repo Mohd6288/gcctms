@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { createPrivilegedAccount } from "@/modules/platform/auth/actions";
 import { REGIONS, type Region } from "@/lib/regions";
 
-type PrivilegedRole = "super_admin" | "platform_admin" | "trainer";
+type PrivilegedRole = "super_admin" | "platform_admin" | "trainer" | "auditor";
 
 export function CreateAccountForm() {
   const t = useTranslations("superadmin.users");
@@ -86,6 +86,7 @@ export function CreateAccountForm() {
               <option value="super_admin">{t("roleSuperAdmin")}</option>
               <option value="platform_admin">{t("rolePlatformAdmin")}</option>
               <option value="trainer">{t("roleTrainer")}</option>
+              <option value="auditor">{t("roleAuditor")}</option>
             </select>
           </div>
           {/* Assigned here rather than afterwards: an unassigned admin is

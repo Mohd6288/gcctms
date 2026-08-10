@@ -4,12 +4,13 @@
       "contractor_manager": "Company Portal",
       "platform_admin": "Admin Portal",
       "super_admin": "Super Admin",
-      "trainer": "Trainer Portal"
+      "trainer": "Trainer Portal",
+      "auditor": "Auditor"
     },
     "items": {
       "dashboard": "Dashboard",
       "overview": "Overview",
-      "requests": "Training Requests",
+      "requests": "Requests",
       "employees": "Employees",
       "payments": "Payments",
       "certificates": "Certificates",
@@ -26,7 +27,8 @@
       "users": "Users",
       "training": "My Training",
       "externalCertificates": "Employee documents",
-      "cities": "Cities"
+      "cities": "Cities",
+      "activity": "Activity log"
     },
     "openMenu": "Open navigation",
     "closeMenu": "Close navigation",
@@ -727,7 +729,8 @@
       "confirmResetMfa": "Clear {name}'s MFA? They will enrol a new authenticator on next sign-in.",
       "mfaCleared": "{count} factor(s) cleared — they enrol again on next sign-in.",
       "confirm": "Confirm",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "roleAuditor": "Auditor (read-only)"
     },
     "overview": {
       "title": "Platform Overview",
@@ -909,6 +912,63 @@
       "fail": "Fail",
       "submit": "Submit Results",
       "submitting": "Submitting…"
+    }
+  },
+  "auditor": {
+    "common": {
+      "rowCount": "{count} row(s)",
+      "downloadCsv": "Download CSV",
+      "empty": "Nothing to show."
+    },
+    "overview": {
+      "title": "Audit overview",
+      "subtitle": "Read-only view of the platform. Iqama numbers and uploaded documents are not shown here by design.",
+      "companies": "Contractor companies",
+      "employees": "Employees",
+      "requestsOpen": "Open requests",
+      "classesRunning": "Classes in progress",
+      "certificatesIssued": "Certificates issued",
+      "certificatesRevoked": "Certificates revoked"
+    },
+    "requests": {
+      "title": "Training requests",
+      "subtitle": "Every request and where it currently sits.",
+      "colId": "Request",
+      "colStatus": "Status",
+      "colCompany": "Company",
+      "colRegion": "Region",
+      "colCourse": "Code",
+      "colCourseTitle": "Course",
+      "colCity": "City",
+      "colCandidates": "Candidates",
+      "colTotal": "Total (SAR)",
+      "colCreated": "Created"
+    },
+    "certificates": {
+      "title": "Certificates",
+      "subtitle": "Issued and revoked certificates. Employee names are shown; Iqama numbers are withheld.",
+      "colSerial": "Serial",
+      "colStatus": "Status",
+      "colEmployee": "Employee",
+      "colCompany": "Company",
+      "colCourse": "Code",
+      "colCourseTitle": "Course",
+      "colIssued": "Issued",
+      "colExpires": "Expires",
+      "colRevokedReason": "Revocation reason"
+    },
+    "activity": {
+      "title": "Activity log",
+      "subtitle": "Append-only record of who changed what, most recent first.",
+      "colWhen": "When (UTC)",
+      "colActor": "Actor",
+      "colActorRole": "Role",
+      "colEntity": "Entity",
+      "colEntityId": "Id",
+      "colAction": "Action",
+      "colFrom": "From",
+      "colTo": "To",
+      "colNote": "Note"
     }
   }
 }

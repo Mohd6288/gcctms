@@ -14,6 +14,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   MapPin,
+  ScrollText,
   Settings,
   ShieldCheck,
   Users,
@@ -64,5 +65,11 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   trainer: [
     { key: "overview", href: "/trainer", icon: LayoutDashboard, end: true },
     { key: "classes", href: "/trainer/classes", icon: BookOpen },
+  ],
+  auditor: [
+    { key: "overview", href: "/auditor", icon: LayoutDashboard, end: true },
+    { key: "requests", href: "/auditor/requests", icon: ClipboardList },
+    { key: "certificates", href: "/auditor/certificates", icon: Award },
+    { key: "activity", href: "/auditor/activity", icon: ScrollText },
   ],
 };

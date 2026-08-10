@@ -4,12 +4,13 @@
       "contractor_manager": "بوابة الشركة",
       "platform_admin": "بوابة الإدارة",
       "super_admin": "المشرف العام",
-      "trainer": "بوابة المدرب"
+      "trainer": "بوابة المدرب",
+      "auditor": "مراجع"
     },
     "items": {
       "dashboard": "لوحة التحكم",
       "overview": "نظرة عامة",
-      "requests": "طلبات التدريب",
+      "requests": "الطلبات",
       "employees": "الموظفون",
       "payments": "المدفوعات",
       "certificates": "الشهادات",
@@ -26,7 +27,8 @@
       "users": "المستخدمون",
       "training": "تدريبي",
       "externalCertificates": "مستندات الموظفين",
-      "cities": "المدن"
+      "cities": "المدن",
+      "activity": "سجل النشاط"
     },
     "openMenu": "فتح قائمة التنقل",
     "closeMenu": "إغلاق قائمة التنقل",
@@ -727,7 +729,8 @@
       "confirmResetMfa": "مسح المصادقة الثنائية لـ {name}؟ سيسجّل تطبيق مصادقة جديداً عند الدخول التالي.",
       "mfaCleared": "تم مسح {count} عامل — سيسجّل من جديد عند الدخول التالي.",
       "confirm": "تأكيد",
-      "cancel": "إلغاء"
+      "cancel": "إلغاء",
+      "roleAuditor": "مراجع (قراءة فقط)"
     },
     "overview": {
       "title": "نظرة عامة على المنصة",
@@ -909,6 +912,63 @@
       "fail": "راسب",
       "submit": "إرسال النتائج",
       "submitting": "جارٍ الإرسال…"
+    }
+  },
+  "auditor": {
+    "common": {
+      "rowCount": "{count} سجل",
+      "downloadCsv": "تنزيل CSV",
+      "empty": "لا توجد بيانات."
+    },
+    "overview": {
+      "title": "نظرة عامة للمراجعة",
+      "subtitle": "عرض للقراءة فقط. أرقام الإقامة والمستندات المرفوعة غير معروضة هنا عن قصد.",
+      "companies": "شركات المقاولين",
+      "employees": "الموظفون",
+      "requestsOpen": "الطلبات المفتوحة",
+      "classesRunning": "الدورات الجارية",
+      "certificatesIssued": "الشهادات الصادرة",
+      "certificatesRevoked": "الشهادات الملغاة"
+    },
+    "requests": {
+      "title": "طلبات التدريب",
+      "subtitle": "جميع الطلبات وحالتها الحالية.",
+      "colId": "الطلب",
+      "colStatus": "الحالة",
+      "colCompany": "الشركة",
+      "colRegion": "المنطقة",
+      "colCourse": "الرمز",
+      "colCourseTitle": "الدورة",
+      "colCity": "المدينة",
+      "colCandidates": "المرشحون",
+      "colTotal": "الإجمالي (ريال)",
+      "colCreated": "تاريخ الإنشاء"
+    },
+    "certificates": {
+      "title": "الشهادات",
+      "subtitle": "الشهادات الصادرة والملغاة. تُعرض أسماء الموظفين دون أرقام الإقامة.",
+      "colSerial": "الرقم التسلسلي",
+      "colStatus": "الحالة",
+      "colEmployee": "الموظف",
+      "colCompany": "الشركة",
+      "colCourse": "الرمز",
+      "colCourseTitle": "الدورة",
+      "colIssued": "تاريخ الإصدار",
+      "colExpires": "تاريخ الانتهاء",
+      "colRevokedReason": "سبب الإلغاء"
+    },
+    "activity": {
+      "title": "سجل النشاط",
+      "subtitle": "سجل غير قابل للتعديل لمن غيّر ماذا، الأحدث أولاً.",
+      "colWhen": "التوقيت (UTC)",
+      "colActor": "المنفّذ",
+      "colActorRole": "الدور",
+      "colEntity": "الكيان",
+      "colEntityId": "المعرّف",
+      "colAction": "الإجراء",
+      "colFrom": "من",
+      "colTo": "إلى",
+      "colNote": "ملاحظة"
     }
   }
 }

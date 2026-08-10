@@ -2,7 +2,7 @@
 // from both server code (service.ts re-exports these) and Client Components
 // (the sign-in/MFA forms need roleHomePath/mfaRequiredFor client-side).
 
-export const ROLES = ["super_admin", "platform_admin", "contractor_manager", "trainer"] as const;
+export const ROLES = ["super_admin", "platform_admin", "contractor_manager", "trainer", "auditor"] as const;
 export type Role = (typeof ROLES)[number];
 
 export function isRole(value: unknown): value is Role {
@@ -15,6 +15,8 @@ export function roleHomePath(role: Role): string {
       return "/superadmin";
     case "platform_admin":
       return "/admin";
+    case "auditor":
+      return "/auditor";
     case "trainer":
       return "/trainer";
     case "contractor_manager":
@@ -69,9 +71,14 @@ export const CAPABILITY_ROLES = {
   record_attendance: ["platform_admin", "trainer"],
   record_results: ["platform_admin", "trainer"],
   approve_certificates: ["platform_admin"],
-  view_certificates: ["super_admin", "platform_admin", "contractor_manager", "trainer"],
-  view_reports: ["super_admin", "platform_admin", "contractor_manager", "trainer"],
-  view_audit_log: ["super_admin", "platform_admin"],
+  view_certificates: ["super_admin", "platform_admin", "contractor_manager", "trainer", "auditor"],
+  view_reports: ["super_admin", "platform_admin", "contractor_manager", "trainer", "auditor"],
+  view_audit_log: ["super_admin", "platform_admin", "auditor"],
+  // Read-only, platform-wide oversight. Deliberately its own capability
+  // rather than adding auditor to review_requests or manage_*: an auditor
+  // must never reach a mutation path, and reusing an existing capability
+  // would grant one the moment somebody adds an action behind it.
+  view_audit_portal: ["auditor"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Capability = keyof typeof CAPABILITY_ROLES;

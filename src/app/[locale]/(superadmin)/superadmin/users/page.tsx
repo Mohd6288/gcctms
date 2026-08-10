@@ -33,6 +33,7 @@ export default async function SuperAdminUsersPage({
     super_admin: t("roleSuperAdmin"),
     platform_admin: t("rolePlatformAdmin"),
     trainer: t("roleTrainer"),
+    auditor: t("roleAuditor"),
   };
 
   return (
