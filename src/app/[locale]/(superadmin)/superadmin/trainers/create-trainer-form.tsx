@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CREATE_ACTIONS, CREATE_FIELD_WIDE, CREATE_GRID } from "@/components/ui/create-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -46,18 +46,16 @@ export function CreateTrainerForm({ courses, locale }: { courses: PickableCourse
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{t("createTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {result ? (
-          <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
-            <p className="text-muted-foreground">{t("successTempPassword")}</p>
-            <p className="mt-1 font-mono">{result.tempPassword}</p>
-          </div>
-        ) : null}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      {/* Shown once and never again, so this panel does not close itself on
+          success — see the same note on the account form. */}
+      {result ? (
+        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
+          <p className="text-muted-foreground">{t("successTempPassword")}</p>
+          <p className="mt-1 font-mono">{result.tempPassword}</p>
+        </div>
+      ) : null}
+      <form onSubmit={handleSubmit} className={CREATE_GRID}>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fullName">{t("fullNameLabel")}</Label>
             <Input id="fullName" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -76,13 +74,16 @@ export function CreateTrainerForm({ courses, locale }: { courses: PickableCourse
             />
             <p className="text-xs text-muted-foreground">{t("qualificationsHint")}</p>
           </div>
+        <div className={CREATE_FIELD_WIDE}>
           <CoursePicker courses={courses} selected={courseIds} onChange={setCourseIds} locale={locale} />
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+        <div className={CREATE_ACTIONS}>
           <Button type="submit" disabled={loading}>
             {loading ? t("submitting") : t("submit")}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+      </form>
+    </div>
   );
 }

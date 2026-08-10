@@ -8,7 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createClassAction } from "@/modules/scheduling/actions";
-import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
+import {
+  TrainerSelect,
+  type TrainerOption,
+} from "@/components/scheduling/trainer-select";
+import {
+  CREATE_ACTIONS,
+  CREATE_FIELD_WIDE,
+  CREATE_GRID,
+} from "@/components/ui/create-panel";
 import { courseDurationDays, endDateFor } from "@/lib/course-duration";
 import { REGIONS } from "@/lib/regions";
 
@@ -55,18 +63,26 @@ export function NewClassForm({
   const [courseId, setCourseId] = useState<number | "">(courses[0]?.id ?? "");
   // Default to someone certified for the starting course, not simply the
   // first name on the roster.
-  const [trainerId, setTrainerId] = useState<number | "">(() => firstQualified(courses[0]?.id ?? "") ?? "");
+  const [trainerId, setTrainerId] = useState<number | "">(
+    () => firstQualified(courses[0]?.id ?? "") ?? "",
+  );
   const [showAllTrainers, setShowAllTrainers] = useState(false);
 
   function firstQualified(forCourseId: number | "") {
-    const ids = new Set(trainerCourses.filter((tc) => tc.courseId === forCourseId).map((tc) => tc.trainerId));
+    const ids = new Set(
+      trainerCourses
+        .filter((tc) => tc.courseId === forCourseId)
+        .map((tc) => tc.trainerId),
+    );
     return trainers.find((tr) => ids.has(tr.id))?.id;
   }
 
   // Changing the course changes who is certified, so a trainer left selected
   // from the previous course would quietly become an unflagged override.
   const selectedCourse = courses.find((c) => c.id === courseId);
-  const durationDays = selectedCourse ? courseDurationDays(selectedCourse.durationHours) : 1;
+  const durationDays = selectedCourse
+    ? courseDurationDays(selectedCourse.durationHours)
+    : 1;
 
   // Picking a start date fills the end date from the course's own duration —
   // a one-day course ends the day it starts. Still editable afterwards: a
@@ -74,7 +90,8 @@ export function NewClassForm({
   // a rule.
   function handleStartDateChange(nextStart: string) {
     setStartDate(nextStart);
-    if (selectedCourse) setEndDate(endDateFor(nextStart, selectedCourse.durationHours));
+    if (selectedCourse)
+      setEndDate(endDateFor(nextStart, selectedCourse.durationHours));
   }
 
   function handleCourseChange(nextCourseId: number) {
@@ -82,7 +99,8 @@ export function NewClassForm({
     // The new course may be a different length, so the end date it implies
     // changes too.
     const course = courses.find((c) => c.id === nextCourseId);
-    if (course && startDate) setEndDate(endDateFor(startDate, course.durationHours));
+    if (course && startDate)
+      setEndDate(endDateFor(startDate, course.durationHours));
     const next = firstQualified(nextCourseId);
     if (next !== undefined) {
       setTrainerId(next);
@@ -92,7 +110,9 @@ export function NewClassForm({
     }
   }
   const [centerId, setCenterId] = useState<number | "">("");
-  const [region, setRegion] = useState<(typeof REGIONS)[number]>(initialRegion ?? "Central");
+  const [region, setRegion] = useState<(typeof REGIONS)[number]>(
+    initialRegion ?? "Central",
+  );
   const [type, setType] = useState<(typeof CLASS_TYPES)[number]>("public");
   const [companyId, setCompanyId] = useState<number | "">("");
   const [startDate, setStartDate] = useState("");
@@ -101,7 +121,15 @@ export function NewClassForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = courseId && trainerId && region && type && startDate && endDate && Number(capacity) > 0 && (type === "public" || companyId);
+  const canSubmit =
+    courseId &&
+    trainerId &&
+    region &&
+    type &&
+    startDate &&
+    endDate &&
+    Number(capacity) > 0 &&
+    (type === "public" || companyId);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -128,14 +156,19 @@ export function NewClassForm({
   }
 
   return (
-    <Card className="w-full max-w-xl">
+    <Card className="w-full max-w-4xl">
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className={CREATE_GRID}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="courseId">{t("courseLabel")}</Label>
-          <select id="courseId" className={selectClassName} value={courseId} onChange={(e) => handleCourseChange(Number(e.target.value))}>
+          <select
+            id="courseId"
+            className={selectClassName}
+            value={courseId}
+            onChange={(e) => handleCourseChange(Number(e.target.value))}
+          >
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.code} — {locale === "ar" ? c.titleAr : c.titleEn}
@@ -155,7 +188,14 @@ export function NewClassForm({
         />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="centerId">{t("centerLabel")}</Label>
-          <select id="centerId" className={selectClassName} value={centerId} onChange={(e) => setCenterId(e.target.value ? Number(e.target.value) : "")}>
+          <select
+            id="centerId"
+            className={selectClassName}
+            value={centerId}
+            onChange={(e) =>
+              setCenterId(e.target.value ? Number(e.target.value) : "")
+            }
+          >
             <option value="">{t("centerNone")}</option>
             {centers.map((c) => (
               <option key={c.id} value={c.id}>
@@ -166,7 +206,14 @@ export function NewClassForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="region">{t("regionLabel")}</Label>
-          <select id="region" className={selectClassName} value={region} onChange={(e) => setRegion(e.target.value as (typeof REGIONS)[number])}>
+          <select
+            id="region"
+            className={selectClassName}
+            value={region}
+            onChange={(e) =>
+              setRegion(e.target.value as (typeof REGIONS)[number])
+            }
+          >
             {REGIONS.map((r) => (
               <option key={r} value={r}>
                 {r}
@@ -176,7 +223,14 @@ export function NewClassForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="type">{t("typeLabel")}</Label>
-          <select id="type" className={selectClassName} value={type} onChange={(e) => setType(e.target.value as (typeof CLASS_TYPES)[number])}>
+          <select
+            id="type"
+            className={selectClassName}
+            value={type}
+            onChange={(e) =>
+              setType(e.target.value as (typeof CLASS_TYPES)[number])
+            }
+          >
             {CLASS_TYPES.map((ct) => (
               <option key={ct} value={ct}>
                 {ct === "public" ? t("typePublic") : t("typePrivate")}
@@ -187,7 +241,14 @@ export function NewClassForm({
         {type === "private" ? (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="companyId">{t("companyLabel")}</Label>
-            <select id="companyId" className={selectClassName} value={companyId} onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : "")}>
+            <select
+              id="companyId"
+              className={selectClassName}
+              value={companyId}
+              onChange={(e) =>
+                setCompanyId(e.target.value ? Number(e.target.value) : "")
+              }
+            >
               <option value="">{t("companyNone")}</option>
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -197,27 +258,53 @@ export function NewClassForm({
             </select>
           </div>
         ) : null}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="startDate">{t("startDateLabel")}</Label>
-            <Input id="startDate" type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="endDate">{t("endDateLabel")}</Label>
-            <Input id="endDate" type="date" min={startDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="startDate">{t("startDateLabel")}</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => handleStartDateChange(e.target.value)}
+          />
         </div>
-        <p className="-mt-2 text-xs text-muted-foreground">
-          {t("durationHint", { days: durationDays, hours: Number(selectedCourse?.durationHours ?? 0) })}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="endDate">{t("endDateLabel")}</Label>
+          <Input
+            id="endDate"
+            type="date"
+            min={startDate || undefined}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+        <p
+          className={`${CREATE_FIELD_WIDE} -mt-2 text-xs text-muted-foreground`}
+        >
+          {t("durationHint", {
+            days: durationDays,
+            hours: Number(selectedCourse?.durationHours ?? 0),
+          })}
         </p>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="capacity">{t("capacityLabel")}</Label>
-          <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+          <Input
+            id="capacity"
+            type="number"
+            min="1"
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+          />
         </div>
-        <Button type="button" disabled={!canSubmit || loading} onClick={handleSubmit}>
-          {loading ? t("submitting") : t("submit")}
-        </Button>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <div className={CREATE_ACTIONS}>
+          <Button
+            type="button"
+            disabled={!canSubmit || loading}
+            onClick={handleSubmit}
+          >
+            {loading ? t("submitting") : t("submit")}
+          </Button>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
       </CardContent>
     </Card>
   );

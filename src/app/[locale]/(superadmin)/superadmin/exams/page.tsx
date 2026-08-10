@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listExams } from "@/modules/catalog/queries";
+import { CreatePanel } from "@/components/ui/create-panel";
 import { CreateExamForm } from "./create-exam-form";
 
 export function generateStaticParams() {
@@ -24,9 +25,16 @@ export default async function ExamsPage({
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
       <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <CreatePanel
+        title={t("createTitle")}
+        addLabel={t("addAction")}
+        cancelLabel={t("cancel")}
+        defaultOpen={exams.length === 0}
+      >
         <CreateExamForm />
-        <div className="min-w-0 flex-1 overflow-x-auto rounded-xl ring-1 ring-foreground/10">
+      </CreatePanel>
+
+      <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
@@ -55,7 +63,6 @@ export default async function ExamsPage({
               )}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   );

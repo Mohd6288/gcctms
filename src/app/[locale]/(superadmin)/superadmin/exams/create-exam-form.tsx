@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CREATE_ACTIONS, CREATE_GRID, useCreatePanelClose } from "@/components/ui/create-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -12,6 +12,7 @@ import { createExamAction } from "@/modules/catalog/actions";
 export function CreateExamForm() {
   const t = useTranslations("superadmin.exams");
   const router = useRouter();
+  const closePanel = useCreatePanelClose();
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [passMark, setPassMark] = useState("70");
@@ -27,6 +28,7 @@ export function CreateExamForm() {
       setCode("");
       setTitle("");
       router.refresh();
+      closePanel();
     } catch {
       setError(t("genericError"));
     } finally {
@@ -35,12 +37,7 @@ export function CreateExamForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{t("createTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className={CREATE_GRID}>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="code">{t("codeLabel")}</Label>
             <Input id="code" required value={code} onChange={(e) => setCode(e.target.value)} />
@@ -53,12 +50,12 @@ export function CreateExamForm() {
             <Label htmlFor="passMark">{t("passMarkLabel")}</Label>
             <Input id="passMark" type="number" min="0" max="100" required value={passMark} onChange={(e) => setPassMark(e.target.value)} />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <div className={CREATE_ACTIONS}>
+        <Button type="submit" disabled={loading}>
+          {loading ? t("submitting") : t("submit")}
+        </Button>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
+    </form>
   );
 }

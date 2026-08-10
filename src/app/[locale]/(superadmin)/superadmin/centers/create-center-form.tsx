@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CREATE_ACTIONS, CREATE_GRID_4, useCreatePanelClose } from "@/components/ui/create-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -12,6 +12,7 @@ import { createTrainingCenterAction } from "@/modules/catalog/actions";
 export function CreateCenterForm() {
   const t = useTranslations("superadmin.centers");
   const router = useRouter();
+  const closePanel = useCreatePanelClose();
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
@@ -35,6 +36,7 @@ export function CreateCenterForm() {
       setAddress("");
       setCapacity("");
       router.refresh();
+      closePanel();
     } catch {
       setError(t("genericError"));
     } finally {
@@ -43,12 +45,7 @@ export function CreateCenterForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{t("createTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className={CREATE_GRID_4}>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">{t("nameLabel")}</Label>
             <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
@@ -65,12 +62,12 @@ export function CreateCenterForm() {
             <Label htmlFor="capacity">{t("capacityLabel")}</Label>
             <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <div className={CREATE_ACTIONS}>
+        <Button type="submit" disabled={loading}>
+          {loading ? t("submitting") : t("submit")}
+        </Button>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </div>
+    </form>
   );
 }

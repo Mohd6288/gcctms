@@ -183,14 +183,14 @@ export function TrainerRoster({
         <p className="rounded-xl border border-border p-6 text-sm text-muted-foreground">{t("empty")}</p>
       ) : null}
 
-      <div className="grid grid-cols-1 content-start gap-3 2xl:grid-cols-2">
+      <div className="grid grid-cols-1 content-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
       {trainers.map((trainer) => {
         const editing = editingId === trainer.id && fields !== null;
         const taught = courseIdsFor(trainer.id);
         return (
           <div
             key={trainer.id}
-            className={`flex flex-col gap-3 rounded-xl border border-border p-4 ${editing ? "2xl:col-span-2" : ""}`}
+            className={`flex flex-col gap-3 rounded-xl border border-border p-4 ${editing ? "col-span-full" : ""}`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">

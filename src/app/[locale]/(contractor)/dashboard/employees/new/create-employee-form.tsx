@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CREATE_ACTIONS, CREATE_GRID } from "@/components/ui/create-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -59,13 +60,13 @@ export function CreateEmployeeForm({ companyId, jobRoles, locale }: { companyId:
   }
 
   return (
-    <Card className="w-full max-w-lg">
+    <Card className="w-full max-w-4xl">
       <CardHeader>
         <CardTitle>{t("createTitle")}</CardTitle>
         <CardDescription>{t("createDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className={CREATE_GRID}>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fullNameEn">{t("fullNameEnLabel")}</Label>
             <Input id="fullNameEn" required value={fullNameEn} onChange={(e) => setFullNameEn(e.target.value)} />
@@ -125,10 +126,12 @@ export function CreateEmployeeForm({ companyId, jobRoles, locale }: { companyId:
             <Label htmlFor="contractorCity">{t("contractorCityLabel")}</Label>
             <Input id="contractorCity" value={contractorCity} onChange={(e) => setContractorCity(e.target.value)} />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? t("submitting") : t("submit")}
-          </Button>
+          <div className={CREATE_ACTIONS}>
+            <Button type="submit" disabled={loading}>
+              {loading ? t("submitting") : t("submit")}
+            </Button>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </div>
         </form>
       </CardContent>
     </Card>

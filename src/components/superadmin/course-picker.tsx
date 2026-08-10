@@ -63,9 +63,9 @@ export function CoursePicker({
         aria-label={t("coursesFilterPlaceholder")}
       />
 
-      <div className="flex max-h-56 flex-col gap-0.5 overflow-y-auto rounded-lg border border-border p-2">
+      <div className="grid max-h-56 grid-cols-1 content-start gap-0.5 overflow-y-auto rounded-lg border border-border p-2 sm:grid-cols-2 xl:grid-cols-3">
         {visible.length === 0 ? (
-          <p className="p-2 text-xs text-muted-foreground">{t("coursesNoMatch")}</p>
+          <p className="col-span-full p-2 text-xs text-muted-foreground">{t("coursesNoMatch")}</p>
         ) : (
           visible.map((course) => (
             <label key={course.id} className="flex items-start gap-2 rounded-md p-1.5 text-xs hover:bg-muted">

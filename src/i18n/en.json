@@ -839,7 +839,8 @@
       "copied": "Copied",
       "description": "Platform accounts and the regions they cover. Also where you recover a locked-out admin.",
       "lastSignIn": "Last sign-in {date}",
-      "createdOn": "Created {date}"
+      "createdOn": "Created {date}",
+      "addAction": "Add account"
     },
     "overview": {
       "title": "Platform Overview",
@@ -910,7 +911,9 @@
       "tablePrice": "Price",
       "tableEffectiveFrom": "From",
       "tableEffectiveTo": "To",
-      "description": "Every course GCC Lab delivers, with its duration, exam, prerequisites and eligible job roles."
+      "description": "Every course GCC Lab delivers, with its duration, exam, prerequisites and eligible job roles.",
+      "addAction": "Add course",
+      "cancel": "Cancel"
     },
     "exams": {
       "title": "Exams",
@@ -929,7 +932,9 @@
       "submit": "Save",
       "submitting": "Saving…",
       "genericError": "Could not save exam. Please try again.",
-      "description": "The exams courses are assessed by. A course points at one exam, and its pass mark decides certification."
+      "description": "The exams courses are assessed by. A course points at one exam, and its pass mark decides certification.",
+      "addAction": "Add exam",
+      "cancel": "Cancel"
     },
     "centers": {
       "title": "Training Centers",
@@ -949,7 +954,9 @@
       "submit": "Save",
       "submitting": "Saving…",
       "genericError": "Could not save training center. Please try again.",
-      "description": "The training centres where classes are held. A class can be assigned to one of these."
+      "description": "The training centres where classes are held. A class can be assigned to one of these.",
+      "addAction": "Add centre",
+      "cancel": "Cancel"
     },
     "trainers": {
       "title": "Trainer Roster",
@@ -994,7 +1001,8 @@
       "description": "Everyone who delivers GCC Lab courses. What you tick here decides which classes each trainer can be assigned to.",
       "loginMissing": "No login yet",
       "qualificationsDisplayLabel": "Qualifications",
-      "qualificationsNone": "None recorded"
+      "qualificationsNone": "None recorded",
+      "addAction": "Add trainer"
     },
     "cities": {
       "title": "Cities",
@@ -1013,7 +1021,9 @@
       "activate": "Activate",
       "deactivate": "Deactivate",
       "empty": "No cities yet.",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "addAction": "Add city",
+      "cancel": "Cancel"
     }
   },
   "trainer": {

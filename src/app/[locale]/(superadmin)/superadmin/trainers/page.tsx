@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listCourses, listTrainerCourses, listTrainers } from "@/modules/catalog/queries";
+import { CreatePanel } from "@/components/ui/create-panel";
 import { CreateTrainerForm } from "./create-trainer-form";
 import { TrainerRoster } from "./trainer-roster";
 
@@ -30,12 +31,16 @@ export default async function TrainersPage({
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
       <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <CreatePanel
+        title={t("createTitle")}
+        addLabel={t("addAction")}
+        cancelLabel={t("cancel")}
+        defaultOpen={trainers.length === 0}
+      >
         <CreateTrainerForm courses={courses} locale={locale} />
-        <div className="min-w-0 flex-1">
-          <TrainerRoster trainers={trainers} courses={courses} trainerCourses={trainerCourses} locale={locale} />
-        </div>
-      </div>
+      </CreatePanel>
+
+      <TrainerRoster trainers={trainers} courses={courses} trainerCourses={trainerCourses} locale={locale} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CREATE_ACTIONS, CREATE_FIELD_WIDE, CREATE_GRID_4 } from "@/components/ui/create-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createPrivilegedAccount } from "@/modules/platform/auth/actions";
@@ -47,19 +47,18 @@ export function CreateAccountForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>{t("createTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {result ? (
-          <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
-            <p className="font-medium">{t("successTitle")}</p>
-            <p className="mt-1 text-muted-foreground">{t("successTempPassword")}</p>
-            <p className="mt-1 font-mono">{result.tempPassword}</p>
-          </div>
-        ) : null}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      {/* The temporary password is shown exactly once, so this panel
+          deliberately does NOT close itself on success — collapsing it would
+          take the only copy of the credential with it. */}
+      {result ? (
+        <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm">
+          <p className="font-medium">{t("successTitle")}</p>
+          <p className="mt-1 text-muted-foreground">{t("successTempPassword")}</p>
+          <p className="mt-1 font-mono">{result.tempPassword}</p>
+        </div>
+      ) : null}
+      <form onSubmit={handleSubmit} className={CREATE_GRID_4}>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fullName">{t("fullNameLabel")}</Label>
             <Input id="fullName" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -94,7 +93,7 @@ export function CreateAccountForm() {
               creating a batch and assigning later hands out full platform
               visibility in the meantime. */}
           {role === "platform_admin" ? (
-            <div className="flex flex-col gap-1.5">
+            <div className={`flex flex-col gap-1.5 ${CREATE_FIELD_WIDE}`}>
               <Label htmlFor="region">{t("regionLabel")}</Label>
               <select
                 id="region"
@@ -112,12 +111,13 @@ export function CreateAccountForm() {
               <p className="text-xs text-muted-foreground">{region ? t("regionScopedHint", { region }) : t("regionAllHint")}</p>
             </div>
           ) : null}
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <div className={CREATE_ACTIONS}>
           <Button type="submit" disabled={loading}>
             {loading ? t("submitting") : t("submit")}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+      </form>
+    </div>
   );
 }

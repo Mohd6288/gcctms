@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext, listPrivilegedAccounts } from "@/modules/platform/auth/service";
 import { listRegionalAdminAssignments } from "@/modules/scheduling/queries";
+import { CreatePanel } from "@/components/ui/create-panel";
 import { CreateAccountForm } from "./create-account-form";
 import { RegionSelect } from "./region-select";
 import { AccountActions } from "@/components/superadmin/account-actions";
@@ -41,12 +42,20 @@ export default async function SuperAdminUsersPage({
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
       <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <CreatePanel
+        title={t("createTitle")}
+        addLabel={t("addAction")}
+        cancelLabel={t("cancel")}
+        defaultOpen={accounts.length === 0}
+      >
         <CreateAccountForm />
+      </CreatePanel>
+
+      <div className="flex flex-col gap-6">
         {/* One card per account instead of eight columns that ran off the
             side of the screen — the region dropdown and the recovery buttons
             need room, and they were the two things furthest to the right. */}
-        <div className="grid min-w-0 flex-1 grid-cols-1 content-start gap-3 2xl:grid-cols-2">
+        <div className="grid grid-cols-1 content-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {accounts.length === 0 ? (
             <p className="rounded-xl border border-border p-6 text-sm text-muted-foreground 2xl:col-span-2">{t("empty")}</p>
           ) : null}
