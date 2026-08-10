@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { listCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
+import { listCourses, listTrainerCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
 import { listCompanies } from "@/modules/companies/queries";
 import { NewClassForm } from "./new-class-form";
 import { REGIONS } from "@/lib/regions";
@@ -30,12 +30,13 @@ export default async function NewClassPage({
     return null;
   }
 
-  const [courses, trainers, centers, companies] = await Promise.all([
-    listCourses(),
-    listTrainers(),
-    listTrainingCenters(),
-    listCompanies(context?.region),
-  ]);
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // Supabase pooler (see db/index.ts).
+  const courses = await listCourses();
+  const trainers = await listTrainers();
+  const trainerCourses = await listTrainerCourses();
+  const centers = await listTrainingCenters();
+  const companies = await listCompanies(context?.region);
   const initialRegion = (REGIONS as readonly string[]).includes(region ?? "") ? (region as (typeof REGIONS)[number]) : undefined;
 
   return (
@@ -48,6 +49,7 @@ export default async function NewClassPage({
       <NewClassForm
         courses={courses.filter((c) => c.active)}
         trainers={trainers.filter((t) => t.active)}
+        trainerCourses={trainerCourses}
         centers={centers.filter((c) => c.active)}
         companies={companies}
         initialRegion={initialRegion}

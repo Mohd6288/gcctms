@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
+import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
 import { approveAllPendingForClassAction, approveCertificateAction } from "@/modules/certification/actions";
 import {
   cancelClassAction,
@@ -22,6 +23,7 @@ const selectClassName =
 
 interface ClassData {
   id: number;
+  courseId: number;
   courseCode: string;
   courseTitleEn: string;
   courseTitleAr: string;
@@ -44,10 +46,6 @@ interface Enrollment {
   companyName: string;
   status: string;
 }
-interface TrainerOption {
-  id: number;
-  fullName: string;
-}
 interface CenterOption {
   id: number;
   name: string;
@@ -69,6 +67,7 @@ export function ClassDetail({
   cls,
   enrollments,
   trainers,
+  trainerCourses,
   centers,
   availablePool,
   pendingCertificates,
@@ -77,6 +76,7 @@ export function ClassDetail({
   cls: ClassData;
   enrollments: Enrollment[];
   trainers: TrainerOption[];
+  trainerCourses: { trainerId: number; courseId: number }[];
   centers: CenterOption[];
   availablePool: PooledItem[];
   pendingCertificates: PendingCertificate[];
@@ -86,6 +86,11 @@ export function ClassDetail({
   const router = useRouter();
 
   const [trainerId, setTrainerId] = useState(cls.trainerId);
+  // Opens showing the full roster when the class already has an uncertified
+  // trainer, so the current assignment isn't hidden behind the filter.
+  const [showAllTrainers, setShowAllTrainers] = useState(
+    () => !trainerCourses.some((tc) => tc.trainerId === cls.trainerId && tc.courseId === cls.courseId)
+  );
   const [centerId, setCenterId] = useState<number | "">(cls.centerId ?? "");
   const [startDate, setStartDate] = useState(cls.startDate);
   const [endDate, setEndDate] = useState(cls.endDate);
@@ -133,22 +138,17 @@ export function ClassDetail({
               <Label>{t("typeLabel")}</Label>
               <Input value={cls.type} disabled />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="trainerId">{t("trainerLabel")}</Label>
-              <select
-                id="trainerId"
-                className={selectClassName}
-                value={trainerId}
-                disabled={isLocked}
-                onChange={(e) => setTrainerId(Number(e.target.value))}
-              >
-                {trainers.map((tr) => (
-                  <option key={tr.id} value={tr.id}>
-                    {tr.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <TrainerSelect
+              id="trainerId"
+              trainers={trainers}
+              trainerCourses={trainerCourses}
+              courseId={cls.courseId}
+              value={trainerId}
+              onChange={setTrainerId}
+              showAll={showAllTrainers}
+              onShowAllChange={setShowAllTrainers}
+              disabled={isLocked}
+            />
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="centerId">{t("centerLabel")}</Label>
               <select

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createClassAction } from "@/modules/scheduling/actions";
+import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
 import { REGIONS } from "@/lib/regions";
 
 const CLASS_TYPES = ["public", "private"] as const;
@@ -19,10 +20,6 @@ interface CourseOption {
   code: string;
   titleEn: string;
   titleAr: string;
-}
-interface TrainerOption {
-  id: number;
-  fullName: string;
 }
 interface CenterOption {
   id: number;
@@ -36,6 +33,7 @@ interface CompanyOption {
 export function NewClassForm({
   courses,
   trainers,
+  trainerCourses,
   centers,
   companies,
   initialRegion,
@@ -43,6 +41,7 @@ export function NewClassForm({
 }: {
   courses: CourseOption[];
   trainers: TrainerOption[];
+  trainerCourses: { trainerId: number; courseId: number }[];
   centers: CenterOption[];
   companies: CompanyOption[];
   initialRegion?: (typeof REGIONS)[number];
@@ -52,7 +51,28 @@ export function NewClassForm({
   const router = useRouter();
 
   const [courseId, setCourseId] = useState<number | "">(courses[0]?.id ?? "");
-  const [trainerId, setTrainerId] = useState<number | "">(trainers[0]?.id ?? "");
+  // Default to someone certified for the starting course, not simply the
+  // first name on the roster.
+  const [trainerId, setTrainerId] = useState<number | "">(() => firstQualified(courses[0]?.id ?? "") ?? "");
+  const [showAllTrainers, setShowAllTrainers] = useState(false);
+
+  function firstQualified(forCourseId: number | "") {
+    const ids = new Set(trainerCourses.filter((tc) => tc.courseId === forCourseId).map((tc) => tc.trainerId));
+    return trainers.find((tr) => ids.has(tr.id))?.id;
+  }
+
+  // Changing the course changes who is certified, so a trainer left selected
+  // from the previous course would quietly become an unflagged override.
+  function handleCourseChange(nextCourseId: number) {
+    setCourseId(nextCourseId);
+    const next = firstQualified(nextCourseId);
+    if (next !== undefined) {
+      setTrainerId(next);
+      setShowAllTrainers(false);
+    } else {
+      setTrainerId("");
+    }
+  }
   const [centerId, setCenterId] = useState<number | "">("");
   const [region, setRegion] = useState<(typeof REGIONS)[number]>(initialRegion ?? "Central");
   const [type, setType] = useState<(typeof CLASS_TYPES)[number]>("public");
@@ -97,7 +117,7 @@ export function NewClassForm({
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="courseId">{t("courseLabel")}</Label>
-          <select id="courseId" className={selectClassName} value={courseId} onChange={(e) => setCourseId(Number(e.target.value))}>
+          <select id="courseId" className={selectClassName} value={courseId} onChange={(e) => handleCourseChange(Number(e.target.value))}>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.code} — {locale === "ar" ? c.titleAr : c.titleEn}
@@ -105,16 +125,16 @@ export function NewClassForm({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="trainerId">{t("trainerLabel")}</Label>
-          <select id="trainerId" className={selectClassName} value={trainerId} onChange={(e) => setTrainerId(Number(e.target.value))}>
-            {trainers.map((tr) => (
-              <option key={tr.id} value={tr.id}>
-                {tr.fullName}
-              </option>
-            ))}
-          </select>
-        </div>
+        <TrainerSelect
+          id="trainerId"
+          trainers={trainers}
+          trainerCourses={trainerCourses}
+          courseId={courseId}
+          value={trainerId}
+          onChange={setTrainerId}
+          showAll={showAllTrainers}
+          onShowAllChange={setShowAllTrainers}
+        />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="centerId">{t("centerLabel")}</Label>
           <select id="centerId" className={selectClassName} value={centerId} onChange={(e) => setCenterId(e.target.value ? Number(e.target.value) : "")}>

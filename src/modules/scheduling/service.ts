@@ -2,7 +2,7 @@
 import "server-only";
 import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { classEnrollments, classes, companies, employees, regionalAdminAssignments, requestItems, trainingRequests } from "@/db/schema";
+import { classEnrollments, classes, companies, employees, regionalAdminAssignments, requestItems, trainerCourses, trainingRequests } from "@/db/schema";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { REGIONS as REGIONS_ORDER } from "@/lib/regions";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -77,6 +77,19 @@ function isExclusionViolation(err: unknown): boolean {
 // since it can't be bypassed by any code path at all, including a future
 // admin script. This function just turns that violation into a readable
 // error instead of a raw Postgres exception.
+// GCC Lab deliberately allows an uncertified trainer on a class — when there
+// aren't enough instructors, an admin has to be able to override. So this
+// records rather than blocks: the class is created either way, but the audit
+// row says the override happened, and "who put an uncertified trainer on
+// CSCC10" has an answer six months later.
+async function unqualifiedOverrideNote(trainerId: number, courseId: number): Promise<string | undefined> {
+  const [row] = await db
+    .select({ courseId: trainerCourses.courseId })
+    .from(trainerCourses)
+    .where(and(eq(trainerCourses.trainerId, trainerId), eq(trainerCourses.courseId, courseId)));
+  return row ? undefined : "Trainer is not certified for this course (override)";
+}
+
 export async function createClass(context: AuthContext, input: CreateClassInput) {
   requireScheduleAccess(context);
   if (input.type === "private" && !input.companyId) {
@@ -98,7 +111,14 @@ export async function createClass(context: AuthContext, input: CreateClassInput)
         capacity: input.capacity,
       })
       .returning({ id: classes.id });
-    await writeAudit({ userId: context.userId, entityType: "class", entityId: cls.id, action: "create", toStatus: "scheduled" });
+    await writeAudit({
+      userId: context.userId,
+      entityType: "class",
+      entityId: cls.id,
+      action: "create",
+      toStatus: "scheduled",
+      note: await unqualifiedOverrideNote(input.trainerId, input.courseId),
+    });
     return cls;
   } catch (err) {
     if (isExclusionViolation(err)) {
@@ -134,7 +154,13 @@ export async function updateClass(context: AuthContext, input: UpdateClassInput)
     }
     throw err;
   }
-  await writeAudit({ userId: context.userId, entityType: "class", entityId: input.classId, action: "update" });
+  await writeAudit({
+    userId: context.userId,
+    entityType: "class",
+    entityId: input.classId,
+    action: "update",
+    note: await unqualifiedOverrideNote(input.trainerId, cls.courseId),
+  });
 
   if (input.capacity > cls.capacity) {
     await promoteFromWaitlist(input.classId, input.capacity - enrolledCount);

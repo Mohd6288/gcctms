@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
+import { listTrainerCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
 import { listPendingApprovalCertificatesForClass } from "@/modules/certification/queries";
 import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems } from "@/modules/scheduling/queries";
 import { ClassDetail } from "./class-detail";
@@ -44,14 +44,15 @@ export default async function AdminClassDetailPage({
     return null;
   }
 
-  const [enrollments, trainers, centers, pooled, activeIds, pendingCertificates] = await Promise.all([
-    listEnrollmentsForClass(classId),
-    listTrainers(),
-    listTrainingCenters(),
-    listSchedulableRequestItems(),
-    listActiveEnrollmentRequestItemIds(),
-    listPendingApprovalCertificatesForClass(classId),
-  ]);
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // Supabase pooler (see db/index.ts).
+  const enrollments = await listEnrollmentsForClass(classId);
+  const trainers = await listTrainers();
+  const trainerCourses = await listTrainerCourses();
+  const centers = await listTrainingCenters();
+  const pooled = await listSchedulableRequestItems();
+  const activeIds = await listActiveEnrollmentRequestItemIds();
+  const pendingCertificates = await listPendingApprovalCertificatesForClass(classId);
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
@@ -68,6 +69,7 @@ export default async function AdminClassDetailPage({
         cls={cls}
         enrollments={enrollments}
         trainers={trainers.filter((tr) => tr.active)}
+        trainerCourses={trainerCourses}
         centers={centers.filter((c) => c.active)}
         availablePool={availablePool}
         pendingCertificates={pendingCertificates}

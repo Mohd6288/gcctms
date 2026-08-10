@@ -608,7 +608,6 @@
         "title": "New Class",
         "backToList": "Back to classes",
         "courseLabel": "Course",
-        "trainerLabel": "Trainer",
         "centerLabel": "Training center",
         "centerNone": "Not set",
         "regionLabel": "Region",
@@ -629,7 +628,6 @@
         "cancelledBanner": "This class was cancelled.",
         "regionLabel": "Region",
         "typeLabel": "Type",
-        "trainerLabel": "Trainer",
         "centerLabel": "Training center",
         "centerNone": "Not set",
         "startDateLabel": "Start date",
@@ -655,7 +653,15 @@
         "releaseAll": "Release All",
         "release": "Release"
       },
-      "regionScopedNote": "Showing only classes in the {region} region."
+      "regionScopedNote": "Showing only classes in the {region} region.",
+      "trainerSelect": {
+        "trainerLabel": "Trainer",
+        "trainerNotCertified": "not certified for this course",
+        "trainerNoneQualified": "No trainer available",
+        "trainerNoneQualifiedHint": "No trainer on the roster is certified for this course. Tick the box above to assign one anyway.",
+        "trainerShowAll": "Show all trainers, including {count} not certified for this course",
+        "trainerOverrideWarning": "This trainer is not certified for this course. The class can still be scheduled — the override is recorded in the audit log."
+      }
     },
     "scheduling": {
       "title": "Scheduling Board",

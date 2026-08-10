@@ -608,7 +608,6 @@
         "title": "فصل جديد",
         "backToList": "العودة إلى الفصول",
         "courseLabel": "الدورة",
-        "trainerLabel": "المدرب",
         "centerLabel": "مركز التدريب",
         "centerNone": "غير محدد",
         "regionLabel": "المنطقة",
@@ -629,7 +628,6 @@
         "cancelledBanner": "تم إلغاء هذا الفصل.",
         "regionLabel": "المنطقة",
         "typeLabel": "النوع",
-        "trainerLabel": "المدرب",
         "centerLabel": "مركز التدريب",
         "centerNone": "غير محدد",
         "startDateLabel": "تاريخ البدء",
@@ -655,7 +653,15 @@
         "releaseAll": "إصدار الكل",
         "release": "إصدار"
       },
-      "regionScopedNote": "تُعرض هنا فصول منطقة {region} فقط."
+      "regionScopedNote": "تُعرض هنا فصول منطقة {region} فقط.",
+      "trainerSelect": {
+        "trainerLabel": "المدرب",
+        "trainerNotCertified": "غير معتمد لهذه الدورة",
+        "trainerNoneQualified": "لا يوجد مدرب متاح",
+        "trainerNoneQualifiedHint": "لا يوجد مدرب معتمد لهذه الدورة ضمن القائمة. حدد الخيار أعلاه لإسناد مدرب آخر على أي حال.",
+        "trainerShowAll": "عرض جميع المدربين، بما في ذلك {count} غير معتمدين لهذه الدورة",
+        "trainerOverrideWarning": "هذا المدرب غير معتمد لهذه الدورة. لا يزال بالإمكان جدولة الفصل، وسيُسجَّل هذا التجاوز في سجل التدقيق."
+      }
     },
     "scheduling": {
       "title": "لوحة الجدولة",

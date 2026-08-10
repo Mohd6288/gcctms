@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import {
+  auditLog,
   classEnrollments,
   classes,
   companies,
@@ -10,6 +11,7 @@ import {
   employees,
   jobRoles,
   requestItems,
+  trainerCourses,
   trainers,
   trainingRequests,
 } from "../../db/schema";
@@ -105,6 +107,7 @@ describe("scheduling — classes, capacity/waitlist, cancellation, real DB", () 
     await db.delete(requestItems).where(sql`request_id in (select id from ${trainingRequests} where company_id = ${companyId})`);
     await db.delete(trainingRequests).where(eq(trainingRequests.companyId, companyId));
     await db.delete(classes).where(eq(classes.trainerId, trainerId));
+    await db.delete(trainerCourses).where(eq(trainerCourses.trainerId, trainerId));
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(trainers).where(eq(trainers.id, trainerId));
     await db.delete(courses).where(eq(courses.id, courseId));
@@ -112,6 +115,45 @@ describe("scheduling — classes, capacity/waitlist, cancellation, real DB", () 
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.execute(sql`delete from profiles where user_id = ${adminId}`);
     await db.execute(sql`delete from auth.users where id in (${ownerId}, ${adminId}, ${trainerUserId})`);
+  });
+
+  // The admin screen filters the trainer dropdown to the certified ones and
+  // makes reaching past it an explicit tick-box, because GCC Lab sometimes
+  // has to run a class without a certified instructor. The server does not
+  // block it — it records it, so the override is answerable later.
+  it("notes an uncertified trainer on the class audit row, and stays silent for a certified one", async () => {
+    const uncertified = await createClass(adminCtx, {
+      courseId,
+      trainerId,
+      region: "Central",
+      type: "public",
+      startDate: "2031-03-01",
+      endDate: "2031-03-03",
+      capacity: 5,
+    });
+    const [noted] = await db
+      .select({ note: auditLog.note })
+      .from(auditLog)
+      .where(sql`entity_type = 'class' and entity_id = ${uncertified.id} and action = 'create'`);
+    expect(noted.note).toBe("Trainer is not certified for this course (override)");
+
+    await db.insert(trainerCourses).values({ trainerId, courseId });
+    const certified = await createClass(adminCtx, {
+      courseId,
+      trainerId,
+      region: "Central",
+      type: "public",
+      startDate: "2031-04-01",
+      endDate: "2031-04-03",
+      capacity: 5,
+    });
+    const [clean] = await db
+      .select({ note: auditLog.note })
+      .from(auditLog)
+      .where(sql`entity_type = 'class' and entity_id = ${certified.id} and action = 'create'`);
+    expect(clean.note).toBeNull();
+
+    await db.delete(trainerCourses).where(eq(trainerCourses.trainerId, trainerId));
   });
 
   it("blocks creating a class that double-books the trainer with an overlapping date range", async () => {
