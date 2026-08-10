@@ -1,6 +1,6 @@
 // platform/auth — Session context (getContext()), authorize(capability, context), permission matrix.
 import "server-only";
-import { desc, ne, sql } from "drizzle-orm";
+import { asc, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { redirect } from "@/i18n/navigation";
@@ -126,5 +126,11 @@ export async function listPrivilegedAccounts() {
     })
     .from(profiles)
     .where(ne(profiles.role, "contractor_manager"))
-    .orderBy(desc(profiles.createdAt));
+    // Grouped by how much the account can do, then by name. Newest-first
+    // buried the two super admins somewhere in the middle of two dozen
+    // trainers, which is the opposite of what this screen is for.
+    .orderBy(
+      sql`case ${profiles.role} when 'super_admin' then 0 when 'platform_admin' then 1 when 'auditor' then 2 else 3 end`,
+      asc(profiles.fullName)
+    );
 }

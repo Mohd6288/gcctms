@@ -75,7 +75,9 @@
       "submit": "Verify and enable",
       "submitting": "Verifying…",
       "secretFallback": "Can't scan? Enter this code manually:",
-      "genericError": "Could not verify the code. Please try again."
+      "genericError": "Could not verify the code. Please try again.",
+      "qrAlt": "QR code for your authenticator app",
+      "enrollError": "Could not start two-factor setup. Refresh the page to try again."
     },
     "mfaChallenge": {
       "title": "Enter your authentication code",
@@ -795,11 +797,7 @@
       "genericError": "Could not create the account. Please try again.",
       "successTitle": "Account created",
       "successTempPassword": "Temporary password (share this with the user once — it won't be shown again):",
-      "tableName": "Name",
-      "tableRole": "Role",
       "tableRegion": "Region",
-      "tableStatus": "Status",
-      "tableCreated": "Created",
       "statusActive": "Active",
       "statusInactive": "Inactive",
       "empty": "No admin or trainer accounts yet.",
@@ -809,7 +807,6 @@
       "regionAll": "All regions (unscoped)",
       "regionAllHint": "This admin will see every region's data. Assign a region to limit them.",
       "regionScopedHint": "This admin will only see {region} region data.",
-      "tableActions": "Recovery",
       "resetPassword": "Reset password",
       "resetMfa": "Reset MFA",
       "confirmResetPassword": "Issue a new temporary password for {name}? Their current password stops working immediately.",
@@ -818,14 +815,14 @@
       "confirm": "Confirm",
       "cancel": "Cancel",
       "roleAuditor": "Auditor (read-only)",
-      "tableEmail": "Email",
-      "tableSignIn": "Sign-in",
       "neverSignedIn": "Never signed in",
       "mfaEnrolled": "MFA set up",
       "mfaPending": "MFA not set up",
       "copyEmail": "Click to copy",
       "copied": "Copied",
-      "description": "Platform accounts and the regions they cover. Also where you recover a locked-out admin."
+      "description": "Platform accounts and the regions they cover. Also where you recover a locked-out admin.",
+      "lastSignIn": "Last sign-in {date}",
+      "createdOn": "Created {date}"
     },
     "overview": {
       "title": "Platform Overview",

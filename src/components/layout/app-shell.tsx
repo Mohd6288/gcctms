@@ -126,7 +126,10 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="flex flex-1 flex-col">{children}</main>
+        {/* min-w-0: without it any page holding a wide table pushes the
+            whole layout sideways instead of scrolling inside its own
+            container, and the last columns end up under the viewport edge. */}
+        <main className="flex min-w-0 flex-1 flex-col">{children}</main>
       </div>
     </div>
   );

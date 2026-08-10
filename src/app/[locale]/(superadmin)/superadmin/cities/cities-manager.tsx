@@ -95,7 +95,7 @@ export function CitiesManager({ cities, locale }: { cities: City[]; locale: stri
         </CardContent>
       </Card>
 
-      <div className="flex-1 overflow-x-auto rounded-xl ring-1 ring-foreground/10">
+      <div className="min-w-0 flex-1 overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +19,18 @@ export function MfaEnrollForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Enrollment must happen exactly once per mount. React StrictMode invokes
+  // effects twice in development, and the two runs raced each other: both
+  // cleared the stale factor, both called enroll(), and the loser came back
+  // with mfa_factor_name_conflict. The result was a page showing a perfectly
+  // good QR code *and* an error under it, on first load, before the user had
+  // typed anything. A ref, not state — it has to be set synchronously,
+  // before the second invocation reads it.
+  const enrollmentStarted = useRef(false);
 
   useEffect(() => {
+    if (enrollmentStarted.current) return;
+    enrollmentStarted.current = true;
     const supabase = createClient();
     async function startEnrollment() {
       // A prior unverified attempt (page refresh, tab switch back to grab
@@ -34,9 +44,13 @@ export function MfaEnrollForm() {
 
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: "totp" });
       if (enrollError || !data) {
-        setError(t("genericError"));
+        // Its own message: "Could not verify the code" is nonsense on a page
+        // where nothing has been entered yet, and it sent people looking for
+        // a mistake they had not made.
+        setError(t("enrollError"));
         return;
       }
+      setError(null);
       setFactorId(data.id);
       setQrCodeSvg(data.totp.qr_code);
       setSecret(data.totp.secret);
@@ -74,16 +88,30 @@ export function MfaEnrollForm() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {qrCodeSvg ? (
-          // Inline SVG, not a data: URI img src — some mobile/in-app
-          // browsers refuse or mis-render data: URI images depending on
-          // security policy; the markup comes straight from Supabase's own
-          // API response, not user input, so this is safe.
-          <div className="mx-auto h-[200px] w-[200px]" dangerouslySetInnerHTML={{ __html: qrCodeSvg }} />
+          // Supabase returns totp.qr_code as a data: URI
+          // ("data:image/svg+xml;utf-8,<svg…>"), NOT bare markup. Injecting
+          // it as innerHTML printed the "data:image/svg+xml;utf-8," prefix
+          // as visible text above the code and pushed the manual-entry
+          // fallback underneath the image — which is what every admin and
+          // trainer saw on the one screen standing between them and their
+          // first sign-in.
+          //
+          // Rendered as an <img> when it is a URI, still inlined when it is
+          // markup, so a change at Supabase's end degrades rather than
+          // breaks. next/image is no use here: the source is a data URI with
+          // nothing to optimise.
+          qrCodeSvg.trim().startsWith("data:") ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrCodeSvg} alt={t("qrAlt")} width={200} height={200} className="mx-auto size-[200px]" />
+          ) : (
+            <div className="mx-auto size-[200px] [&_svg]:size-full" dangerouslySetInnerHTML={{ __html: qrCodeSvg }} />
+          )
         ) : null}
         {secret ? (
-          <p className="text-center text-xs text-muted-foreground">
-            {t("secretFallback")} <span className="font-mono">{secret}</span>
-          </p>
+          <div className="flex flex-col items-center gap-1 rounded-lg border border-border p-2">
+            <span className="text-xs text-muted-foreground">{t("secretFallback")}</span>
+            <span className="break-all text-center font-mono text-xs">{secret}</span>
+          </div>
         ) : null}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

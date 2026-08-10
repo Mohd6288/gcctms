@@ -43,65 +43,59 @@ export default async function SuperAdminUsersPage({
       <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <CreateAccountForm />
-        <div className="flex-1 overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-start text-muted-foreground">
-                <th className="p-3 text-start font-medium">{t("tableName")}</th>
-                <th className="p-3 text-start font-medium">{t("tableEmail")}</th>
-                <th className="p-3 text-start font-medium">{t("tableRole")}</th>
-                <th className="p-3 text-start font-medium">{t("tableRegion")}</th>
-                <th className="p-3 text-start font-medium">{t("tableStatus")}</th>
-                <th className="p-3 text-start font-medium">{t("tableSignIn")}</th>
-                <th className="p-3 text-start font-medium">{t("tableCreated")}</th>
-                <th className="p-3 text-start font-medium">{t("tableActions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.length === 0 ? (
-                <tr>
-                  <td className="p-3 text-muted-foreground" colSpan={8}>
-                    {t("empty")}
-                  </td>
-                </tr>
-              ) : (
-                accounts.map((account) => (
-                  <tr key={account.userId} className="border-b border-border last:border-0">
-                    <td className="p-3">{account.fullName}</td>
-                    <td className="p-3">
-                      {account.email ? <CopyEmail email={account.email} /> : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="p-3">{roleLabels[account.role] ?? account.role}</td>
-                    <td className="p-3">
-                      {account.role === "platform_admin" ? (
-                        <RegionSelect adminUserId={account.userId} currentRegion={regionByAdminId.get(account.userId) ?? null} />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="p-3">{account.active ? t("statusActive") : t("statusInactive")}</td>
-                    <td className="p-3">
-                      {/* "never signed in" and "signed in but never got past
-                          MFA" look identical without this, and they need
-                          different help. */}
-                      {account.lastSignInAt ? (
-                        <span>{new Date(account.lastSignInAt).toLocaleDateString(locale)}</span>
-                      ) : (
-                        <span className="text-warning">{t("neverSignedIn")}</span>
-                      )}
-                      <span className="ms-2 text-xs text-muted-foreground">
-                        {account.mfaFactors > 0 ? t("mfaEnrolled") : t("mfaPending")}
-                      </span>
-                    </td>
-                    <td className="p-3">{new Date(account.createdAt).toLocaleDateString(locale)}</td>
-                    <td className="p-3">
-                      <AccountActions userId={account.userId} fullName={account.fullName} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* One card per account instead of eight columns that ran off the
+            side of the screen — the region dropdown and the recovery buttons
+            need room, and they were the two things furthest to the right. */}
+        <div className="grid min-w-0 flex-1 grid-cols-1 content-start gap-3 2xl:grid-cols-2">
+          {accounts.length === 0 ? (
+            <p className="rounded-xl border border-border p-6 text-sm text-muted-foreground 2xl:col-span-2">{t("empty")}</p>
+          ) : null}
+
+          {accounts.map((account) => (
+            <div key={account.userId} className="flex flex-col gap-3 rounded-xl border border-border p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="font-medium">{account.fullName}</span>
+                  {account.email ? <CopyEmail email={account.email} /> : <span className="text-xs text-muted-foreground">—</span>}
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+                    {roleLabels[account.role] ?? account.role}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      account.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {account.active ? t("statusActive") : t("statusInactive")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {/* "never signed in" and "signed in but never got past MFA"
+                    look identical without this, and they need different help. */}
+                {account.lastSignInAt ? (
+                  <span>{t("lastSignIn", { date: new Date(account.lastSignInAt).toLocaleDateString(locale) })}</span>
+                ) : (
+                  <span className="text-warning">{t("neverSignedIn")}</span>
+                )}
+                <span>{account.mfaFactors > 0 ? t("mfaEnrolled") : t("mfaPending")}</span>
+                <span>{t("createdOn", { date: new Date(account.createdAt).toLocaleDateString(locale) })}</span>
+              </div>
+
+              {account.role === "platform_admin" ? (
+                <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+                  <span className="text-xs font-medium">{t("tableRegion")}</span>
+                  <RegionSelect adminUserId={account.userId} currentRegion={regionByAdminId.get(account.userId) ?? null} />
+                </div>
+              ) : null}
+
+              <div className="border-t border-border pt-3">
+                <AccountActions userId={account.userId} fullName={account.fullName} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

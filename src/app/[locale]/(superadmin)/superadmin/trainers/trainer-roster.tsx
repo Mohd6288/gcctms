@@ -183,13 +183,17 @@ export function TrainerRoster({
         <p className="rounded-xl border border-border p-6 text-sm text-muted-foreground">{t("empty")}</p>
       ) : null}
 
+      <div className="grid grid-cols-1 content-start gap-3 2xl:grid-cols-2">
       {trainers.map((trainer) => {
         const editing = editingId === trainer.id && fields !== null;
         const taught = courseIdsFor(trainer.id);
         return (
-          <div key={trainer.id} className="flex flex-col gap-3 rounded-xl border border-border p-4">
+          <div
+            key={trainer.id}
+            className={`flex flex-col gap-3 rounded-xl border border-border p-4 ${editing ? "2xl:col-span-2" : ""}`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex flex-col gap-0.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="font-medium">{trainer.fullName}</span>
                 <span className="text-xs text-muted-foreground">
                   {trainer.email ?? t("noEmail")}
@@ -201,7 +205,7 @@ export function TrainerRoster({
                     : t("neverSignedIn")}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
                     trainer.active ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
@@ -322,6 +326,7 @@ export function TrainerRoster({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
