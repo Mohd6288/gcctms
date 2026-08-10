@@ -11,7 +11,15 @@ on:
         description: Target Supabase project
         required: true
         type: choice
-        options: [dev, staging, prod]
+        # staging is deliberately not routine. It was provisioned in Phase 10
+        # and never used — zero companies, requests, profiles or sign-ins,
+        # ever — so every "deploy to dev and staging" was doubling the work
+        # for a database nobody reads. One environment is built and tested
+        # in (dev), and production is promoted to when it exists. Add
+        # `staging` back to this list if a pre-production rehearsal is ever
+        # genuinely wanted; the GitHub Environment still holds its ref and
+        # password.
+        options: [dev, prod]
 
 jobs:
   deploy-migrations:

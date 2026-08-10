@@ -5,11 +5,24 @@
 | Env | Supabase project | Vercel | Status |
 |---|---|---|---|
 | local | `supabase start` (Docker) | `npm run dev` | dev workstation only |
-| dev | `gcctms-dev` (`bupfgfbdcbhvmrqszndn`, `eu-central-1`, free tier) | Production deploys point here today (`https://gcctms.vercel.app`) | live |
-| staging | `gcctms-staging` (`spodkchlifabfzdtbpxw`, `eu-central-1`, free tier) | not wired to a Vercel environment yet | schema-only, no app traffic |
+| dev | `gcctms-dev` (`bupfgfbdcbhvmrqszndn`, `eu-central-1`, free tier) | Production deploys point here today (`https://gcctms.vercel.app`) | **the working environment — build and test here** |
+| staging | `gcctms-staging` (`spodkchlifabfzdtbpxw`, `eu-central-1`, free tier) | not wired to a Vercel environment | **parked** — never used |
 | prod | not provisioned | — | deferred — see "Before onboarding a real company" below |
 
-Deploying migrations to dev/staging: `gh workflow run deploy-migrations.yml -f environment=dev` (or `staging`) — see `docs/residency.md` for why this is manual dispatch rather than branch-triggered.
+**One environment until launch.** Everything is built and tested against `dev`, which is what `gcctms.vercel.app` talks to. `staging` was provisioned in Phase 10 and never used — as of 2026-08-10 it held zero companies, employees, requests, profiles and audit rows, and had never been signed into. Deploying to it doubled the work of every schema change for a database nobody read, so it is off the routine path and dropped from `deploy-migrations.yml`'s choices. Its GitHub Environment still holds the project ref and password, so re-adding `staging` to that list is a one-line change if a pre-production rehearsal is ever wanted.
+
+Deploying migrations: `gh workflow run deploy-migrations.yml -f environment=dev` — see `docs/residency.md` for why this is manual dispatch rather than branch-triggered.
+
+### Promoting to production
+
+Production is a **new Supabase project**, not a rename of dev — dev holds test data, test accounts and the trainers' real email addresses under `TRAINER_EMAIL_MODE=real`. The steps, in order:
+
+1. Create the prod Supabase project in `eu-central-1` (same region as the others — see `docs/residency.md`; region is fixed at creation and cannot be changed later).
+2. Work through **"New Supabase project checklist"** below. The Auth Hook step is not optional: without it every sign-in fails with a generic error, which is how dev and staging both started.
+3. Create a `prod` GitHub Environment holding `SUPABASE_PROJECT_REF` and `SUPABASE_DB_PASSWORD`. Until this exists, `-f environment=prod` fails at the link step with an empty ref.
+4. `gh workflow run deploy-migrations.yml -f environment=prod` — applies the full migration chain, seeds the catalog, and seeds the trainer roster with real addresses.
+5. Point Vercel's production environment variables at the prod project, and confirm `NEXT_PUBLIC_SUPABASE_URL` actually changed before onboarding anyone.
+6. Create the first super_admin, then work through **"Before onboarding a real company"** below.
 
 ## New Supabase project checklist (do this for prod too — don't skip it)
 
