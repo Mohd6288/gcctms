@@ -96,7 +96,10 @@ describe("createTrainerLogin — links an account to an existing roster trainer"
     expect(createdEmails).toContain(emailB);
     // No email to match on, so it isn't even a candidate.
     expect(result.created.some((c) => c.fullName === "Bulk No Email")).toBe(false);
-    expect(result.failed).toEqual([]);
+    // Scoped to this test's own trainers: the roster also holds whatever the
+    // seeder put there, and asserting the whole batch succeeded would make
+    // this fail for reasons that have nothing to do with the code under test.
+    expect(result.failed.filter((f) => f.fullName.startsWith("Bulk "))).toEqual([]);
 
     const linked = await db.select({ id: trainers.id, userId: trainers.userId }).from(trainers).where(inArray(trainers.id, [a.id, b.id]));
     expect(linked.every((t) => t.userId !== null)).toBe(true);
