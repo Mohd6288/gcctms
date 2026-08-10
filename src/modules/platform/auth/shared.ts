@@ -61,6 +61,10 @@ export const CAPABILITY_ROLES = {
   upload_documents: ["super_admin", "platform_admin", "contractor_manager"],
   submit_requests: ["contractor_manager"],
   review_requests: ["platform_admin"],
+  // Ownership, not access. Its own capability rather than part of
+  // review_requests because that one is platform_admin only, and a super
+  // admin must be able to reassign a request whose owner has left.
+  assign_requests: ["platform_admin", "super_admin"],
   manage_pricing: ["super_admin"],
   view_pricing: ["super_admin", "platform_admin"],
   upload_payment: ["contractor_manager"],

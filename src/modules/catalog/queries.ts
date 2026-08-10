@@ -12,7 +12,6 @@ import {
   courses,
   documents,
   employees,
-  exams,
   jobRoles,
   payments,
   pricing,
@@ -416,10 +415,6 @@ export async function listPricingForCourse(courseId: number) {
     .from(pricing)
     .where(eq(pricing.courseId, courseId))
     .orderBy(asc(pricing.effectiveFrom));
-}
-
-export async function listExams() {
-  return db.select().from(exams).orderBy(asc(exams.code));
 }
 
 export async function listTrainingCenters() {

@@ -22,6 +22,8 @@ interface CourseData {
   description: string | null;
   durationHours: string;
   minAttendancePct: number;
+  examRequired: boolean;
+  passMark: number | null;
   contractorCategory: string | null;
   active: boolean;
 }
@@ -85,6 +87,9 @@ export function CourseDetail({
     new Set(initialSelectedPrerequisiteCourseIds)
   );
 
+  const [examRequired, setExamRequired] = useState(course.examRequired);
+  const [passMark, setPassMark] = useState(String(course.passMark ?? 70));
+
   const [region, setRegion] = useState("");
   const [price, setPrice] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
@@ -102,6 +107,8 @@ export function CourseDetail({
         durationHours: Number(durationHours),
         minAttendancePct: Number(minAttendancePct),
         contractorCategory: contractorCategory || undefined,
+        examRequired,
+        passMark: examRequired ? Number(passMark) : undefined,
         active,
       });
       router.refresh();
@@ -209,6 +216,21 @@ export function CourseDetail({
             <Label htmlFor="minAttendancePct">{t("minAttendanceLabel")}</Label>
             <Input id="minAttendancePct" type="number" min="1" max="100" value={minAttendancePct} onChange={(e) => setMinAttendancePct(e.target.value)} />
           </div>
+          {/* The old Exams screen's two fields, now where they belong (0035). */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="examRequired">{t("examLabel")}</Label>
+            <label className="flex h-8 items-center gap-2 text-sm">
+              <input id="examRequired" type="checkbox" className="size-3.5" checked={examRequired} onChange={(e) => setExamRequired(e.target.checked)} />
+              {t("examRequiredLabel")}
+            </label>
+          </div>
+          {examRequired ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="passMark">{t("passMarkLabel")}</Label>
+              <Input id="passMark" type="number" min="0" max="100" value={passMark} onChange={(e) => setPassMark(e.target.value)} />
+              <p className="text-xs text-muted-foreground">{t("passMarkHint")}</p>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="contractorCategory">{t("contractorCategoryLabel")}</Label>
             <select

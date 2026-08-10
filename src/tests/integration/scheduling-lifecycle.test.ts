@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import {
+  attendance,
   auditLog,
   classEnrollments,
   classes,
@@ -21,6 +22,7 @@ import {
   cancelClass,
   createClass,
   enrollRequestItem,
+  moveEnrollment,
   removeEnrollment,
   removeFromWaitlist,
   updateClass,
@@ -103,10 +105,13 @@ describe("scheduling — classes, capacity/waitlist, cancellation, real DB", () 
   });
 
   afterAll(async () => {
+    // The move tests write attendance and spin up their own trainers for the
+    // destination classes; both hold classes down by foreign key.
+    await db.delete(attendance).where(sql`class_id in (select id from ${classes} where course_id = ${courseId})`);
     await db.delete(classEnrollments).where(sql`company_id = ${companyId}`);
     await db.delete(requestItems).where(sql`request_id in (select id from ${trainingRequests} where company_id = ${companyId})`);
     await db.delete(trainingRequests).where(eq(trainingRequests.companyId, companyId));
-    await db.delete(classes).where(eq(classes.trainerId, trainerId));
+    await db.delete(classes).where(eq(classes.courseId, courseId));
     await db.delete(trainerCourses).where(eq(trainerCourses.trainerId, trainerId));
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(trainers).where(eq(trainers.id, trainerId));
@@ -154,6 +159,76 @@ describe("scheduling — classes, capacity/waitlist, cancellation, real DB", () 
     expect(clean.note).toBeNull();
 
     await db.delete(trainerCourses).where(eq(trainerCourses.trainerId, trainerId));
+  });
+
+  // Moving somebody to another class is an ordinary correction — wrong class,
+  // a date that no longer suits them. It stops being ordinary the moment
+  // delivery records exist, because those belong to the class they happened
+  // in and a certificate is issued against them.
+  describe("moveEnrollment", () => {
+    // Tracked rather than matched by name so cleanup is exact.
+    const moveTrainerIds: number[] = [];
+
+    afterAll(async () => {
+      if (moveTrainerIds.length === 0) return;
+      // inArray with a subquery, not a sql`` template: the template expands a
+      // JS array into a tuple, which `= any()` rejects.
+      const movedClassIds = db.select({ id: classes.id }).from(classes).where(inArray(classes.trainerId, moveTrainerIds));
+      await db.delete(attendance).where(inArray(attendance.classId, movedClassIds));
+      await db.delete(classEnrollments).where(inArray(classEnrollments.classId, movedClassIds));
+      await db.delete(classes).where(inArray(classes.trainerId, moveTrainerIds));
+      await db.delete(trainers).where(inArray(trainers.id, moveTrainerIds));
+    });
+
+    async function twoClasses(startA: string, startB: string, capacityB = 5) {
+      const [a] = await db
+        .insert(classes)
+        .values({ courseId, trainerId, region: "Central", type: "public", startDate: startA, endDate: startA, capacity: 5, status: "scheduled" })
+        .returning({ id: classes.id });
+      const [otherTrainer] = await db.insert(trainers).values({ fullName: `Move Trainer ${startB}` }).returning({ id: trainers.id });
+      moveTrainerIds.push(otherTrainer.id);
+      const [b] = await db
+        .insert(classes)
+        .values({ courseId, trainerId: otherTrainer.id, region: "Central", type: "public", startDate: startB, endDate: startB, capacity: capacityB, status: "scheduled" })
+        .returning({ id: classes.id });
+      return { fromId: a.id, toId: b.id, trainerBId: otherTrainer.id };
+    }
+
+    it("moves a clean enrollment and keeps its id", async () => {
+      const { fromId, toId } = await twoClasses("2033-01-10", "2033-02-10");
+      const item = await makeRequestItem(910);
+      await enrollRequestItem(adminCtx, { classId: fromId, requestItemId: item.requestItemId });
+      const [enrollment] = await db.select().from(classEnrollments).where(eq(classEnrollments.classId, fromId));
+
+      await moveEnrollment(adminCtx, { enrollmentId: enrollment.id, toClassId: toId });
+
+      const [after] = await db.select().from(classEnrollments).where(eq(classEnrollments.id, enrollment.id));
+      expect(after.classId).toBe(toId); // same row, new class
+      expect(after.status).toBe("enrolled");
+    });
+
+    it("refuses once attendance is recorded, naming the way out", async () => {
+      const { fromId, toId } = await twoClasses("2033-03-10", "2033-04-10");
+      const item = await makeRequestItem(911);
+      await enrollRequestItem(adminCtx, { classId: fromId, requestItemId: item.requestItemId });
+      const [enrollment] = await db.select().from(classEnrollments).where(eq(classEnrollments.classId, fromId));
+
+      await db.insert(attendance).values({ classId: fromId, sessionDate: "2033-03-10", employeeId: enrollment.employeeId, present: true, recordedBy: adminId });
+
+      await expect(moveEnrollment(adminCtx, { enrollmentId: enrollment.id, toClassId: toId })).rejects.toThrow(/attendance recorded/);
+    });
+
+    it("refuses a full class rather than quietly waitlisting the move", async () => {
+      const { fromId, toId } = await twoClasses("2033-05-10", "2033-06-10", 1);
+      const filler = await makeRequestItem(912);
+      await enrollRequestItem(adminCtx, { classId: toId, requestItemId: filler.requestItemId });
+
+      const item = await makeRequestItem(913);
+      await enrollRequestItem(adminCtx, { classId: fromId, requestItemId: item.requestItemId });
+      const [enrollment] = await db.select().from(classEnrollments).where(eq(classEnrollments.classId, fromId));
+
+      await expect(moveEnrollment(adminCtx, { enrollmentId: enrollment.id, toClassId: toId })).rejects.toThrow(/full \(1\/1\)/);
+    });
   });
 
   it("blocks creating a class that double-books the trainer with an overlapping date range", async () => {

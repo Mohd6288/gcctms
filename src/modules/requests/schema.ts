@@ -70,3 +70,16 @@ export const RejectRequestInput = z.object({
   reason: z.string().min(1),
 });
 export type RejectRequestInput = z.infer<typeof RejectRequestInput>;
+
+export const ReassignRequestInput = z.object({
+  requestId: z.coerce.number().int().positive(),
+  // null puts the request back into the region's pool.
+  adminUserId: z.string().uuid().nullable(),
+});
+export type ReassignRequestInput = z.infer<typeof ReassignRequestInput>;
+
+export const ChangeRequestCourseInput = z.object({
+  requestId: z.coerce.number().int().positive(),
+  courseId: z.coerce.number().int().positive(),
+});
+export type ChangeRequestCourseInput = z.infer<typeof ChangeRequestCourseInput>;

@@ -14,7 +14,6 @@ import {
   documents,
   employees,
   examResults,
-  exams,
   jobRoles,
   payments,
   requestItems,
@@ -43,7 +42,6 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
   let trainerId: number;
   let classId: number;
   let prereqClassId: number;
-  let examId: number;
 
   let adminCtx: AuthContext;
 
@@ -106,7 +104,7 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
       .returning({ id: classEnrollments.id });
 
     if (opts.examResult) {
-      await db.insert(examResults).values({ enrollmentId: enrollment.id, examId, score: opts.examResult === "pass" ? 90 : 40, result: opts.examResult, recordedBy: trainerUserId });
+      await db.insert(examResults).values({ enrollmentId: enrollment.id, score: opts.examResult === "pass" ? 90 : 40, result: opts.examResult, recordedBy: trainerUserId });
     }
 
     return { employeeId: employee.id, enrollmentId: enrollment.id };
@@ -128,13 +126,11 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
     const [ineligibleRole] = await db.insert(jobRoles).values({ code: `GATE-INELIG-${suffix}`, nameEn: "Ineligible", nameAr: "غير مؤهل" }).returning({ id: jobRoles.id });
     ineligibleRoleId = ineligibleRole.id;
 
-    const [exam] = await db.insert(exams).values({ code: `GATE-EXAM-${suffix}`, title: "Gate Exam", passMark: 70 }).returning({ id: exams.id });
-    examId = exam.id;
 
     const [prereqCourse] = await db.insert(courses).values({ code: `GATE-PREREQ-${suffix}`, titleEn: "Prereq", titleAr: "متطلب", durationHours: "8" }).returning({ id: courses.id });
     prerequisiteCourseId = prereqCourse.id;
 
-    const [gatedCourse] = await db.insert(courses).values({ code: `GATE-${suffix}`, titleEn: "Gated Course", titleAr: "دورة مقيدة", durationHours: "16", examId, minAttendancePct: 90 }).returning({ id: courses.id });
+    const [gatedCourse] = await db.insert(courses).values({ code: `GATE-${suffix}`, titleEn: "Gated Course", titleAr: "دورة مقيدة", durationHours: "16", examRequired: true, passMark: 70, minAttendancePct: 90 }).returning({ id: courses.id });
     gatedCourseId = gatedCourse.id;
     await db.insert(courseJobRoles).values({ courseId: gatedCourseId, jobRoleId: eligibleRoleId });
     await db.insert(coursePrerequisites).values({ courseId: gatedCourseId, prerequisiteCourseId });
@@ -173,7 +169,6 @@ describe("certification — eligibility gate, approval, revocation, real DB", ()
     await db.delete(coursePrerequisites).where(eq(coursePrerequisites.courseId, gatedCourseId));
     await db.delete(courseJobRoles).where(eq(courseJobRoles.courseId, gatedCourseId));
     await db.delete(courses).where(sql`id in (${gatedCourseId}, ${prerequisiteCourseId})`);
-    await db.delete(exams).where(eq(exams.id, examId));
     await db.delete(jobRoles).where(sql`id in (${eligibleRoleId}, ${ineligibleRoleId})`);
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.execute(sql`delete from profiles where user_id = ${adminId}`);

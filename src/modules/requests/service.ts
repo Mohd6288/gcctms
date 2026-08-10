@@ -2,14 +2,17 @@
 import "server-only";
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, courses, documents, employees, payments, requestItems, trainingRequests } from "@/db/schema";
+import { companies, courses, documents, employees, payments, profiles, regionalAdminAssignments, requestItems, trainingRequests } from "@/db/schema";
 import { employeesSatisfyingPrerequisites, listCourseJobRoleIds } from "@/modules/catalog/queries";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
+import { pickAdminForRegion } from "./assignment";
 import { assertTransition, type RequestStatus } from "./machine";
 import type {
+  ChangeRequestCourseInput,
   CreateDraftRequestInput,
+  ReassignRequestInput,
   RejectRequestDocumentInput,
   RejectRequestInput,
   RequestMoreInfoInput,
@@ -114,6 +117,40 @@ export async function syncRequestItems(context: AuthContext, input: SyncRequestI
 // Guard: >=1 request item, and every employee has a national_id document
 // uploaded (the one strictly-mandatory employee-scoped document —
 // prior_certificate is supplementary, not gating).
+// Everything about a course that has to be true of the people on the request.
+// Extracted from submitRequest so changeRequestCourse runs exactly the same
+// checks — a course swapped in without them would put people into a class
+// they are not eligible for, which is the whole thing these guards exist to
+// prevent.
+//
+// Job-role eligibility and prerequisites are both deliberate strengthenings
+// over the validated prototype, where the wizard only ever showed them as
+// advisory badges — see roles-and-workflows.md.
+async function assertCourseFitsEmployees(employeeIds: number[], courseId: number) {
+  // course_job_roles with 0 rows for a course = unrestricted (every job role
+  // eligible), matching isJobRoleEligible()'s semantics.
+  const eligibleRoleIds = await listCourseJobRoleIds(courseId);
+  if (eligibleRoleIds.size > 0) {
+    const employeeRoles = await db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds));
+    const ineligible = employeeRoles.filter((e) => !eligibleRoleIds.has(e.jobRoleId));
+    if (ineligible.length > 0) {
+      throw new Error("All employees must hold a job role eligible for this course before submitting.");
+    }
+  }
+
+  // OR-semantics within each prerequisite group, AND across groups — the
+  // course's own listed prerequisites plus the OHS General Induction that
+  // gates every course. Satisfied by an internally-issued certificate or an
+  // admin-verified external one (catalog/queries.ts).
+  const satisfied = await employeesSatisfyingPrerequisites(employeeIds, courseId);
+  const missing = employeeIds.filter((id) => !satisfied.has(id));
+  if (missing.length > 0) {
+    throw new Error(
+      "Every employee needs a valid OHS General Induction certificate, plus this course's own prerequisites, before submitting. Add the missing course to a request, or upload the employee's existing certificate for admin verification."
+    );
+  }
+}
+
 export async function submitRequest(context: AuthContext, requestId: number) {
   const request = await getRequestOrThrow(requestId);
   assertContractorOwnsEditableRequest(context, request);
@@ -133,40 +170,24 @@ export async function submitRequest(context: AuthContext, requestId: number) {
     throw new Error("All employees must have a national ID document uploaded before submitting.");
   }
 
-  // Job-role eligibility: the validated prototype only ever shows this as a
-  // non-blocking warning badge in the wizard — this is a deliberate
-  // strengthening to a real submission guard, per roles-and-workflows.md.
-  // course_job_roles with 0 rows for a course = unrestricted (every job role
-  // eligible), matching isJobRoleEligible()'s semantics.
-  const eligibleRoleIds = await listCourseJobRoleIds(request.courseId);
-  if (eligibleRoleIds.size > 0) {
-    const employeeRoles = await db.select({ id: employees.id, jobRoleId: employees.jobRoleId }).from(employees).where(inArray(employees.id, employeeIds));
-    const ineligible = employeeRoles.filter((e) => !eligibleRoleIds.has(e.jobRoleId));
-    if (ineligible.length > 0) {
-      throw new Error("All employees must hold a job role eligible for this course before submitting.");
-    }
-  }
-
-  // Prerequisites: OR-semantics within each group, AND across groups — the
-  // course's own listed prerequisites, plus the OHS General Induction that
-  // gates every course. Satisfied by an internally-issued certificate or an
-  // admin-verified external one (catalog/queries.ts). A deliberate
-  // strengthening over the validated prototype's advisory-only wizard badge —
-  // see roles-and-workflows.md.
-  const satisfied = await employeesSatisfyingPrerequisites(employeeIds, request.courseId);
-  const missingPrerequisites = employeeIds.filter((id) => !satisfied.has(id));
-  if (missingPrerequisites.length > 0) {
-    throw new Error(
-      "Every employee needs a valid OHS General Induction certificate, plus this course's own prerequisites, before submitting. Add the missing course to a request, or upload the employee's existing certificate for admin verification."
-    );
-  }
+  await assertCourseFitsEmployees(employeeIds, request.courseId);
 
   // Matches the validated prototype's submitRequest(): resubmitting from
   // info_requested clears the prior review note and every employee
   // decision, so admin re-reviews with a clean slate. A no-op for the
   // draft->submitted path since those fields are already unset there.
   await db.update(requestItems).set({ decision: "pending", decisionReason: null, decidedBy: null, decidedAt: null }).where(eq(requestItems.requestId, requestId));
-  await db.update(trainingRequests).set({ status: "submitted", adminNote: null }).where(eq(trainingRequests.id, requestId));
+  // Give it an owner. The company's region decides the pool; the least-loaded
+  // admin in it takes the request. Null when that region has nobody assigned,
+  // which leaves the request visible to the whole region and owned by no one
+  // rather than blocking the contractor.
+  const [company] = await db.select({ region: companies.region }).from(companies).where(eq(companies.id, request.companyId));
+  const assignedAdminUserId = await pickAdminForRegion(company?.region ?? null);
+
+  await db
+    .update(trainingRequests)
+    .set({ status: "submitted", adminNote: null, assignedAdminUserId })
+    .where(eq(trainingRequests.id, requestId));
   await writeAudit({
     userId: context.userId,
     entityType: "training_request",
@@ -175,9 +196,99 @@ export async function submitRequest(context: AuthContext, requestId: number) {
     fromStatus: request.status,
     toStatus: "submitted",
   });
+  if (assignedAdminUserId) {
+    await writeAudit({ userId: context.userId, entityType: "training_request", entityId: requestId, action: "assign", note: assignedAdminUserId });
+  }
   await notifyPlatformAdmins("request.submitted", { requestId, companyId: request.companyId });
 
   return { id: requestId, status: "submitted" as const };
+}
+
+
+// Hand a request to a different admin. Deliberately a capability of its own
+// (assign_requests) rather than review_requests: that one is platform_admin
+// only, and a super admin has to be able to fix an assignment nobody else
+// can reach — the case where the assigned admin has left.
+export async function reassignRequest(context: AuthContext, input: ReassignRequestInput) {
+  if (!authorize("assign_requests", context)) throw new Error("Not authorized");
+  const request = await getRequestOrThrow(input.requestId);
+
+  // Unassigning is legitimate: it puts the request back to the region pool.
+  if (input.adminUserId === null) {
+    await db.update(trainingRequests).set({ assignedAdminUserId: null }).where(eq(trainingRequests.id, input.requestId));
+    await writeAudit({ userId: context.userId, entityType: "training_request", entityId: input.requestId, action: "unassign" });
+    return;
+  }
+
+  const [target] = await db
+    .select({ role: profiles.role, active: profiles.active })
+    .from(profiles)
+    .where(eq(profiles.userId, input.adminUserId));
+  if (!target || target.role !== "platform_admin" || !target.active) {
+    throw new Error("Requests can only be assigned to an active platform admin.");
+  }
+
+  // A region-scoped admin cannot open a request outside their region, so
+  // assigning them one would hand them work they cannot see — the sort of
+  // silently broken state that looks like the request was simply ignored.
+  const [company] = await db.select({ region: companies.region }).from(companies).where(eq(companies.id, request.companyId));
+  const [assignment] = await db
+    .select({ region: regionalAdminAssignments.region })
+    .from(regionalAdminAssignments)
+    .where(eq(regionalAdminAssignments.adminUserId, input.adminUserId));
+  if (assignment && company && assignment.region !== company.region) {
+    throw new Error(`That admin only covers ${assignment.region}, and this request is in ${company.region}.`);
+  }
+
+  await db.update(trainingRequests).set({ assignedAdminUserId: input.adminUserId }).where(eq(trainingRequests.id, input.requestId));
+  await writeAudit({ userId: context.userId, entityType: "training_request", entityId: input.requestId, action: "reassign", note: input.adminUserId });
+}
+
+// Change which course a request is for.
+//
+// Only before approval. At payment_pending a price, a payment row and
+// possibly an uploaded Dynamics quotation all exist for the OLD course, and
+// later a class does — changing the course there would leave a contractor
+// paying against a quotation for training they are no longer booked on.
+const COURSE_CHANGEABLE_STATUSES = new Set(["draft", "submitted", "info_requested"]);
+
+export async function changeRequestCourse(context: AuthContext, input: ChangeRequestCourseInput) {
+  const request = await getRequestOrThrow(input.requestId);
+
+  if (context.role === "contractor_manager") {
+    // A contractor edits their own, and only while it is still theirs to edit.
+    assertContractorOwnsEditableRequest(context, request);
+  } else if (!authorize("review_requests", context)) {
+    throw new Error("Not authorized");
+  }
+
+  if (!COURSE_CHANGEABLE_STATUSES.has(request.status)) {
+    throw new Error(
+      "The course can only be changed before the request is approved — a quotation and a price already exist for this one. Reject it and start a new request instead."
+    );
+  }
+  if (request.courseId === input.courseId) return;
+
+  const [course] = await db.select({ id: courses.id, active: courses.active, code: courses.code }).from(courses).where(eq(courses.id, input.courseId));
+  if (!course || !course.active) throw new Error("That course is not available.");
+
+  const items = await db.select({ employeeId: requestItems.employeeId }).from(requestItems).where(eq(requestItems.requestId, input.requestId));
+  if (items.length > 0) {
+    await assertCourseFitsEmployees(items.map((i) => i.employeeId), input.courseId);
+  }
+
+  await db.update(trainingRequests).set({ courseId: input.courseId }).where(eq(trainingRequests.id, input.requestId));
+  // request_items carry their own copy of the course (see syncRequestItems),
+  // and leaving them stale would certify people against the old one.
+  await db.update(requestItems).set({ courseId: input.courseId }).where(eq(requestItems.requestId, input.requestId));
+
+  await writeAudit({
+    userId: context.userId,
+    entityType: "training_request",
+    entityId: input.requestId,
+    action: "change_course",
+    note: `${request.courseId} -> ${input.courseId}`,
+  });
 }
 
 export async function setEmployeeDecision(context: AuthContext, input: SetEmployeeDecisionInput) {

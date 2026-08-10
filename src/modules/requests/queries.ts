@@ -26,20 +26,38 @@ export async function listRequestsForCompany(companyId: number) {
 // region: Drizzle bypasses RLS, so a region-assigned platform_admin
 // (Phase 5) needs this filter applied explicitly here too — see
 // companies/queries.ts's listCompanies() for the same note.
-export async function listSubmittedRequestsForAdmin(region?: string | null) {
+export async function listSubmittedRequestsForAdmin(region?: string | null, viewerUserId?: string | null) {
   return db
     .select({
       id: trainingRequests.id,
       companyName: companies.name,
       courseTitleEn: courses.titleEn,
       courseTitleAr: courses.titleAr,
+      assignedAdminUserId: trainingRequests.assignedAdminUserId,
+      assignedAdminName: sql<string | null>`(select p.full_name from profiles p where p.user_id = ${trainingRequests.assignedAdminUserId})`,
       createdAt: trainingRequests.createdAt,
     })
     .from(trainingRequests)
     .innerJoin(courses, eq(trainingRequests.courseId, courses.id))
     .innerJoin(companies, eq(trainingRequests.companyId, companies.id))
     .where(region ? and(eq(trainingRequests.status, "submitted"), eq(companies.region, region)) : eq(trainingRequests.status, "submitted"))
-    .orderBy(desc(trainingRequests.createdAt));
+    // Mine first: the queue is a worklist, and the rest of the region is
+    // context rather than the job in front of you.
+    .orderBy(sql`case when ${trainingRequests.assignedAdminUserId} = ${viewerUserId ?? null} then 0 else 1 end`, desc(trainingRequests.createdAt));
+}
+
+// Who this request can be handed to: active platform admins who either cover
+// the company's region or are unscoped (unassigned means unrestricted, per
+// 0026). Anyone else would be given work they cannot open.
+export async function listAssignableAdmins(companyRegion: string | null) {
+  return db.execute<{ user_id: string; full_name: string; region: string | null }>(sql`
+    select p.user_id, p.full_name, raa.region
+      from profiles p
+      left join regional_admin_assignments raa on raa.admin_user_id = p.user_id
+     where p.role = 'platform_admin' and p.active
+       and (raa.region is null or raa.region = ${companyRegion})
+     order by p.full_name
+  `);
 }
 
 export async function getRequestById(requestId: number) {
@@ -62,6 +80,8 @@ export async function getRequestById(requestId: number) {
       totalAmount: trainingRequests.totalAmount,
       adminNote: trainingRequests.adminNote,
       rejectedReason: trainingRequests.rejectedReason,
+      assignedAdminUserId: trainingRequests.assignedAdminUserId,
+      assignedAdminName: sql<string | null>`(select p.full_name from profiles p where p.user_id = ${trainingRequests.assignedAdminUserId})`,
       createdAt: trainingRequests.createdAt,
     })
     .from(trainingRequests)

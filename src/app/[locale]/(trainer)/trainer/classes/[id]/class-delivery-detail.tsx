@@ -41,6 +41,7 @@ export function ClassDeliveryDetail({
   attendance,
   examResults,
   hasExam,
+  passMark,
   locale,
 }: {
   cls: ClassData;
@@ -49,6 +50,8 @@ export function ClassDeliveryDetail({
   attendance: AttendanceRow[];
   examResults: ExamResultRow[];
   hasExam: boolean;
+  /** The course's pass mark — shown so the trainer can see what a score means. */
+  passMark: number | null;
   locale: string;
 }) {
   const t = useTranslations("trainer.classDetail");
@@ -168,32 +171,39 @@ export function ClassDeliveryDetail({
                                 value={scoreDraft[r.employeeId] ?? String(result?.score ?? "")}
                                 onChange={(e) => setScoreDraft((prev) => ({ ...prev, [r.employeeId]: e.target.value }))}
                               />
+                              {/* Save, not Pass/Fail. The outcome is the
+                                  course's pass mark applied to the score —
+                                  it was never the trainer's to choose, and
+                                  before 0035 nothing stopped a 40 being
+                                  filed as a pass on a 70 course. */}
                               <Button
                                 type="button"
                                 size="sm"
-                                variant={result?.result === "pass" ? "default" : "outline"}
-                                disabled={!canEdit || loading === `pass-${r.employeeId}`}
+                                disabled={!canEdit || loading === `score-${r.employeeId}` || scoreDraft[r.employeeId] === undefined}
                                 onClick={() =>
-                                  run(`pass-${r.employeeId}`, () =>
-                                    setExamResultAction({ classId: cls.id, employeeId: r.employeeId, result: "pass", score: Number(scoreDraft[r.employeeId] ?? result?.score ?? 0) })
+                                  run(`score-${r.employeeId}`, () =>
+                                    setExamResultAction({
+                                      classId: cls.id,
+                                      employeeId: r.employeeId,
+                                      score: Number(scoreDraft[r.employeeId] ?? result?.score ?? 0),
+                                    })
                                   )
                                 }
                               >
-                                {t("pass")}
+                                {t("saveScore")}
                               </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant={result?.result === "fail" ? "destructive" : "outline"}
-                                disabled={!canEdit || loading === `fail-${r.employeeId}`}
-                                onClick={() =>
-                                  run(`fail-${r.employeeId}`, () =>
-                                    setExamResultAction({ classId: cls.id, employeeId: r.employeeId, result: "fail", score: Number(scoreDraft[r.employeeId] ?? result?.score ?? 0) })
-                                  )
-                                }
-                              >
-                                {t("fail")}
-                              </Button>
+                              {result ? (
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                    result.result === "pass" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                                  }`}
+                                >
+                                  {result.result === "pass" ? t("pass") : t("fail")}
+                                </span>
+                              ) : null}
+                              {passMark != null ? (
+                                <span className="text-[11px] text-muted-foreground">{t("passMarkNote", { mark: passMark })}</span>
+                              ) : null}
                             </div>
                           </td>
                         ) : null}

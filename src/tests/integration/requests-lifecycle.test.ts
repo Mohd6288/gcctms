@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import { grantOhsInduction } from "../helpers/ohs-induction";
@@ -8,6 +8,7 @@ import { encryptNationalId, hashNationalId } from "../../modules/platform/securi
 import type { AuthContext } from "../../modules/platform/auth/shared";
 import {
   approveRequest,
+  changeRequestCourse,
   createDraftRequest,
   requestMoreInfo,
   setEmployeeDecision,
@@ -30,6 +31,7 @@ describe("training request lifecycle — real DB", () => {
   let companyId: number;
   let jobRoleId: number;
   let courseId: number;
+  let secondCourseId: number;
   let employeeWithDocId: number;
   let employeeNoDocId: number;
 
@@ -85,6 +87,15 @@ describe("training request lifecycle — real DB", () => {
       .values({ code: `REQ-CSCC-${suffix}`, titleEn: "Lifecycle Test Course", titleAr: "دورة اختبار", durationHours: "8" })
       .returning({ id: courses.id });
     courseId = course.id;
+
+    // A second course to move a request onto. No job-role restrictions and no
+    // prerequisites, so the change itself is what is under test rather than
+    // the eligibility guards (those have their own suite).
+    const [secondCourse] = await db
+      .insert(courses)
+      .values({ code: `REQ-ALT-${suffix}`, titleEn: "Alternate Course", titleAr: "دورة بديلة", durationHours: "8" })
+      .returning({ id: courses.id });
+    secondCourseId = secondCourse.id;
 
     await db.insert(pricing).values({ courseId, price: "500.00", effectiveFrom: "2020-01-01" });
 
@@ -151,7 +162,7 @@ describe("training request lifecycle — real DB", () => {
     await db.delete(trainingRequests).where(eq(trainingRequests.companyId, companyId));
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(pricing).where(eq(pricing.courseId, courseId));
-    await db.delete(courses).where(eq(courses.id, courseId));
+    await db.delete(courses).where(inArray(courses.id, [courseId, secondCourseId]));
     await db.delete(jobRoles).where(eq(jobRoles.id, jobRoleId));
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.delete(profiles).where(eq(profiles.userId, adminId));
@@ -184,6 +195,40 @@ describe("training request lifecycle — real DB", () => {
 
     const [request] = await db.select({ totalAmount: trainingRequests.totalAmount }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
     expect(request.totalAmount).toBe("575.00");
+  });
+
+  // A contractor picks the wrong course, or an admin spots it during review.
+  // Before this the only route was reject-and-start-again, which throws away
+  // the uploaded documents and the employee list with it.
+  it("changes the course on a submitted request, carrying every request item with it", async () => {
+    const draft = await createDraftRequest(contractorCtx, { courseId });
+    await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeWithDocId] });
+    await submitRequest(contractorCtx, draft.id);
+
+    await changeRequestCourse(adminCtx, { requestId: draft.id, courseId: secondCourseId });
+
+    const [request] = await db.select({ courseId: trainingRequests.courseId }).from(trainingRequests).where(eq(trainingRequests.id, draft.id));
+    expect(request.courseId).toBe(secondCourseId);
+
+    // The items carry their own copy of the course; a stale one would
+    // certify the employee against the course they are no longer taking.
+    const items = await db.select({ courseId: requestItems.courseId }).from(requestItems).where(eq(requestItems.requestId, draft.id));
+    expect(items).toHaveLength(1);
+    expect(items[0].courseId).toBe(secondCourseId);
+  });
+
+  it("refuses a course change once the request is approved and priced", async () => {
+    const draft = await createDraftRequest(contractorCtx, { courseId });
+    await syncRequestItems(contractorCtx, { requestId: draft.id, employeeIds: [employeeWithDocId] });
+    await submitRequest(contractorCtx, draft.id);
+    await attachAndVerifyRequestDocs(draft.id);
+    const [item] = await db.select().from(requestItems).where(eq(requestItems.requestId, draft.id));
+    await setEmployeeDecision(adminCtx, { requestItemId: item.id, decision: "approved" });
+    await approveRequest(adminCtx, draft.id);
+
+    await expect(changeRequestCourse(adminCtx, { requestId: draft.id, courseId: secondCourseId })).rejects.toThrow(
+      /only be changed before the request is approved/
+    );
   });
 
   it("approveRequest honors an admin unit price override instead of resolving catalog pricing", async () => {

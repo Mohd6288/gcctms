@@ -61,7 +61,7 @@ export async function evaluateClassEligibility(classId: number): Promise<{ creat
       .where(eq(examResults.enrollmentId, enrollment.id))
       .orderBy(desc(examResults.attemptNo))
       .limit(1);
-    const examOk = course.examId == null || latestExam?.result === "pass";
+    const examOk = !course.examRequired || latestExam?.result === "pass";
 
     const [item] = await db.select({ requestId: requestItems.requestId }).from(requestItems).where(eq(requestItems.id, enrollment.requestItemId));
     let paymentOk = false;

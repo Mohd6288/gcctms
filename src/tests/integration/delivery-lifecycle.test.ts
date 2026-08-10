@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import {
@@ -10,7 +10,6 @@ import {
   courses,
   employees,
   examResults,
-  exams,
   jobRoles,
   requestItems,
   trainers,
@@ -30,7 +29,6 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
   const otherTrainerUserId = randomUUID();
   let companyId: number;
   let jobRoleId: number;
-  let examId: number;
   let courseId: number;
   let courseNoExamId: number;
   let trainerId: number;
@@ -59,9 +57,12 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
 
     const [item] = await db.insert(requestItems).values({ requestId: request.id, employeeId: employee.id, courseId: cls.courseId, decision: "approved" }).returning({ id: requestItems.id });
 
-    await db.insert(classEnrollments).values({ classId: cls.id, requestItemId: item.id, employeeId: employee.id, companyId, status: "enrolled" });
+    const [enrollment] = await db
+      .insert(classEnrollments)
+      .values({ classId: cls.id, requestItemId: item.id, employeeId: employee.id, companyId, status: "enrolled" })
+      .returning({ id: classEnrollments.id });
 
-    return { employeeId: employee.id, requestId: request.id, requestItemId: item.id };
+    return { employeeId: employee.id, requestId: request.id, requestItemId: item.id, enrollmentId: enrollment.id };
   }
 
   beforeAll(async () => {
@@ -76,10 +77,8 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
     const [jobRole] = await db.insert(jobRoles).values({ code: `DEL-ROLE-${suffix}`, nameEn: "Delivery Role", nameAr: "دور" }).returning({ id: jobRoles.id });
     jobRoleId = jobRole.id;
 
-    const [exam] = await db.insert(exams).values({ code: `DEL-EXAM-${suffix}`, title: "Delivery Test Exam", passMark: 70 }).returning({ id: exams.id });
-    examId = exam.id;
 
-    const [course] = await db.insert(courses).values({ code: `DEL-${suffix}`, titleEn: "Delivery Test Course", titleAr: "دورة", durationHours: "24", examId }).returning({ id: courses.id });
+    const [course] = await db.insert(courses).values({ code: `DEL-${suffix}`, titleEn: "Delivery Test Course", titleAr: "دورة", durationHours: "24", examRequired: true, passMark: 70 }).returning({ id: courses.id });
     courseId = course.id;
 
     const [courseNoExam] = await db.insert(courses).values({ code: `DEL-NOEXAM-${suffix}`, titleEn: "No Exam Course", titleAr: "دورة بدون اختبار", durationHours: "8" }).returning({ id: courses.id });
@@ -104,7 +103,6 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
     await db.delete(trainers).where(sql`id in (${trainerId}, ${otherTrainerId})`);
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(courses).where(sql`id in (${courseId}, ${courseNoExamId})`);
-    await db.delete(exams).where(eq(exams.id, examId));
     await db.delete(jobRoles).where(eq(jobRoles.id, jobRoleId));
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.execute(sql`delete from auth.users where id in (${ownerId}, ${trainerUserId}, ${otherTrainerUserId})`);
@@ -115,6 +113,36 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
     expect(getSessionDates("2030-07-01", "2030-07-01")).toEqual(["2030-07-01"]);
   });
 
+  // 0035: the pass mark stops being decoration. Before it, the trainer
+  // pressed Pass or Fail and the score sat beside that answer without ever
+  // being compared to it — a 40 could be filed as a pass on a 70 course.
+  it("derives pass/fail from the course pass mark, not from the caller", async () => {
+    const [cls] = await db
+      .insert(classes)
+      .values({ courseId, trainerId, region: "Central", type: "public", startDate: "2032-09-01", endDate: "2032-09-01", capacity: 10, status: "in_progress" })
+      .returning({ id: classes.id });
+    const a = await makeEnrolledEmployee(90, { id: cls.id, courseId });
+
+    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 69 });
+    const [below] = await db
+      .select({ result: examResults.result, score: examResults.score })
+      .from(examResults)
+      .where(eq(examResults.enrollmentId, a.enrollmentId))
+      .orderBy(desc(examResults.attemptNo))
+      .limit(1);
+    expect(below.score).toBe(69);
+    expect(below.result).toBe("fail"); // course pass mark is 70
+
+    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 70 });
+    const [atMark] = await db
+      .select({ result: examResults.result })
+      .from(examResults)
+      .where(eq(examResults.enrollmentId, a.enrollmentId))
+      .orderBy(desc(examResults.attemptNo))
+      .limit(1);
+    expect(atMark.result).toBe("pass"); // the mark itself passes
+  });
+
   it("blocks attendance/results writes from a trainer who doesn't own the class", async () => {
     const [cls] = await db
       .insert(classes)
@@ -123,7 +151,7 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
     const a = await makeEnrolledEmployee(1, { id: cls.id, courseId });
 
     await expect(setAttendance(otherTrainerCtx, { classId: cls.id, employeeId: a.employeeId, sessionDate: "2030-07-01", present: true })).rejects.toThrow("Not authorized");
-    await expect(setExamResult(otherTrainerCtx, { classId: cls.id, employeeId: a.employeeId, result: "pass", score: 90 })).rejects.toThrow("Not authorized");
+    await expect(setExamResult(otherTrainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 90 })).rejects.toThrow("Not authorized");
     await expect(submitResults(otherTrainerCtx, cls.id)).rejects.toThrow("Not authorized");
   });
 
@@ -144,7 +172,7 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
       .returning({ id: classes.id });
     const a = await makeEnrolledEmployee(3, { id: cls.id, courseId: courseNoExamId });
 
-    await expect(setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, result: "pass", score: 90 })).rejects.toThrow("This course has no exam configured.");
+    await expect(setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 90 })).rejects.toThrow("This course is not examined.");
   });
 
   it("retakes increment attempt_no; latest attempt is what's stored per enrollment", async () => {
@@ -154,8 +182,8 @@ describe("delivery — attendance, exam results, class close-out, real DB", () =
       .returning({ id: classes.id });
     const a = await makeEnrolledEmployee(4, { id: cls.id, courseId });
 
-    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, result: "fail", score: 50 });
-    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, result: "pass", score: 80 });
+    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 50 });
+    await setExamResult(trainerCtx, { classId: cls.id, employeeId: a.employeeId, score: 80 });
 
     const [enrollment] = await db.select({ id: classEnrollments.id }).from(classEnrollments).where(and(eq(classEnrollments.classId, cls.id), eq(classEnrollments.employeeId, a.employeeId)));
     const results = await db.select().from(examResults).where(eq(examResults.enrollmentId, enrollment.id)).orderBy(examResults.attemptNo);

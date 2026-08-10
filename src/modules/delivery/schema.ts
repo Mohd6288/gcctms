@@ -12,7 +12,8 @@ export type SetAttendanceInput = z.infer<typeof SetAttendanceInput>;
 export const SetExamResultInput = z.object({
   classId: z.number().int().positive(),
   employeeId: z.number().int().positive(),
-  result: z.enum(["pass", "fail"]),
+  // No `result` field: the server derives it from the score against the
+  // course's pass mark (see setExamResult).
   score: z.number().int().min(0).max(100),
 });
 export type SetExamResultInput = z.infer<typeof SetExamResultInput>;

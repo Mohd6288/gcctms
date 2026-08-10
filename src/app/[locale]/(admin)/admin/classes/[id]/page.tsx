@@ -4,7 +4,7 @@ import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listTrainerCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
 import { listPendingApprovalCertificatesForClass } from "@/modules/certification/queries";
-import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems } from "@/modules/scheduling/queries";
+import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems, listMoveTargets } from "@/modules/scheduling/queries";
 import { ClassDetail } from "./class-detail";
 
 export function generateStaticParams() {
@@ -53,6 +53,7 @@ export default async function AdminClassDetailPage({
   const pooled = await listSchedulableRequestItems();
   const activeIds = await listActiveEnrollmentRequestItemIds();
   const pendingCertificates = await listPendingApprovalCertificatesForClass(classId);
+  const moveTargets = await listMoveTargets(classId);
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
@@ -73,6 +74,7 @@ export default async function AdminClassDetailPage({
         centers={centers.filter((c) => c.active)}
         availablePool={availablePool}
         pendingCertificates={pendingCertificates}
+        moveTargets={moveTargets}
         locale={locale}
       />
     </div>

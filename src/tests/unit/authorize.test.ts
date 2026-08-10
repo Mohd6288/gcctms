@@ -11,6 +11,7 @@ const EXPECTED: Record<Capability, Record<Role, boolean>> = {
   upload_documents: { super_admin: true, platform_admin: true, contractor_manager: true, trainer: false, auditor: false },
   submit_requests: { super_admin: false, platform_admin: false, contractor_manager: true, trainer: false, auditor: false },
   review_requests: { super_admin: false, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
+  assign_requests: { super_admin: true, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
   manage_pricing: { super_admin: true, platform_admin: false, contractor_manager: false, trainer: false, auditor: false },
   view_pricing: { super_admin: true, platform_admin: true, contractor_manager: false, trainer: false, auditor: false },
   upload_payment: { super_admin: false, platform_admin: false, contractor_manager: true, trainer: false, auditor: false },
@@ -55,6 +56,7 @@ describe("authorize() — full 5-role x 20-capability matrix", () => {
   it("covers every capability named in roles-and-workflows.md's matrix (no drift)", () => {
     expect(Object.keys(EXPECTED).sort()).toEqual([
       "approve_certificates",
+      "assign_requests",
       "manage_catalog",
       "manage_companies",
       "manage_employees",

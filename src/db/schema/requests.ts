@@ -18,6 +18,11 @@ export const trainingRequests = pgTable(
     preferredEndDate: date("preferred_end_date"),
     notes: text("notes"),
     status: text("status").notNull().default("draft"),
+    // The admin doing this request (0035). Set on submit from the
+    // least-loaded admin in the company's region; null when that region has
+    // nobody assigned, which is a real state and not an error. Ownership
+    // only — who may SEE a request is still region scoping.
+    assignedAdminUserId: uuid("assigned_admin_user_id"),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }),
     adminNote: text("admin_note"),
     rejectedReason: text("rejected_reason"),
@@ -29,6 +34,7 @@ export const trainingRequests = pgTable(
     index("training_requests_company_id_idx").on(t.companyId),
     index("training_requests_course_id_idx").on(t.courseId),
     index("training_requests_status_idx").on(t.status),
+    index("training_requests_assigned_admin_idx").on(t.assignedAdminUserId),
     check(
       "training_requests_status_check",
       sql`${t.status} in ('draft', 'submitted', 'info_requested', 'rejected', 'payment_pending', 'ready_for_scheduling', 'scheduled', 'completed')`

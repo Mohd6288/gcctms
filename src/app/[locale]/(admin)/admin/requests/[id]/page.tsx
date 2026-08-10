@@ -2,7 +2,9 @@ import { setRequestLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { getRequestById, getRequestItems, getRequestLevelDocuments } from "@/modules/requests/queries";
+import { getRequestById, getRequestItems, getRequestLevelDocuments, listAssignableAdmins } from "@/modules/requests/queries";
+import { listCourses } from "@/modules/catalog/queries";
+import { RequestOwnershipPanel } from "./request-ownership-panel";
 import { getPaymentForRequest } from "@/modules/payments/queries";
 import { ReviewPanel } from "./review-panel";
 import { PaymentReviewPanel } from "./payment-review-panel";
@@ -45,6 +47,8 @@ export default async function AdminRequestDetailPage({
 
   const showEmployeeReview = canReviewRequests && request.status === "submitted";
   const payment = canVerifyPayments && request.status !== "draft" && request.status !== "submitted" ? await getPaymentForRequest(requestId) : null;
+  const admins = await listAssignableAdmins(request.companyRegion);
+  const courseOptions = (await listCourses()).filter((c) => c.active);
 
   const [items, requestDocs] = showEmployeeReview
     ? await Promise.all([getRequestItems(requestId), getRequestLevelDocuments(requestId)])
@@ -77,6 +81,19 @@ export default async function AdminRequestDetailPage({
           locale={locale}
         />
       ) : null}
+      {/* Sequential, not Promise.all — concurrent Drizzle calls stall against
+          the Supabase pooler (see db/index.ts). */}
+      <RequestOwnershipPanel
+        requestId={request.id}
+        status={request.status}
+        assignedAdminUserId={request.assignedAdminUserId}
+        assignedAdminName={request.assignedAdminName}
+        admins={admins.map((a) => ({ userId: a.user_id, fullName: a.full_name, region: a.region }))}
+        courseId={request.courseId}
+        courses={courseOptions}
+        locale={locale}
+      />
+
       {payment ? (
         <PaymentReviewPanel
           requestId={request.id}

@@ -59,7 +59,8 @@ export default async function TrainerClassDetailPage({
         sessionDates={sessionDates}
         attendance={attendanceRows}
         examResults={examResultRows}
-        hasExam={course?.examId != null}
+        hasExam={course?.examRequired === true}
+        passMark={course?.passMark ?? null}
         locale={locale}
       />
     </div>

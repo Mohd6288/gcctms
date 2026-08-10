@@ -24,6 +24,11 @@ export function CreateCourseForm() {
   const [durationHours, setDurationHours] = useState("8");
   const [minAttendancePct, setMinAttendancePct] = useState("90");
   const [contractorCategory, setContractorCategory] = useState<(typeof CONTRACTOR_CATEGORIES)[number] | "">("");
+  // Replaces the old Exams screen (0035): a course now carries whether it is
+  // examined and the mark that passes it, and the trainer's entry is measured
+  // against this rather than being their call.
+  const [examRequired, setExamRequired] = useState(false);
+  const [passMark, setPassMark] = useState("70");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +45,8 @@ export function CreateCourseForm() {
         durationHours: Number(durationHours),
         minAttendancePct: Number(minAttendancePct),
         contractorCategory: contractorCategory || undefined,
+        examRequired,
+        passMark: examRequired ? Number(passMark) : undefined,
       });
       setCode("");
       setTitleEn("");
@@ -104,6 +111,26 @@ export function CreateCourseForm() {
               ))}
             </select>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="examRequired">{t("examLabel")}</Label>
+            <label className="flex h-8 items-center gap-2 text-sm">
+              <input
+                id="examRequired"
+                type="checkbox"
+                className="size-3.5"
+                checked={examRequired}
+                onChange={(e) => setExamRequired(e.target.checked)}
+              />
+              {t("examRequiredLabel")}
+            </label>
+          </div>
+          {examRequired ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="passMark">{t("passMarkLabel")}</Label>
+              <Input id="passMark" type="number" min="0" max="100" required value={passMark} onChange={(e) => setPassMark(e.target.value)} />
+              <p className="text-xs text-muted-foreground">{t("passMarkHint")}</p>
+            </div>
+          ) : null}
       <div className={CREATE_ACTIONS}>
         <Button type="submit" disabled={loading}>
           {loading ? t("submitting") : t("submit")}

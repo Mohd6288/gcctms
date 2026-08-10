@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { AuthContext } from "../../modules/platform/auth/shared";
 import {
   createCourse,
-  createExam,
   createPricing,
   createTrainer,
   createTrainingCenter,
@@ -27,22 +26,18 @@ describe("catalog service — non-super_admin roles denied at authorize(), befor
   for (const context of nonSuperAdminContexts) {
     it(`${context.role} cannot createCourse`, async () => {
       await expect(
-        createCourse(context, { code: "X", titleEn: "x", titleAr: "x", durationHours: 1, minAttendancePct: 90 })
+        createCourse(context, { code: "X", titleEn: "x", titleAr: "x", durationHours: 1, minAttendancePct: 90, examRequired: false })
       ).rejects.toThrow("Not authorized");
     });
 
     it(`${context.role} cannot updateCourse`, async () => {
       await expect(
-        updateCourse(context, { courseId: 1, code: "X", titleEn: "x", titleAr: "x", durationHours: 1, minAttendancePct: 90, active: true })
+        updateCourse(context, { courseId: 1, code: "X", titleEn: "x", titleAr: "x", durationHours: 1, minAttendancePct: 90, examRequired: false, active: true })
       ).rejects.toThrow("Not authorized");
     });
 
     it(`${context.role} cannot setCourseJobRoles`, async () => {
       await expect(setCourseJobRoles(context, { courseId: 1, jobRoleIds: [1] })).rejects.toThrow("Not authorized");
-    });
-
-    it(`${context.role} cannot createExam`, async () => {
-      await expect(createExam(context, { code: "X", title: "x", passMark: 70 })).rejects.toThrow("Not authorized");
     });
 
     it(`${context.role} cannot createTrainingCenter`, async () => {

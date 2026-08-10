@@ -56,3 +56,9 @@ export const EnrollRequestItemInput = z.object({
   classId: z.number().int().positive(),
 });
 export type EnrollRequestItemInput = z.infer<typeof EnrollRequestItemInput>;
+
+export const MoveEnrollmentInput = z.object({
+  enrollmentId: z.coerce.number().int().positive(),
+  toClassId: z.coerce.number().int().positive(),
+});
+export type MoveEnrollmentInput = z.infer<typeof MoveEnrollmentInput>;

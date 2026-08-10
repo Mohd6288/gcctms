@@ -2,13 +2,13 @@
 import "server-only";
 import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { classEnrollments, classes, companies, employees, regionalAdminAssignments, requestItems, trainerCourses, trainingRequests } from "@/db/schema";
+import { attendance, certificates, classEnrollments, classes, companies, employees, examResults, regionalAdminAssignments, requestItems, trainerCourses, trainingRequests } from "@/db/schema";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { REGIONS as REGIONS_ORDER } from "@/lib/regions";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { getTrainerEmail, queueNotification } from "@/modules/platform/notifications/service";
 import { listActiveEnrollmentRequestItemIds, listSchedulableRequestItems } from "./queries";
-import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, SetAdminRegionInput, UpdateClassInput } from "./schema";
+import type { AssignRequestItemRegionInput, CancelClassInput, CreateClassInput, EnrollRequestItemInput, MoveEnrollmentInput, SetAdminRegionInput, UpdateClassInput } from "./schema";
 
 function requireScheduleAccess(context: AuthContext | null) {
   if (!authorize("schedule_classes", context)) throw new Error("Not authorized");
@@ -318,6 +318,91 @@ async function promoteFromWaitlist(classId: number, seatsFreed: number) {
 
 // Roster removal (not a waitlist removal) — frees a seat, so this promotes
 // the next waitlisted employee, matching the validated prototype.
+
+// Move an already-enrolled employee to a different class.
+//
+// An UPDATE of class_id rather than remove-then-enroll: the enrollment id
+// stays stable, so request_items.status and anything pointing at the
+// enrollment survive the move intact.
+//
+// The hard rule is that delivery records belong to the class they happened
+// in. Once attendance, a result, or a certificate exists, the move is
+// refused — moving would either strand those records against a class the
+// employee is no longer in, or quietly delete evidence a certificate was
+// issued on. Withdraw and re-enroll is the honest path there, and it leaves
+// both halves visible.
+export async function moveEnrollment(context: AuthContext, input: MoveEnrollmentInput) {
+  requireScheduleAccess(context);
+
+  const [enrollment] = await db.select().from(classEnrollments).where(eq(classEnrollments.id, input.enrollmentId));
+  if (!enrollment) throw new Error("Enrollment not found.");
+  if (enrollment.classId === input.toClassId) return;
+
+  const from = await getClassOrThrow(enrollment.classId);
+  const to = await getClassOrThrow(input.toClassId);
+  if (to.status === "cancelled" || to.status === "completed") {
+    throw new Error(`Can't move anyone into a class that's ${to.status}.`);
+  }
+  if (to.courseId !== from.courseId) {
+    throw new Error("The other class teaches a different course. Withdraw the employee and enroll them from the scheduling board instead.");
+  }
+
+  const [attendanceRow] = await db
+    .select({ id: attendance.id })
+    .from(attendance)
+    .where(and(eq(attendance.classId, enrollment.classId), eq(attendance.employeeId, enrollment.employeeId)))
+    .limit(1);
+  if (attendanceRow) {
+    throw new Error("This employee already has attendance recorded on this class. Withdraw them instead, then enroll them in the new class.");
+  }
+
+  const [resultRow] = await db.select({ id: examResults.id }).from(examResults).where(eq(examResults.enrollmentId, enrollment.id)).limit(1);
+  if (resultRow) {
+    throw new Error("This employee already has an exam result on this class. Withdraw them instead, then enroll them in the new class.");
+  }
+
+  const [certificateRow] = await db
+    .select({ id: certificates.id })
+    .from(certificates)
+    .where(and(eq(certificates.classId, enrollment.classId), eq(certificates.employeeId, enrollment.employeeId)))
+    .limit(1);
+  if (certificateRow) throw new Error("A certificate already exists for this employee on this class.");
+
+  // Refuse a full class rather than silently landing them on its waitlist —
+  // a move that quietly becomes a waitlist entry reads as "done" and isn't.
+  const [{ value: enrolledCount }] = await db
+    .select({ value: count() })
+    .from(classEnrollments)
+    .where(and(eq(classEnrollments.classId, input.toClassId), eq(classEnrollments.status, "enrolled")));
+  if (enrolledCount >= to.capacity) {
+    throw new Error(`That class is full (${enrolledCount}/${to.capacity}). Raise its capacity first, or pick another.`);
+  }
+
+  // class_enrollments has unique (class_id, employee_id).
+  const [clash] = await db
+    .select({ id: classEnrollments.id })
+    .from(classEnrollments)
+    .where(and(eq(classEnrollments.classId, input.toClassId), eq(classEnrollments.employeeId, enrollment.employeeId)));
+  if (clash) throw new Error("This employee is already on that class.");
+
+  await db
+    .update(classEnrollments)
+    .set({ classId: input.toClassId, status: "enrolled", attendancePct: null, updatedAt: new Date() })
+    .where(eq(classEnrollments.id, enrollment.id));
+
+  await writeAudit({
+    userId: context.userId,
+    entityType: "class_enrollment",
+    entityId: enrollment.id,
+    action: "move",
+    note: `class ${enrollment.classId} -> ${input.toClassId} (employee ${enrollment.employeeId})`,
+  });
+
+  await notifyEnrolled(input.toClassId, enrollment.companyId, to.trainerId, enrollment.employeeId);
+  // The seat freed on the old class goes to whoever was waiting for it.
+  await promoteFromWaitlist(enrollment.classId, 1);
+}
+
 export async function removeEnrollment(context: AuthContext, enrollmentId: number) {
   requireScheduleAccess(context);
   const [enrollment] = await db.select().from(classEnrollments).where(eq(classEnrollments.id, enrollmentId));

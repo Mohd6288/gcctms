@@ -13,6 +13,7 @@ import { approveAllPendingForClassAction, approveCertificateAction } from "@/mod
 import {
   cancelClassAction,
   enrollRequestItemAction,
+  moveEnrollmentAction,
   removeEnrollmentAction,
   removeFromWaitlistAction,
   startClassAction,
@@ -73,6 +74,7 @@ export function ClassDetail({
   centers,
   availablePool,
   pendingCertificates,
+  moveTargets,
   locale,
 }: {
   cls: ClassData;
@@ -82,6 +84,8 @@ export function ClassDetail({
   centers: CenterOption[];
   availablePool: PooledItem[];
   pendingCertificates: PendingCertificate[];
+  /** Other open classes for this same course an employee can be moved to. */
+  moveTargets: { id: number; startDate: string; trainerName: string; enrolled: number; capacity: number }[];
   locale: string;
 }) {
   const t = useTranslations("admin.classes.detail");
@@ -278,9 +282,35 @@ export function ClassDetail({
                     {locale === "ar" ? e.employeeFullNameAr : e.employeeFullNameEn} — {e.companyName}
                   </span>
                   {!isLocked ? (
-                    <Button type="button" size="sm" variant="ghost" disabled={loading === `remove-${e.id}`} onClick={() => run(`remove-${e.id}`, () => removeEnrollmentAction(e.id))}>
-                      {t("remove")}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {/* Wrong class, or a date that no longer suits them —
+                          an ordinary correction that used to mean removing
+                          the employee and finding them again on the
+                          scheduling board. Refused server-side once
+                          attendance or a result exists, because those belong
+                          to the class they happened in. */}
+                      {moveTargets.length > 0 ? (
+                        <select
+                          className="h-7 rounded-lg border border-input bg-transparent px-2 text-xs outline-none focus-visible:border-ring"
+                          value=""
+                          disabled={loading === `move-${e.id}`}
+                          onChange={(event) => {
+                            const toClassId = Number(event.target.value);
+                            if (toClassId) run(`move-${e.id}`, () => moveEnrollmentAction({ enrollmentId: e.id, toClassId }));
+                          }}
+                        >
+                          <option value="">{t("moveTo")}</option>
+                          {moveTargets.map((target) => (
+                            <option key={target.id} value={target.id}>
+                              {target.startDate} — {target.trainerName} ({target.enrolled}/{target.capacity})
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                      <Button type="button" size="sm" variant="ghost" disabled={loading === `remove-${e.id}`} onClick={() => run(`remove-${e.id}`, () => removeEnrollmentAction(e.id))}>
+                        {t("remove")}
+                      </Button>
+                    </div>
                   ) : null}
                 </li>
               ))}

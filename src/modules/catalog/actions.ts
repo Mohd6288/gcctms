@@ -9,7 +9,6 @@ import {
   CreateCityInput,
   SetCityActiveInput,
   CreateCourseInput,
-  CreateExamInput,
   CreatePricingInput,
   CreateTrainerInput,
   CreateTrainerLoginInput,
@@ -17,7 +16,6 @@ import {
   SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
   UpdateCourseInput,
-  UpdateExamInput,
   UpdateTrainerInput,
   UpdateTrainingCenterInput,
 } from "./schema";
@@ -25,7 +23,6 @@ import {
   createCity,
   setCityActive,
   createCourse,
-  createExam,
   createPricing,
   createTrainer,
   createTrainerLogin,
@@ -35,7 +32,6 @@ import {
   setCoursePrerequisites,
   setCourseJobRoles,
   updateCourse,
-  updateExam,
   updateTrainer,
   updateTrainingCenter,
 } from "./service";
@@ -64,16 +60,6 @@ export async function setCourseJobRolesAction(input: SetCourseJobRolesInput) {
 export async function setCoursePrerequisitesAction(input: SetCoursePrerequisitesInput) {
   const context = await requireContext();
   return setCoursePrerequisites(context, SetCoursePrerequisitesInput.parse(input));
-}
-
-export async function createExamAction(input: CreateExamInput) {
-  const context = await requireContext();
-  return createExam(context, CreateExamInput.parse(input));
-}
-
-export async function updateExamAction(input: UpdateExamInput) {
-  const context = await requireContext();
-  return updateExam(context, UpdateExamInput.parse(input));
 }
 
 export async function createTrainingCenterAction(input: CreateTrainingCenterInput) {

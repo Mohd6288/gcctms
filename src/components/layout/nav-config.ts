@@ -59,7 +59,6 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { key: "catalog", href: "/superadmin/catalog", icon: Settings },
     { key: "centers", href: "/superadmin/centers", icon: Building2 },
     { key: "cities", href: "/superadmin/cities", icon: MapPin },
-    { key: "exams", href: "/superadmin/exams", icon: FileText },
     { key: "trainers", href: "/superadmin/trainers", icon: GraduationCap },
     { key: "users", href: "/superadmin/users", icon: ShieldCheck },
   ],

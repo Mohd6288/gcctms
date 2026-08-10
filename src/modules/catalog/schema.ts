@@ -13,7 +13,11 @@ export const CreateCourseInput = z.object({
   description: z.string().optional(),
   durationHours: z.number().positive(),
   minAttendancePct: z.number().int().min(1).max(100).default(90),
-  examId: z.number().int().positive().optional(),
+  // The course says whether it is examined and at what mark (0035). A pass
+  // mark without exam_required, or the reverse, is rejected by the DB check
+  // constraint too.
+  examRequired: z.boolean().default(false),
+  passMark: z.number().int().min(0).max(100).optional(),
   validityMonths: z.number().int().positive().optional(),
   contractorCategory: z.enum(CONTRACTOR_CATEGORIES).optional(),
 });
@@ -37,18 +41,6 @@ export const SetCoursePrerequisitesInput = z.object({
 });
 export type SetCoursePrerequisitesInput = z.infer<typeof SetCoursePrerequisitesInput>;
 
-export const CreateExamInput = z.object({
-  code: z.string().min(1),
-  title: z.string().min(1),
-  passMark: z.number().int().min(0).max(100),
-});
-export type CreateExamInput = z.infer<typeof CreateExamInput>;
-
-export const UpdateExamInput = CreateExamInput.extend({
-  examId: z.number().int().positive(),
-  active: z.boolean(),
-});
-export type UpdateExamInput = z.infer<typeof UpdateExamInput>;
 
 export const CreateTrainingCenterInput = z.object({
   name: z.string().min(1),

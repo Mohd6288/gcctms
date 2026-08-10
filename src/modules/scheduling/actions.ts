@@ -6,6 +6,7 @@ import {
   CancelClassInput,
   CreateClassInput,
   EnrollRequestItemInput,
+  MoveEnrollmentInput,
   SetAdminRegionInput,
   UpdateClassInput,
 } from "./schema";
@@ -15,6 +16,7 @@ import {
   cancelClass,
   createClass,
   enrollRequestItem,
+  moveEnrollment,
   removeEnrollment,
   removeFromWaitlist,
   setAdminRegion,
@@ -27,6 +29,11 @@ async function requireContext() {
   const context = await getContext();
   if (!context) throw new Error("Not authorized");
   return context;
+}
+
+export async function moveEnrollmentAction(input: MoveEnrollmentInput) {
+  const context = await requireContext();
+  return moveEnrollment(context, MoveEnrollmentInput.parse(input));
 }
 
 export async function assignRequestItemRegionAction(input: AssignRequestItemRegionInput) {

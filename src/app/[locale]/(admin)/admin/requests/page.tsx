@@ -19,7 +19,7 @@ export default async function AdminRequestsPage({
   const t = await getTranslations("admin.requests");
 
   const context = await getContext();
-  const requests = authorize("review_requests", context) ? await listSubmittedRequestsForAdmin(context?.region) : [];
+  const requests = authorize("review_requests", context) ? await listSubmittedRequestsForAdmin(context?.region, context?.userId) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -38,7 +38,7 @@ export default async function AdminRequestsPage({
           <tbody>
             {requests.length === 0 ? (
               <tr>
-                <td className="p-3 text-muted-foreground" colSpan={4}>
+                <td className="p-3 text-muted-foreground" colSpan={5}>
                   {t("empty")}
                 </td>
               </tr>
@@ -47,6 +47,15 @@ export default async function AdminRequestsPage({
                 <tr key={request.id} className="border-b border-border last:border-0">
                   <td className="p-3">{request.companyName}</td>
                   <td className="p-3">{locale === "ar" ? request.courseTitleAr : request.courseTitleEn}</td>
+                  <td className="p-3">
+                    {request.assignedAdminName ? (
+                      <span className={request.assignedAdminUserId === context?.userId ? "font-medium" : "text-muted-foreground"}>
+                        {request.assignedAdminUserId === context?.userId ? t("assignedToMe") : request.assignedAdminName}
+                      </span>
+                    ) : (
+                      <span className="text-warning">{t("assignedNobody")}</span>
+                    )}
+                  </td>
                   <td className="p-3">{new Date(request.createdAt).toLocaleDateString(locale)}</td>
                   <td className="p-3">
                     <Button asChild size="sm" variant="outline">

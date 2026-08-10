@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { cities, courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainerCourses, trainers, trainingCenters } from "@/db/schema";
+import { cities, courseJobRoles, coursePrerequisites, courses, pricing, profiles, trainerCourses, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -12,14 +12,12 @@ import type {
   CreateTrainerLoginInput,
   SetCityActiveInput,
   CreateCourseInput,
-  CreateExamInput,
   CreatePricingInput,
   CreateTrainerInput,
   CreateTrainingCenterInput,
   SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
   UpdateCourseInput,
-  UpdateExamInput,
   UpdateTrainerInput,
   UpdateTrainingCenterInput,
 } from "./schema";
@@ -47,7 +45,8 @@ export async function createCourse(context: AuthContext, input: CreateCourseInpu
       description: input.description,
       durationHours: String(input.durationHours),
       minAttendancePct: input.minAttendancePct,
-      examId: input.examId,
+      examRequired: input.examRequired,
+      passMark: input.examRequired ? input.passMark : null,
       validityMonths: input.validityMonths,
       contractorCategory: input.contractorCategory,
     })
@@ -67,7 +66,8 @@ export async function updateCourse(context: AuthContext, input: UpdateCourseInpu
       description: input.description,
       durationHours: String(input.durationHours),
       minAttendancePct: input.minAttendancePct,
-      examId: input.examId ?? null,
+      examRequired: input.examRequired,
+      passMark: input.examRequired ? input.passMark : null,
       validityMonths: input.validityMonths ?? null,
       contractorCategory: input.contractorCategory ?? null,
       active: input.active,
@@ -132,22 +132,6 @@ export async function setCoursePrerequisites(context: AuthContext, input: SetCou
     await db.insert(coursePrerequisites).values(toAdd.map((prerequisiteCourseId) => ({ courseId: input.courseId, prerequisiteCourseId })));
   }
   await writeAudit({ userId: context.userId, entityType: "course", entityId: input.courseId, action: "set_prerequisites" });
-}
-
-export async function createExam(context: AuthContext, input: CreateExamInput) {
-  requireCatalogAccess(context);
-  const [exam] = await db.insert(exams).values(input).returning({ id: exams.id });
-  await writeAudit({ userId: context.userId, entityType: "exam", entityId: exam.id, action: "create" });
-  return exam;
-}
-
-export async function updateExam(context: AuthContext, input: UpdateExamInput) {
-  requireCatalogAccess(context);
-  await db
-    .update(exams)
-    .set({ code: input.code, title: input.title, passMark: input.passMark, active: input.active })
-    .where(eq(exams.id, input.examId));
-  await writeAudit({ userId: context.userId, entityType: "exam", entityId: input.examId, action: "update" });
 }
 
 export async function createTrainingCenter(context: AuthContext, input: CreateTrainingCenterInput) {

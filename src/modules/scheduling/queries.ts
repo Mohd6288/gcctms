@@ -1,6 +1,6 @@
 // scheduling module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   classEnrollments,
@@ -90,6 +90,30 @@ export async function listClasses(region?: string | null) {
     .innerJoin(courses, eq(classes.courseId, courses.id))
     .innerJoin(trainers, eq(classes.trainerId, trainers.id))
     .where(region ? eq(classes.region, region) : undefined)
+    .orderBy(asc(classes.startDate));
+}
+
+// Other open classes teaching the same course that an employee could be moved
+// to. Same course only: a different course is a different request, not a
+// reschedule.
+export async function listMoveTargets(classId: number) {
+  return db
+    .select({
+      id: classes.id,
+      startDate: classes.startDate,
+      trainerName: trainers.fullName,
+      capacity: classes.capacity,
+      enrolled: sql<number>`(select count(*)::int from class_enrollments ce where ce.class_id = ${classes.id} and ce.status = 'enrolled')`,
+    })
+    .from(classes)
+    .innerJoin(trainers, eq(classes.trainerId, trainers.id))
+    .where(
+      and(
+        ne(classes.id, classId),
+        inArray(classes.status, ["scheduled", "in_progress"]),
+        eq(classes.courseId, sql`(select course_id from classes where id = ${classId})`)
+      )
+    )
     .orderBy(asc(classes.startDate));
 }
 

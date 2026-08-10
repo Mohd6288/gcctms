@@ -52,8 +52,11 @@ export async function setExamResult(context: AuthContext, input: SetExamResultIn
   const cls = await getOwnedClassOrThrow(context, input.classId);
   if (cls.status !== "in_progress") throw new Error(`Can't record results for a class that's ${cls.status}.`);
 
-  const [course] = await db.select({ examId: courses.examId }).from(courses).where(eq(courses.id, cls.courseId));
-  if (!course?.examId) throw new Error("This course has no exam configured.");
+  const [course] = await db
+    .select({ examRequired: courses.examRequired, passMark: courses.passMark })
+    .from(courses)
+    .where(eq(courses.id, cls.courseId));
+  if (!course?.examRequired || course.passMark == null) throw new Error("This course is not examined.");
 
   const [enrollment] = await db
     .select({ id: classEnrollments.id })
@@ -64,8 +67,20 @@ export async function setExamResult(context: AuthContext, input: SetExamResultIn
   const [latest] = await db.select({ attemptNo: examResults.attemptNo }).from(examResults).where(eq(examResults.enrollmentId, enrollment.id)).orderBy(desc(examResults.attemptNo)).limit(1);
   const attemptNo = (latest?.attemptNo ?? 0) + 1;
 
-  await db.insert(examResults).values({ enrollmentId: enrollment.id, examId: course.examId, score: input.score, result: input.result, attemptNo, recordedBy: context.userId });
-  await writeAudit({ userId: context.userId, entityType: "exam_result", entityId: enrollment.id, action: "record", note: `${input.result} (attempt ${attemptNo})` });
+  // Derived, never submitted. Until 0035 the trainer pressed Pass or Fail and
+  // the score was recorded beside it without ever being compared to the pass
+  // mark — so a 40 could be filed as a pass on a 70 course. The mark exists
+  // precisely so this is not a per-candidate judgement call.
+  const result = input.score >= course.passMark ? "pass" : "fail";
+
+  await db.insert(examResults).values({ enrollmentId: enrollment.id, score: input.score, result, attemptNo, recordedBy: context.userId });
+  await writeAudit({
+    userId: context.userId,
+    entityType: "exam_result",
+    entityId: enrollment.id,
+    action: "record",
+    note: `${result} — ${input.score}/${course.passMark} (attempt ${attemptNo})`,
+  });
 }
 
 // A request's employees can span multiple classes — completed is derived

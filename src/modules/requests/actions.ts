@@ -3,7 +3,9 @@
 import { getContext } from "@/modules/platform/auth/service";
 import {
   ApproveRequestInput,
+  ChangeRequestCourseInput,
   CreateDraftRequestInput,
+  ReassignRequestInput,
   RejectRequestDocumentInput,
   RejectRequestInput,
   RequestMoreInfoInput,
@@ -14,8 +16,10 @@ import {
 } from "./schema";
 import {
   approveRequest,
+  changeRequestCourse,
   closeRequest,
   createDraftRequest,
+  reassignRequest,
   rejectRequest,
   rejectRequestDocument,
   requestMoreInfo,
@@ -50,6 +54,16 @@ export async function syncRequestItemsAction(input: SyncRequestItemsInput) {
 export async function submitRequestAction(requestId: number) {
   const context = await requireContext();
   return submitRequest(context, requestId);
+}
+
+export async function reassignRequestAction(input: ReassignRequestInput) {
+  const context = await requireContext();
+  return reassignRequest(context, ReassignRequestInput.parse(input));
+}
+
+export async function changeRequestCourseAction(input: ChangeRequestCourseInput) {
+  const context = await requireContext();
+  return changeRequestCourse(context, ChangeRequestCourseInput.parse(input));
 }
 
 export async function setEmployeeDecisionAction(input: SetEmployeeDecisionInput) {

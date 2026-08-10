@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { timestamptz } from "./_helpers";
 import { companies, employees, trainers } from "./auth";
-import { courses, exams, trainingCenters } from "./catalog";
+import { courses, trainingCenters } from "./catalog";
 import { requestItems } from "./requests";
 
 export const classes = pgTable(
@@ -102,7 +102,6 @@ export const examResults = pgTable(
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     enrollmentId: bigint("enrollment_id", { mode: "number" }).notNull().references(() => classEnrollments.id),
-    examId: bigint("exam_id", { mode: "number" }).notNull().references(() => exams.id),
     score: integer("score").notNull(),
     result: text("result").notNull(),
     attemptNo: integer("attempt_no").notNull().default(1),

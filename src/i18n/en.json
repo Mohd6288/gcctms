@@ -22,7 +22,6 @@
       "reports": "Reports",
       "catalog": "Course Catalog",
       "centers": "Training Centers",
-      "exams": "Exams",
       "trainers": "Trainers",
       "users": "Users",
       "training": "My Training",
@@ -574,7 +573,26 @@
         "verifyIqama": "Verify this Iqama",
         "iqamaMissing": "No Iqama has been uploaded for this employee — the contractor must upload one, or reject them on this request."
       },
-      "regionScopedNote": "Showing only requests in the {region} region."
+      "regionScopedNote": "Showing only requests in the {region} region.",
+      "ownership": {
+        "title": "Ownership and course",
+        "assignedTo": "Assigned to {name}",
+        "unassigned": "Not assigned to anyone yet — anyone in this region can pick it up.",
+        "assigneeLabel": "Assigned admin",
+        "assigneeNone": "Unassigned (anyone in the region)",
+        "adminUnscoped": "all regions",
+        "assignAction": "Save assignment",
+        "assignDone": "Assignment updated.",
+        "courseLabel": "Course",
+        "courseAction": "Change course",
+        "courseDone": "Course changed. Every employee on this request was re-checked against it.",
+        "courseLocked": "The course can only be changed before approval — a price and a quotation already exist for this one.",
+        "saving": "Saving…",
+        "genericError": "Something went wrong. Please try again."
+      },
+      "tableAssignee": "Assigned to",
+      "assignedToMe": "You",
+      "assignedNobody": "Unassigned"
     },
     "payments": {
       "title": "Payment Verification Queue",
@@ -675,7 +693,8 @@
         "pendingCertsTitle": "Pending Certificate Releases ({count})",
         "releaseAll": "Release All",
         "release": "Release",
-        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}"
+        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}",
+        "moveTo": "Move to…"
       },
       "regionScopedNote": "Showing only classes in the {region} region.",
       "trainerSelect": {
@@ -882,7 +901,7 @@
       "descriptionLabel": "Description (optional)",
       "durationLabel": "Duration (hours)",
       "minAttendanceLabel": "Minimum attendance %",
-      "examLabel": "Exam (optional)",
+      "examLabel": "Exam",
       "examNone": "No exam",
       "validityMonthsLabel": "Validity (months, optional)",
       "contractorCategoryLabel": "Contractor category (optional)",
@@ -913,28 +932,10 @@
       "tableEffectiveTo": "To",
       "description": "Every course GCC Lab delivers, with its duration, exam, prerequisites and eligible job roles.",
       "addAction": "Add course",
-      "cancel": "Cancel"
-    },
-    "exams": {
-      "title": "Exams",
-      "addNew": "Add exam",
-      "tableCode": "Code",
-      "tableTitle": "Title",
-      "tablePassMark": "Pass mark",
-      "tableStatus": "Status",
-      "statusActive": "Active",
-      "statusInactive": "Inactive",
-      "empty": "No exams yet.",
-      "createTitle": "Add exam",
-      "codeLabel": "Code",
-      "titleLabel": "Title",
+      "cancel": "Cancel",
+      "examRequiredLabel": "This course is examined",
       "passMarkLabel": "Pass mark",
-      "submit": "Save",
-      "submitting": "Saving…",
-      "genericError": "Could not save exam. Please try again.",
-      "description": "The exams courses are assessed by. A course points at one exam, and its pass mark decides certification.",
-      "addAction": "Add exam",
-      "cancel": "Cancel"
+      "passMarkHint": "A trainer records a score; anything at or above this is a pass."
     },
     "centers": {
       "title": "Training Centers",
@@ -1057,7 +1058,9 @@
       "pass": "Pass",
       "fail": "Fail",
       "submit": "Submit Results",
-      "submitting": "Submitting…"
+      "submitting": "Submitting…",
+      "saveScore": "Save score",
+      "passMarkNote": "pass ≥ {mark}"
     }
   },
   "auditor": {

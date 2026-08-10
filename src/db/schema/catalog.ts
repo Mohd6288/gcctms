@@ -3,16 +3,6 @@ import { bigint, boolean, check, date, index, integer, numeric, pgTable, primary
 import { timestamptz } from "./_helpers";
 import { jobRoles } from "./auth";
 
-export const exams = pgTable("exams", {
-  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-  code: text("code").notNull().unique(),
-  title: text("title").notNull(),
-  passMark: integer("pass_mark").notNull(),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
-});
-
 export const courses = pgTable(
   "courses",
   {
@@ -27,7 +17,11 @@ export const courses = pgTable(
     description: text("description"),
     durationHours: numeric("duration_hours", { precision: 5, scale: 2 }).notNull(),
     minAttendancePct: integer("min_attendance_pct").notNull().default(90),
-    examId: bigint("exam_id", { mode: "number" }).references(() => exams.id),
+    // Whether this course is examined and the mark that passes it (0035).
+    // Replaces the separate `exams` entity, which existed only to hold these
+    // two values and whose pass mark nothing ever enforced.
+    examRequired: boolean("exam_required").notNull().default(false),
+    passMark: integer("pass_mark"),
     validityMonths: integer("validity_months"),
     contractorCategory: text("contractor_category"),
     active: boolean("active").notNull().default(true),
@@ -35,7 +29,6 @@ export const courses = pgTable(
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("courses_exam_id_idx").on(t.examId),
     check(
       "courses_contractor_category_check",
       sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
