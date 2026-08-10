@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { createClassAction } from "@/modules/scheduling/actions";
 import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
+import { courseDurationDays, endDateFor } from "@/lib/course-duration";
 import { REGIONS } from "@/lib/regions";
 
 const CLASS_TYPES = ["public", "private"] as const;
@@ -20,6 +21,7 @@ interface CourseOption {
   code: string;
   titleEn: string;
   titleAr: string;
+  durationHours: string;
 }
 interface CenterOption {
   id: number;
@@ -63,8 +65,24 @@ export function NewClassForm({
 
   // Changing the course changes who is certified, so a trainer left selected
   // from the previous course would quietly become an unflagged override.
+  const selectedCourse = courses.find((c) => c.id === courseId);
+  const durationDays = selectedCourse ? courseDurationDays(selectedCourse.durationHours) : 1;
+
+  // Picking a start date fills the end date from the course's own duration —
+  // a one-day course ends the day it starts. Still editable afterwards: a
+  // class can run over a weekend or a holiday, and this is a head start, not
+  // a rule.
+  function handleStartDateChange(nextStart: string) {
+    setStartDate(nextStart);
+    if (selectedCourse) setEndDate(endDateFor(nextStart, selectedCourse.durationHours));
+  }
+
   function handleCourseChange(nextCourseId: number) {
     setCourseId(nextCourseId);
+    // The new course may be a different length, so the end date it implies
+    // changes too.
+    const course = courses.find((c) => c.id === nextCourseId);
+    if (course && startDate) setEndDate(endDateFor(startDate, course.durationHours));
     const next = firstQualified(nextCourseId);
     if (next !== undefined) {
       setTrainerId(next);
@@ -182,13 +200,16 @@ export function NewClassForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="startDate">{t("startDateLabel")}</Label>
-            <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input id="startDate" type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="endDate">{t("endDateLabel")}</Label>
-            <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input id="endDate" type="date" min={startDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
+        <p className="-mt-2 text-xs text-muted-foreground">
+          {t("durationHint", { days: durationDays, hours: Number(selectedCourse?.durationHours ?? 0) })}
+        </p>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="capacity">{t("capacityLabel")}</Label>
           <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />

@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Button } from "@/components/ui/button";
 import { Link, redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
@@ -34,6 +35,7 @@ export default async function ContractorPaymentsPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
       <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">
           <thead>
@@ -60,9 +62,9 @@ export default async function ContractorPaymentsPage({
                   <td className="p-3">{payment.dueDate ?? "—"}</td>
                   <td className="p-3">{statusLabels[payment.status] ?? payment.status}</td>
                   <td className="p-3">
-                    <Link href={`/dashboard/requests/${payment.requestId}`} className="text-primary hover:underline">
-                      {t("view")}
-                    </Link>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/dashboard/requests/${payment.requestId}`}>{t("view")}</Link>
+                    </Button>
                   </td>
                 </tr>
               ))

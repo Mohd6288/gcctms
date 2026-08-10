@@ -338,7 +338,8 @@
         "quotationHint": "This is the official quotation from GCC Lab. Pay the amount it states using the payment details it contains, then upload your receipt below.",
         "awaitingQuotationTitle": "Waiting for your quotation",
         "awaitingQuotationHint": "The amount above is an estimate from the course price list. GCC Lab is preparing your official quotation — it will appear here with the final amount and the payment details. You can upload your receipt once it arrives."
-      }
+      },
+      "description": "Your training requests, from draft through to scheduled classes."
     },
     "employees": {
       "title": "Employees",
@@ -367,7 +368,9 @@
       "submit": "Save",
       "submitting": "Saving…",
       "genericError": "Could not save employee. Please try again.",
-      "backToList": "Back to employees"
+      "backToList": "Back to employees",
+      "description": "Your workforce. Add employees here first — a training request can only include employees already on this list.",
+      "createDescription": "One record per worker. The Iqama number identifies them on every certificate GCC Lab issues, so enter it exactly as it appears on the card."
     },
     "documents": {
       "title": "Documents",
@@ -391,7 +394,8 @@
       "statusVerified": "Verified",
       "statusRejected": "Rejected",
       "empty": "No payments yet.",
-      "view": "View"
+      "view": "View",
+      "description": "Every invoice raised on your approved requests, and where each one stands."
     },
     "profile": {
       "title": "Company Profile",
@@ -416,7 +420,8 @@
       "crVerification": "CR Verification",
       "verified": "Verified",
       "pending": "Pending",
-      "contractorCategory": "Contractor Category"
+      "contractorCategory": "Contractor Category",
+      "description": "Your company's details as GCC Lab holds them. These appear on your certificates and invoices."
     },
     "certificates": {
       "title": "Certificates",
@@ -426,7 +431,8 @@
       "tableIssued": "Issued",
       "tableExpires": "Expires",
       "download": "Download",
-      "empty": "No certificates issued yet."
+      "empty": "No certificates issued yet.",
+      "description": "Certificates issued to your employees. Each one has a QR code that anyone can scan to verify it."
     },
     "training": {
       "title": "My Training",
@@ -627,7 +633,8 @@
         "capacityLabel": "Capacity",
         "submit": "Create class",
         "submitting": "Creating…",
-        "genericError": "Could not create class. Please try again."
+        "genericError": "Could not create class. Please try again.",
+        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}"
       },
       "detail": {
         "backToList": "Back to classes",
@@ -657,7 +664,8 @@
         "remove": "Remove",
         "pendingCertsTitle": "Pending Certificate Releases ({count})",
         "releaseAll": "Release All",
-        "release": "Release"
+        "release": "Release",
+        "durationHint": "{days, plural, =1 {One-day course (# hours of training) — the end date fills in automatically and stays editable.} other {# training days ({hours} hours) — the end date fills in automatically and stays editable.}}"
       },
       "regionScopedNote": "Showing only classes in the {region} region.",
       "trainerSelect": {
@@ -715,7 +723,8 @@
         "readyForScheduling": "Ready for scheduling",
         "scheduled": "Scheduled",
         "completed": "Completed"
-      }
+      },
+      "description": "Revenue, requests and certificates over the period you pick. Use the print button for a copy to circulate."
     },
     "externalCertificates": {
       "title": "Employee documents",
@@ -815,7 +824,8 @@
       "mfaEnrolled": "MFA set up",
       "mfaPending": "MFA not set up",
       "copyEmail": "Click to copy",
-      "copied": "Copied"
+      "copied": "Copied",
+      "description": "Platform accounts and the regions they cover. Also where you recover a locked-out admin."
     },
     "overview": {
       "title": "Platform Overview",
@@ -885,7 +895,8 @@
       "tableRegion": "Region",
       "tablePrice": "Price",
       "tableEffectiveFrom": "From",
-      "tableEffectiveTo": "To"
+      "tableEffectiveTo": "To",
+      "description": "Every course GCC Lab delivers, with its duration, exam, prerequisites and eligible job roles."
     },
     "exams": {
       "title": "Exams",
@@ -903,7 +914,8 @@
       "passMarkLabel": "Pass mark",
       "submit": "Save",
       "submitting": "Saving…",
-      "genericError": "Could not save exam. Please try again."
+      "genericError": "Could not save exam. Please try again.",
+      "description": "The exams courses are assessed by. A course points at one exam, and its pass mark decides certification."
     },
     "centers": {
       "title": "Training Centers",
@@ -922,7 +934,8 @@
       "capacityLabel": "Capacity (optional)",
       "submit": "Save",
       "submitting": "Saving…",
-      "genericError": "Could not save training center. Please try again."
+      "genericError": "Could not save training center. Please try again.",
+      "description": "The training centres where classes are held. A class can be assigned to one of these."
     },
     "trainers": {
       "title": "Trainer Roster",
@@ -963,7 +976,8 @@
       "edit": "Edit",
       "save": "Save",
       "saving": "Saving…",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "description": "Everyone who delivers GCC Lab courses. What you tick here decides which classes each trainer can be assigned to."
     },
     "cities": {
       "title": "Cities",
@@ -999,7 +1013,8 @@
       "statusScheduled": "Scheduled",
       "statusInProgress": "In progress",
       "statusCompleted": "Completed",
-      "empty": "No classes assigned yet."
+      "empty": "No classes assigned yet.",
+      "description": "Classes assigned to you. Open one to record attendance and exam results."
     },
     "classDetail": {
       "backToList": "Back to my classes",

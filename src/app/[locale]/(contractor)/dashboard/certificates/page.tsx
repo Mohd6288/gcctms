@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Button } from "@/components/ui/button";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getContext } from "@/modules/platform/auth/service";
@@ -32,6 +33,7 @@ export default async function ContractorCertificatesPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
       <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
         <table className="w-full text-sm">
           <thead>
@@ -62,9 +64,9 @@ export default async function ContractorCertificatesPage({
                   <td className="p-3">{cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString(locale) : "—"}</td>
                   <td className="p-3">{cert.expiresAt ? new Date(cert.expiresAt).toLocaleDateString(locale) : "—"}</td>
                   <td className="p-3">
-                    <a href={`/api/certificates/${cert.id}/download`} className="text-primary hover:underline">
-                      {t("download")}
-                    </a>
+                    <Button asChild size="sm" variant="outline">
+                      <a href={`/api/certificates/${cert.id}/download`}>{t("download")}</a>
+                    </Button>
                   </td>
                 </tr>
               ))

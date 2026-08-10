@@ -146,6 +146,7 @@ export function ReportsView({
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-lg font-semibold">{t("title")}</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">{t("description")}</p>
           <p className="text-xs text-muted-foreground">{resolvedDateRangeLabel({ mode, value } as never)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

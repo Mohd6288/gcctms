@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { TrainerSelect, type TrainerOption } from "@/components/scheduling/trainer-select";
+import { courseDurationDays, endDateFor } from "@/lib/course-duration";
 import { approveAllPendingForClassAction, approveCertificateAction } from "@/modules/certification/actions";
 import {
   cancelClassAction,
@@ -27,6 +28,7 @@ interface ClassData {
   courseCode: string;
   courseTitleEn: string;
   courseTitleAr: string;
+  courseDurationHours: string;
   trainerId: number;
   centerId: number | null;
   region: string;
@@ -100,6 +102,15 @@ export function ClassDetail({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
 
+  const durationDays = courseDurationDays(cls.courseDurationHours);
+
+  // Moving the start date moves the end date with it — the class is as long
+  // as its course. Editable afterwards, same as the create form.
+  function handleStartDateChange(nextStart: string) {
+    setStartDate(nextStart);
+    setEndDate(endDateFor(nextStart, cls.courseDurationHours));
+  }
+
   const isLocked = cls.status === "cancelled" || cls.status === "completed";
   const enrolled = enrollments.filter((e) => e.status === "enrolled");
   const waitlisted = enrollments.filter((e) => e.status === "waitlisted");
@@ -168,11 +179,21 @@ export function ClassDetail({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="startDate">{t("startDateLabel")}</Label>
-              <Input id="startDate" type="date" value={startDate} disabled={isLocked} onChange={(e) => setStartDate(e.target.value)} />
+              <Input id="startDate" type="date" value={startDate} disabled={isLocked} onChange={(e) => handleStartDateChange(e.target.value)} />
+              <p className="text-xs text-muted-foreground">
+                {t("durationHint", { days: durationDays, hours: Number(cls.courseDurationHours) })}
+              </p>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="endDate">{t("endDateLabel")}</Label>
-              <Input id="endDate" type="date" value={endDate} disabled={isLocked} onChange={(e) => setEndDate(e.target.value)} />
+              <Input
+                id="endDate"
+                type="date"
+                min={startDate || undefined}
+                value={endDate}
+                disabled={isLocked}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="capacity">{t("capacityLabel")}</Label>

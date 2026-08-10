@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
@@ -60,9 +61,9 @@ export default async function AdminPaymentsPage({
                     <td className="p-3 text-muted-foreground">{row.totalAmount} SAR</td>
                     <td className="p-3">{new Date(row.createdAt).toLocaleDateString(locale)}</td>
                     <td className="p-3">
-                      <Link href={`/admin/requests/${row.requestId}`} className="text-primary hover:underline">
-                        {t("uploadQuotation")}
-                      </Link>
+                      <Button asChild size="sm">
+                        <Link href={`/admin/requests/${row.requestId}`}>{t("uploadQuotation")}</Link>
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -100,9 +101,9 @@ export default async function AdminPaymentsPage({
                   <td className="p-3">{payment.totalAmount} SAR</td>
                   <td className="p-3">{new Date(payment.createdAt).toLocaleDateString(locale)}</td>
                   <td className="p-3">
-                    <Link href={`/admin/requests/${payment.requestId}`} className="text-primary hover:underline">
-                      {t("review")}
-                    </Link>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/admin/requests/${payment.requestId}`}>{t("review")}</Link>
+                    </Button>
                   </td>
                 </tr>
               ))

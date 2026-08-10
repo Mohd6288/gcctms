@@ -23,6 +23,7 @@ export default async function ExamsPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <CreateExamForm />
         <div className="flex-1 overflow-x-auto rounded-xl ring-1 ring-foreground/10">

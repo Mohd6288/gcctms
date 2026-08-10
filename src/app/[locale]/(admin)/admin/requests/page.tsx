@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
@@ -48,9 +49,9 @@ export default async function AdminRequestsPage({
                   <td className="p-3">{locale === "ar" ? request.courseTitleAr : request.courseTitleEn}</td>
                   <td className="p-3">{new Date(request.createdAt).toLocaleDateString(locale)}</td>
                   <td className="p-3">
-                    <Link href={`/admin/requests/${request.id}`} className="text-primary hover:underline">
-                      {t("review")}
-                    </Link>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/admin/requests/${request.id}`}>{t("review")}</Link>
+                    </Button>
                   </td>
                 </tr>
               ))

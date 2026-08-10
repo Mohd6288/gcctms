@@ -26,6 +26,7 @@ export default async function RequestsPage({
     <div className="flex flex-1 flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
         <Button asChild>
           <Link href="/dashboard/requests/new">{t("newRequest")}</Link>
         </Button>
@@ -56,9 +57,9 @@ export default async function RequestsPage({
                   <td className="p-3">{request.totalAmount ? `${request.totalAmount} SAR` : "—"}</td>
                   <td className="p-3">{new Date(request.createdAt).toLocaleDateString(locale)}</td>
                   <td className="p-3">
-                    <Link href={`/dashboard/requests/${request.id}`} className="text-primary hover:underline">
-                      {t("view")}
-                    </Link>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/dashboard/requests/${request.id}`}>{t("view")}</Link>
+                    </Button>
                   </td>
                 </tr>
               ))

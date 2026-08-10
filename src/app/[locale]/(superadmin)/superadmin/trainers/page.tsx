@@ -29,6 +29,7 @@ export default async function TrainersPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h1 className="text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 max-w-3xl text-sm text-muted-foreground">{t("description")}</p>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <CreateTrainerForm courses={courses} locale={locale} />
         <div className="min-w-0 flex-1">

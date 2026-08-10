@@ -75,6 +75,8 @@ export async function listClasses(region?: string | null) {
       courseCode: courses.code,
       courseTitleEn: courses.titleEn,
       courseTitleAr: courses.titleAr,
+      // Drives the end-date auto-fill when an admin moves the start date.
+      courseDurationHours: courses.durationHours,
       trainerId: classes.trainerId,
       trainerFullName: trainers.fullName,
       region: classes.region,
@@ -99,6 +101,8 @@ export async function getClassById(classId: number) {
       courseCode: courses.code,
       courseTitleEn: courses.titleEn,
       courseTitleAr: courses.titleAr,
+      // Drives the end-date auto-fill when an admin moves the start date.
+      courseDurationHours: courses.durationHours,
       trainerId: classes.trainerId,
       trainerFullName: trainers.fullName,
       centerId: classes.centerId,

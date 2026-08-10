@@ -40,6 +40,7 @@ export default async function ContractorProfilePage({
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-6">
       <h1 className="w-full max-w-2xl text-lg font-semibold">{t("title")}</h1>
+      <p className="-mt-4 w-full max-w-2xl text-sm text-muted-foreground">{t("description")}</p>
       <ProfileForm company={company} requestCount={requests.length} employeeCount={employees.length} />
     </div>
   );
