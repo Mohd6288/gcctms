@@ -10,6 +10,23 @@
 
 **Region: `eu-central-1` (Frankfurt)** — closer to Saudi Arabia than the only other plausible candidate (`ap-south-1`/Mumbai) via standard European backbone routing, and the conventional default for MENA-adjacent deployments. Used for dev, staging, and prod. The region is chosen **once, at Supabase project creation**, and data + backups stay there for the life of the project (changing region later means a new project + full re-migration, not a config flip) — so staging/prod must reuse this same region, not be re-decided later.
 
+## Re-confirmed 10 August 2026
+
+Re-confirmed by the business: **hosting outside the Kingdom is acceptable**, so
+`eu-central-1` stands and the prod project is created there alongside dev.
+
+Re-asked because the material facts changed after Phase 10: the platform now
+holds real people's data (13 named trainers with personal emails and phone
+numbers, and shortly a client's employees with Iqama numbers), where the
+original decision was taken while everything was test data. The answer is the
+same; it is recorded again here so the record shows it was reconsidered
+against the data that actually exists rather than carried forward by default.
+
+Location is settled. PDPL's other obligations are not a hosting question and
+still apply wherever the data sits — retention, subject-access, breach
+notification, and the legal basis for transferring personal data abroad. Those
+belong with GCC Lab's legal side, not with this decision.
+
 ## Residency variant (if PDPL/in-Kingdom is mandated)
 
 Per `architecture.md`: **AWS in a Middle East region** — Bahrain (`me-south-1`) or UAE (`me-central-1`) — or a local sovereign cloud option (Google Cloud Dammam, STC Cloud), optionally with **self-hosted Supabase** (Postgres + GoTrue + Storage run on that infrastructure instead of Supabase's managed cloud). This is a materially larger operational lift (self-managed backups, upgrades, monitoring) than the managed Vercel+Supabase default — only take this path if actually required, not preemptively.
@@ -29,7 +46,7 @@ Each run links to that environment's Supabase project (via a GitHub Environment 
 ## Status
 
 - [x] Framework/platform decision (Vercel + Supabase) — Phase 0
-- [x] PDPL/in-Kingdom requirement confirmed with the business — no mandate
+- [x] PDPL/in-Kingdom requirement confirmed with the business — no mandate (re-confirmed 10 Aug 2026, now that real personal data is involved)
 - [x] Supabase region chosen (`eu-central-1`) — Phase 10
 - [x] Dev Supabase project created (`gcctms-dev`) — Phase 10
 - [x] Staging Supabase project created (`gcctms-staging`) — Phase 10
