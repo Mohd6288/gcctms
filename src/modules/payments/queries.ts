@@ -66,6 +66,44 @@ export async function listPaymentsForCompany(companyId: number) {
     .orderBy(desc(payments.createdAt));
 }
 
+// The queue that sits BEFORE the verification one: approved requests whose
+// quotation GCC Lab still owes the contractor.
+//
+// Without this an approved request is in no admin list at all —
+// listSubmittedRequestsForAdmin drops it the moment it stops being
+// "submitted", and the verification queue below only picks it up once a
+// receipt exists, which cannot happen until the quotation is uploaded. The
+// request page holding the upload box was reachable only by typing its URL.
+//
+// Keyed on the request still being payment_pending, not merely on a missing
+// quotation: requests settled before 0034 have no quotation document and
+// would otherwise sit in this queue forever.
+export async function listPaymentsAwaitingQuotation(region?: string | null) {
+  const missingQuotation = sql`not exists (
+    select 1 from documents d where d.request_id = ${payments.requestId} and d.type = 'quotation'
+  )`;
+  return db
+    .select({
+      id: payments.id,
+      requestId: payments.requestId,
+      companyName: companies.name,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      totalAmount: payments.totalAmount,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .innerJoin(trainingRequests, eq(payments.requestId, trainingRequests.id))
+    .innerJoin(companies, eq(trainingRequests.companyId, companies.id))
+    .innerJoin(courses, eq(trainingRequests.courseId, courses.id))
+    .where(
+      region
+        ? and(eq(trainingRequests.status, "payment_pending"), missingQuotation, eq(companies.region, region))
+        : and(eq(trainingRequests.status, "payment_pending"), missingQuotation)
+    )
+    .orderBy(desc(payments.createdAt));
+}
+
 // Admin verification queue — only payments with an actual receipt attached
 // and still awaiting review (status "uploaded" + document_id set; an
 // "uploaded" payment with no document yet has nothing to review).

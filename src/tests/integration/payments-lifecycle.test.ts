@@ -28,6 +28,7 @@ import {
 } from "../../modules/requests/service";
 import { uploadDocument, verifyEmployeeDocument } from "../../modules/platform/storage/service";
 import { rejectPayment, uploadPaymentReceipt, uploadQuotation, verifyPayment } from "../../modules/payments/service";
+import { listPaymentsAwaitingQuotation } from "../../modules/payments/queries";
 
 // Full SADAD payment lifecycle against the real local Supabase Postgres —
 // Phase 5 acceptance criteria: end-to-end incl. reject/re-upload, a
@@ -284,6 +285,23 @@ describe("payment lifecycle — real DB", () => {
 
     const { requestId } = await driveRequestToPaymentPending();
     await expect(uploadQuotation(contractorA, { requestId, file: pdf("self-issued.pdf") })).rejects.toThrow("Not authorized");
+  });
+
+  // The regression that made the whole quotation step unreachable: an
+  // approved request is gone from the submitted-requests queue and cannot
+  // reach the verification queue (that needs a receipt, which needs a
+  // quotation). Without this queue the only route to the upload box was
+  // typing the URL.
+  it("lists an approved request as awaiting quotation until one is uploaded", async () => {
+    const { requestId } = await driveRequestToPaymentPending();
+
+    const queued = await listPaymentsAwaitingQuotation();
+    expect(queued.map((r) => r.requestId)).toContain(requestId);
+
+    await uploadQuotation(adminCtx, { requestId, file: pdf("quotation.pdf") });
+
+    const after = await listPaymentsAwaitingQuotation();
+    expect(after.map((r) => r.requestId)).not.toContain(requestId);
   });
 
   it("stops writing the fabricated SADAD reference", async () => {

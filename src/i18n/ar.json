@@ -589,7 +589,13 @@
         "quotationHint": "ارفع عرض السعر الصادر من نظام Dynamics 365. لا يمكن للمقاول رفع إيصال الدفع قبل رفعه، فالمبلغ أعلاه تقديري من المنصة فقط.",
         "quotationUploading": "جارٍ الرفع…"
       },
-      "regionScopedNote": "تُعرض هنا مدفوعات منطقة {region} فقط."
+      "regionScopedNote": "تُعرض هنا مدفوعات منطقة {region} فقط.",
+      "quotationQueueTitle": "بانتظار عرض السعر",
+      "quotationQueueHint": "طلبات معتمدة تنتظر عرض السعر الصادر من Dynamics 365. لا يمكن للمقاول الدفع قبل رفعه.",
+      "quotationQueueEmpty": "لا توجد طلبات تنتظر عرض سعر.",
+      "uploadQuotation": "رفع عرض السعر",
+      "verifyQueueTitle": "بانتظار التحقق من الدفع",
+      "tableEstimate": "المبلغ التقديري"
     },
     "classes": {
       "title": "الفصول التدريبية",

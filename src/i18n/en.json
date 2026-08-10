@@ -589,7 +589,13 @@
         "quotationHint": "Upload the quotation generated in Dynamics 365. The contractor cannot upload a payment receipt until it is here — the amount above is only the portal's estimate.",
         "quotationUploading": "Uploading…"
       },
-      "regionScopedNote": "Showing only payments in the {region} region."
+      "regionScopedNote": "Showing only payments in the {region} region.",
+      "quotationQueueTitle": "Awaiting quotation",
+      "quotationQueueHint": "Approved requests waiting on the Dynamics 365 quotation. The contractor cannot pay until it is uploaded.",
+      "quotationQueueEmpty": "No requests are waiting for a quotation.",
+      "uploadQuotation": "Upload quotation",
+      "verifyQueueTitle": "Awaiting payment verification",
+      "tableEstimate": "Estimate"
     },
     "classes": {
       "title": "Classes",
