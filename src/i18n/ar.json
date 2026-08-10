@@ -280,7 +280,13 @@
         "requiredRequestDocuments": "أرفق كشف التسجيل ونموذج طلب التسجيل معاً.",
         "requiredNationalId": "يجب رفع الإقامة لكل موظف مختار.",
         "requiredOhsCertificate": "ارفع شهادة السلامة العامة (OHS General Induction) لـ: {employees}. وإن لم تكن لديهم، اطلب هذه الدورة لهم أولاً.",
-        "orFileExistingCertificate": "وإن كانت لديه الشهادة مسبقاً، فأرفقها في خطوة المستندات."
+        "orFileExistingCertificate": "وإن كانت لديه الشهادة مسبقاً، فأرفقها في خطوة المستندات.",
+        "sar": "{amount} ريال",
+        "pricePerCandidate": "السعر التقديري لكل مرشّح",
+        "priceEstimateNote": "تقديري فقط وغير شامل الضريبة المضافة. يصدر مختبر الخليج عرض السعر الرسمي بعد اعتماد طلبك، وهو المستند الذي يحدّد المبلغ وطريقة السداد.",
+        "estimateLine": "{count} مرشّح × {unit} ريال",
+        "estimateVat": "شامل ضريبة القيمة المضافة {rate}%. تقديري فقط — عرض السعر يحدّد المبلغ النهائي.",
+        "estimatedTotal": "الإجمالي التقديري"
       },
       "documents": {
         "registrationSheet": "ورقة التسجيل",

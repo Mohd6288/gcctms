@@ -280,7 +280,13 @@
         "requiredRequestDocuments": "Attach both the Registration Sheet and the Registration Request form.",
         "requiredNationalId": "Every selected employee needs their Iqama uploaded.",
         "requiredOhsCertificate": "Upload the OHS General Induction certificate for: {employees}. If they do not hold one, request that course for them first.",
-        "orFileExistingCertificate": "If they already hold it, file the certificate under Documents."
+        "orFileExistingCertificate": "If they already hold it, file the certificate under Documents.",
+        "sar": "SAR {amount}",
+        "pricePerCandidate": "Estimated price per candidate",
+        "priceEstimateNote": "Estimate only, excluding VAT. GCC Lab issues the official quotation after approving your request — that document confirms the amount to pay and how to pay it.",
+        "estimateLine": "{count} candidate(s) × SAR {unit}",
+        "estimateVat": "Includes {rate}% VAT. Estimate only — your quotation confirms the final amount.",
+        "estimatedTotal": "Estimated total"
       },
       "documents": {
         "registrationSheet": "Registration Sheet",

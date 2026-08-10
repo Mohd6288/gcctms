@@ -1,8 +1,8 @@
 // requests module — read-side queries (Drizzle, RLS-scoped via lib/supabase/server.ts).
 import "server-only";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, courses, documents, employees, requestItems, trainingRequests } from "@/db/schema";
+import { companies, courses, documents, employees, pricing, requestItems, trainingRequests } from "@/db/schema";
 
 export async function listRequestsForCompany(companyId: number) {
   return db
@@ -114,6 +114,52 @@ export async function getRequestItems(requestId: number) {
 
 // The two request-level documents (registration_sheet, hrbl_request_form) —
 // never the employee-scoped national_id/prior_certificate ones.
+// The price a contractor is shown while building a request. It must resolve
+// exactly the way resolvePrice() does in requests/service.ts, because that
+// is the number approveRequest will actually invoice — an estimate computed
+// by different rules is worse than no estimate.
+//
+// Same precedence: an active row for the specific region wins over an active
+// region-null default ("order by region nulls last"), and the latest
+// effective_from wins within each. Resolved in JS rather than SQL so the
+// whole matrix comes back in one round trip instead of one query per
+// (course, region) the wizard might switch to.
+//
+// price is numeric(10,2), which postgres.js returns as a STRING. It stays a
+// string all the way to the UI; the only arithmetic is done after an
+// explicit Number() at the point of use — "500.00" * 3 is the kind of thing
+// that silently produces nonsense.
+export async function listEffectiveCoursePrices(courseIds: number[]) {
+  if (courseIds.length === 0) return [] as { courseId: number; region: string | null; price: string }[];
+
+  const rows = await db
+    .select({
+      courseId: pricing.courseId,
+      region: pricing.region,
+      price: pricing.price,
+      effectiveFrom: pricing.effectiveFrom,
+    })
+    .from(pricing)
+    .where(
+      and(
+        inArray(pricing.courseId, courseIds),
+        lte(pricing.effectiveFrom, sql`current_date`),
+        or(isNull(pricing.effectiveTo), gte(pricing.effectiveTo, sql`current_date`))
+      )
+    );
+
+  // Latest effective row per (course, region), then let a region-specific
+  // row shadow the region-null default for that region.
+  const best = new Map<string, { courseId: number; region: string | null; price: string; effectiveFrom: string }>();
+  for (const row of rows) {
+    const key = `${row.courseId}|${row.region ?? ""}`;
+    const current = best.get(key);
+    if (!current || row.effectiveFrom > current.effectiveFrom) best.set(key, row);
+  }
+
+  return Array.from(best.values()).map(({ courseId, region, price }) => ({ courseId, region, price }));
+}
+
 export async function getRequestLevelDocuments(requestId: number) {
   return db
     .select({

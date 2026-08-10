@@ -55,6 +55,12 @@ interface RequestDocInfo {
   rejectionReason?: string | null;
 }
 
+export interface CoursePrice {
+  courseId: number;
+  region: string | null;
+  price: string;
+}
+
 export interface CityOption {
   name: string;
   nameAr: string;
@@ -95,6 +101,8 @@ export function RequestWizard({
   externalCertificates,
   jobRoles,
   cities,
+  coursePrices,
+  vatRate,
   locale,
 }: {
   requestId: number | null;
@@ -110,6 +118,12 @@ export function RequestWizard({
   // Server-provided since 0032 — cities are rows now, not a hardcoded map,
   // so a super_admin can add one without a deploy.
   cities: CityOption[];
+  // Estimate only. The Dynamics 365 quotation the admin attaches after
+  // approval is the authoritative figure, and an admin can override the unit
+  // price at approval — so this is labelled as an estimate everywhere it
+  // appears rather than presented as a price the contractor can hold us to.
+  coursePrices: CoursePrice[];
+  vatRate: number;
   locale: string;
 }) {
   const t = useTranslations("contractor.requests.wizard");
@@ -272,6 +286,21 @@ export function RequestWizard({
     }
   }
 
+  // Mirrors resolvePrice()'s precedence: a row for the chosen region wins,
+  // otherwise the region-null default. numeric(10,2) arrives as a string, so
+  // Number() is explicit and happens exactly here.
+  const unitPrice = (() => {
+    if (!courseId) return null;
+    const forCourse = coursePrices.filter((p) => p.courseId === courseId);
+    const exact = forCourse.find((p) => p.region === preferredRegion);
+    const fallback = forCourse.find((p) => p.region === null);
+    const chosen = exact ?? fallback;
+    return chosen ? Number(chosen.price) : null;
+  })();
+
+  const money = (value: number) =>
+    value.toLocaleString(locale === "ar" ? "ar-SA" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   const selectedEmployees = companyEmployees.filter((e) => selectedEmployeeIds.has(e.id));
   const selectedCourse = courses.find((c) => c.id === courseId);
   const ohsCourse = courses.find((c) => c.code === OHS_COURSE_CODE);
@@ -411,6 +440,15 @@ export function RequestWizard({
                 ))}
               </select>
             </div>
+            {unitPrice !== null ? (
+              <div className="flex flex-col gap-1 rounded-lg border border-border bg-muted/40 p-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm">{t("pricePerCandidate")}</span>
+                  <span className="text-sm font-semibold">{t("sar", { amount: money(unitPrice) })}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("priceEstimateNote")}</p>
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="notes">{t("notesLabel")}</Label>
               <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -476,6 +514,22 @@ export function RequestWizard({
                   router.refresh();
                 }}
               />
+            ) : null}
+
+            {unitPrice !== null && selectedEmployeeIds.size > 0 ? (
+              <div className="flex flex-col gap-1 rounded-lg border border-border bg-muted/40 p-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm">
+                    {t("estimateLine", { count: selectedEmployeeIds.size, unit: money(unitPrice) })}
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {t("sar", { amount: money(unitPrice * selectedEmployeeIds.size * (1 + vatRate)) })}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("estimateVat", { rate: Math.round(vatRate * 100) })}
+                </p>
+              </div>
             ) : null}
 
             {companyEmployees.length === 0 ? (
@@ -639,7 +693,14 @@ export function RequestWizard({
               <dd>{preferredRegion || "—"}</dd>
               <dt className="text-muted-foreground">{t("stepEmployees")}</dt>
               <dd>{selectedEmployees.length}</dd>
+              {unitPrice !== null ? (
+                <>
+                  <dt className="text-muted-foreground">{t("estimatedTotal")}</dt>
+                  <dd>{t("sar", { amount: money(unitPrice * selectedEmployees.length * (1 + vatRate)) })}</dd>
+                </>
+              ) : null}
             </dl>
+            {unitPrice !== null ? <p className="text-xs text-muted-foreground">{t("priceEstimateNote")}</p> : null}
           </div>
         ) : null}
 

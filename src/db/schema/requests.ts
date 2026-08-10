@@ -116,6 +116,13 @@ export const documents = pgTable(
   ]
 );
 
+// The contractor's estimate multiplies by this before approval exists, and
+// payments.vat_rate defaults to it afterwards. Derived rather than written
+// twice so the number the wizard shows and the number the invoice computes
+// cannot drift apart. Changing VAT means changing this AND a migration for
+// the column default — existing rows keep their own stored rate.
+export const DEFAULT_VAT_RATE = 0.15;
+
 export const payments = pgTable(
   "payments",
   {
@@ -127,7 +134,7 @@ export const payments = pgTable(
     qty: integer("qty").notNull(),
     unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
     subtotal: numeric("subtotal", { precision: 10, scale: 2 }).generatedAlwaysAs(sql`(qty * unit_price)`),
-    vatRate: numeric("vat_rate", { precision: 4, scale: 3 }).notNull().default("0.15"),
+    vatRate: numeric("vat_rate", { precision: 4, scale: 3 }).notNull().default(String(DEFAULT_VAT_RATE)),
     totalAmount: numeric("total_amount", { precision: 10, scale: 2 }).generatedAlwaysAs(
       sql`(qty * unit_price * (1 + vat_rate))`
     ),
