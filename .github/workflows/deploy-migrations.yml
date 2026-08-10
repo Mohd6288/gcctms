@@ -53,17 +53,25 @@ jobs:
       # Same deal as the catalog: idempotent, matched on email, and records
       # only — no auth accounts are provisioned for these 13 people here.
       #
-      # Real addresses go to production and nowhere else. Everywhere else
-      # gets deterministic placeholders on trainers.example.com, so a
-      # non-production project never holds someone's personal gmail and no
-      # Supabase email feature enabled later can reach them from a test
-      # environment. The seeder rewrites in place, and refuses to touch the
-      # address of a trainer who already has a login.
+      # Deployed environments use the trainers' real addresses, so a trainer
+      # signs in with the same email everywhere and password recovery works
+      # for them. That is a deliberate trade: personal addresses then exist
+      # in dev and staging too, so if a Supabase email feature is ever
+      # enabled on one of those projects (recovery, magic links, email-change
+      # confirmation), real people can receive mail from a test system.
+      # Check that before switching any of them on.
+      #
+      # The seeder itself defaults to placeholders, so an environment that
+      # forgets to pass this gets trainers.example.com rather than leaking
+      # real addresses by omission. Setting it back to 'placeholder' rewrites
+      # them in place — but only for trainers who have no login yet, since
+      # the address of one who does is what their auth account was created
+      # with.
       - name: Seed trainer roster
         run: npx tsx scripts/seed-trainers.mjs
         env:
           DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
-          TRAINER_EMAIL_MODE: ${{ inputs.environment == 'prod' && 'real' || 'placeholder' }}
+          TRAINER_EMAIL_MODE: real
 
       # Confirms the deployed schema didn't lose RLS coverage along the way
       # — same check CI runs locally, now against the real project.
