@@ -1,4 +1,4 @@
-import { runPendingJobs } from "@/modules/platform/jobs/service";
+import { pruneFinishedJobs, runPendingJobs } from "@/modules/platform/jobs/service";
 // Importing the notifications module is what registers its handler — the
 // registry is populated as a side effect of import, so a route that only
 // imported the runner would find no handler and fail every job.
@@ -22,8 +22,11 @@ export async function GET(request: Request) {
   }
 
   const result = await runPendingJobs(50);
+  // Same tick: clear out finished jobs past their retention window. Sequential,
+  // never Promise.all — see db/index.ts.
+  const pruned = await pruneFinishedJobs();
   // Logged so a silent backlog shows up in runtime logs rather than only in
   // the jobs table.
-  console.log("[cron/jobs]", result);
-  return Response.json({ ok: true, ...result });
+  console.log("[cron/jobs]", { ...result, ...pruned });
+  return Response.json({ ok: true, ...result, ...pruned });
 }

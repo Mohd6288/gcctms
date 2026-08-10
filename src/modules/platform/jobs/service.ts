@@ -91,3 +91,23 @@ export async function runPendingJobs(limit = 20): Promise<{ processed: number; f
 
   return { processed, failed };
 }
+
+// How long a finished job is worth keeping.
+//
+// Long enough to investigate "did that email go out last month?", short
+// enough that the table does not accumulate forever. Deliberately NOT applied
+// to audit_log: that is the compliance record this platform exists to
+// produce, and a certification trail that quietly deletes itself is worse
+// than a large table. audit_log is 136 kB after a week of real use — it will
+// not be a problem before it is somebody's deliberate decision to archive it.
+const FINISHED_JOB_RETENTION_DAYS = 30;
+
+export async function pruneFinishedJobs(): Promise<{ deleted: number }> {
+  const rows = (await db.execute(sql`
+    delete from jobs
+     where status in ('completed', 'failed')
+       and updated_at < now() - (${FINISHED_JOB_RETENTION_DAYS} || ' days')::interval
+    returning id::int
+  `)) as unknown as Array<{ id: number }>;
+  return { deleted: rows.length };
+}

@@ -109,3 +109,22 @@ jobs:
 
       - name: Forbidden pattern check — no service_role in client bundle
         run: npm run check:no-service-role
+
+      # Browser tests against the production build that was just made. The
+      # faults these catch — a page-wide horizontal scroll, untranslated keys,
+      # a Server Component render error — are invisible to every suite above,
+      # and all three reached production before this step existed.
+      - name: End-to-end (Playwright, production build)
+        # DATABASE_URL, the Supabase URL/keys and NATIONAL_ID_HASH_KEY are all
+        # job-level already; repeating them here would only invite drift.
+        run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

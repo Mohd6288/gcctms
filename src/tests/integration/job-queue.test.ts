@@ -3,7 +3,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import { jobs } from "../../db/schema";
-import { enqueueJob, registerJobHandler, runPendingJobs } from "../../modules/platform/jobs/service";
+import { enqueueJob, pruneFinishedJobs, registerJobHandler, runPendingJobs } from "../../modules/platform/jobs/service";
 
 // This queue is what stands between "the platform decided to tell you
 // something" and you being told. It went months delivering nothing because
@@ -118,6 +118,19 @@ describe("job queue — real DB", () => {
     const [row] = await db.select().from(jobs).where(eq(jobs.id, id));
     expect(row.status).toBe("failed");
     expect(row.attempts).toBe(5);
+  });
+
+  it("prunes finished jobs past the retention window and leaves fresh ones alone", async () => {
+    const type = `test.prune.${randomUUID().slice(0, 8)}`;
+    const old = await enqueue(type);
+    const recent = await enqueue(type);
+    await db.update(jobs).set({ status: "completed", updatedAt: new Date(Date.now() - 40 * 86_400_000) }).where(eq(jobs.id, old));
+    await db.update(jobs).set({ status: "completed", updatedAt: new Date() }).where(eq(jobs.id, recent));
+
+    await pruneFinishedJobs();
+
+    expect(await db.select().from(jobs).where(eq(jobs.id, old))).toHaveLength(0);
+    expect(await db.select().from(jobs).where(eq(jobs.id, recent))).toHaveLength(1);
   });
 
   it("fails a job with no handler instead of leaving it stuck in processing", async () => {

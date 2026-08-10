@@ -143,6 +143,48 @@ Required environment variables in production:
 Sends are idempotent on the job id (`Idempotency-Key: job-<id>`), so a retry
 after a timeout cannot deliver the same message twice within 24h.
 
+## Content Security Policy — measured, currently Report-Only
+
+`src/proxy.ts` sends a strict `Content-Security-Policy-Report-Only`. It is not
+enforced yet, on purpose: enforcing it would break the app today, and the
+runbook's own instruction is not to add one blind.
+
+Measured against a production build, signed in, across six pages
+(sign-in, superadmin overview, catalog, trainers, users, cities):
+
+| Directive | Violations | What it is |
+| --- | --- | --- |
+| `script-src-elem` ← inline | 12 | Next.js's own hydration/bootstrap scripts |
+| everything else | 0 | styles, images, fonts, Supabase connections and iframed previews all pass as written |
+
+So exactly one thing stands between this policy and enforcement, and it is a
+choice with a cost either way:
+
+1. **Per-request nonces** (Next's documented approach — generate in `proxy.ts`,
+   read via `headers()`). Correct and strict, but nonces require *dynamic
+   rendering on every page*, and most locale routes here are statically
+   generated. That is a real performance decision, not a header tweak.
+2. **`script-src 'self' 'unsafe-inline'`** — one line, keeps static rendering,
+   and gives up most of the XSS protection the policy exists for.
+
+Recommendation: take option 1 when someone can measure the rendering cost, and
+until then leave it Report-Only rather than shipping a policy that only looks
+strict. To enforce, rename the header in `proxy.ts` to
+`Content-Security-Policy`.
+
+## Data retention
+
+**`audit_log` is never pruned automatically.** It is the record the whole
+certification process is answerable on — who approved what, who released which
+certificate — and a compliance trail that deletes itself on a timer is worse
+than a big table. It is 136 kB after a week of real use; when it eventually
+warrants archiving, that should be a deliberate decision (partition by year,
+or export and detach), not a background job nobody remembers writing.
+
+**Finished `jobs` rows are pruned after 30 days** by the same cron that drains
+the queue. They carry no compliance value once delivered, and the queue is
+the table that actually accumulates noise.
+
 ## Before onboarding a real company (not done, deliberately deferred)
 
 1. Provision a real **prod** Supabase project on a **paid** plan (backups, no auto-pause) — deferred past Phase 11 specifically to stay within the free-tier 2-project cap while dev+staging cover everything needed pre-launch. See `docs/residency.md` for the region (`eu-central-1`, already decided, must match dev/staging).

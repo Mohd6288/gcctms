@@ -45,3 +45,8 @@ scripts/output/
 # drizzle-kit's own journal (unused — we hand-write SQL migrations and apply
 # them via the Supabase CLI, not `drizzle-kit generate`)
 supabase/migrations/meta/
+
+# Playwright output — traces and screenshots from failed runs, uploaded as a
+# CI artifact rather than committed.
+/test-results/
+/playwright-report/
