@@ -3,7 +3,11 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { getContext } from "@/modules/platform/auth/service";
-import { getContractorAttentionCounts } from "@/modules/catalog/queries";
+import {
+  getContractorAttentionCounts,
+  getContractorOverviewStats,
+  listUpcomingClassesForCompany,
+} from "@/modules/catalog/queries";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -23,6 +27,11 @@ export default async function ContractorDashboardPage({ params }: { params: Prom
         return null;
       })
     : null;
+
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // Supabase pooler (see db/index.ts).
+  const stats = context?.companyId ? await getContractorOverviewStats(context.companyId).catch(() => null) : null;
+  const upcoming = context?.companyId ? await listUpcomingClassesForCompany(context.companyId).catch(() => []) : [];
 
   // Only what the contractor can act on themselves. A request sitting with
   // GCC Lab is deliberately absent: surfacing it invites chasing, not doing.
@@ -65,6 +74,52 @@ export default async function ContractorDashboardPage({ params }: { params: Prom
                 <span className="text-sm">{queue.label}</span>
                 <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-sm font-semibold text-warning">{queue.value}</span>
               </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {stats ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: t("statEmployees"), value: stats.employees },
+            { label: t("statOpenRequests"), value: stats.open_requests },
+            { label: t("statUpcomingClasses"), value: stats.upcoming_classes },
+            { label: t("statValidCertificates"), value: stats.valid_certificates },
+          ].map((stat) => (
+            <div key={stat.label} className="flex flex-col gap-1 rounded-xl p-4 ring-1 ring-foreground/10">
+              <span className="text-2xl font-semibold">{stat.value}</span>
+              <span className="text-xs text-muted-foreground">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Who of theirs is going where, and when — the thing a contractor
+          actually signed in to find out. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-medium">{t("upcomingTitle")}</h2>
+          <Link href="/dashboard/training" className="text-xs text-primary hover:underline">
+            {t("upcomingAll")}
+          </Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("upcomingEmpty")}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {upcoming.map((cls) => (
+              <div
+                key={cls.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl p-3 ring-1 ring-foreground/10"
+              >
+                <span className="text-sm font-medium">
+                  {cls.courseCode} — {locale === "ar" ? cls.courseTitleAr : cls.courseTitleEn}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {cls.startDate} → {cls.endDate} · {cls.region} · {t("upcomingAttending", { count: cls.attending })}
+                </span>
+              </div>
             ))}
           </div>
         )}

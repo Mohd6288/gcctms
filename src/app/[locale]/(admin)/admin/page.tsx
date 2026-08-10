@@ -3,7 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { authorize, getContext } from "@/modules/platform/auth/service";
-import { getAdminAttentionCounts } from "@/modules/catalog/queries";
+import { getAdminAttentionCounts, getAdminOverviewStats, listUpcomingClasses } from "@/modules/catalog/queries";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -26,9 +26,16 @@ export default async function AdminHomePage({ params }: { params: Promise<{ loca
       })
     : null;
 
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // Supabase pooler (see db/index.ts).
+  const canReview = authorize("review_requests", context);
+  const stats = canReview ? await getAdminOverviewStats(context?.region).catch(() => null) : null;
+  const upcoming = canReview ? await listUpcomingClasses(context?.region).catch(() => []) : [];
+
   const queues = attention
     ? [
         { label: t("queueRequests"), value: attention.requests_to_review, href: "/admin/requests" },
+        { label: t("queueQuotation"), value: attention.awaiting_quotation, href: "/admin/payments" },
         { label: t("queueDocuments"), value: attention.documents_to_verify, href: "/admin/certificates" },
         { label: t("queuePayments"), value: attention.payments_to_verify, href: "/admin/payments" },
         { label: t("queueScheduling"), value: attention.awaiting_scheduling, href: "/admin/scheduling" },
@@ -69,6 +76,54 @@ export default async function AdminHomePage({ params }: { params: Promise<{ loca
               >
                 <span className="text-sm">{queue.label}</span>
                 <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-sm font-semibold text-warning">{queue.value}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {stats ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: t("statCompanies"), value: stats.companies },
+            { label: t("statEmployees"), value: stats.employees },
+            { label: t("statActiveClasses"), value: stats.active_classes },
+            { label: t("statCertificatesMonth"), value: stats.certificates_this_month },
+          ].map((stat) => (
+            <div key={stat.label} className="flex flex-col gap-1 rounded-xl p-4 ring-1 ring-foreground/10">
+              <span className="text-2xl font-semibold">{stat.value}</span>
+              <span className="text-xs text-muted-foreground">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* "What is running soon" is the question this page is opened with, and
+          it was the one thing it could not answer. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-medium">{t("upcomingTitle")}</h2>
+          <Link href="/admin/calendar" className="text-xs text-primary hover:underline">
+            {t("upcomingAll")}
+          </Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("upcomingEmpty")}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {upcoming.map((cls) => (
+              <Link
+                key={cls.id}
+                href={`/admin/classes/${cls.id}`}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-xl p-3 ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
+              >
+                <span className="text-sm font-medium">
+                  {cls.courseCode} — {locale === "ar" ? cls.courseTitleAr : cls.courseTitleEn}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {cls.startDate} → {cls.endDate} · {cls.region} · {cls.trainerName} ·{" "}
+                  {t("upcomingSeats", { enrolled: cls.enrolled, capacity: cls.capacity })}
+                </span>
               </Link>
             ))}
           </div>

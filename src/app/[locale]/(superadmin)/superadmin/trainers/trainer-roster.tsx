@@ -213,20 +213,13 @@ export function TrainerRoster({
                 >
                   {trainer.active ? t("statusActive") : t("statusInactive")}
                 </span>
-                {trainer.hasLogin ? (
-                  <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">{t("loginActive")}</span>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={creatingId === trainer.id || !trainer.email}
-                    title={trainer.email ?? t("loginNeedsEmail")}
-                    onClick={() => handleCreateLogin(trainer)}
-                  >
-                    {creatingId === trainer.id ? t("loginCreating") : t("createLogin")}
-                  </Button>
-                )}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    trainer.hasLogin ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                  }`}
+                >
+                  {trainer.hasLogin ? t("loginActive") : t("loginMissing")}
+                </span>
               </div>
             </div>
 
@@ -311,12 +304,24 @@ export function TrainerRoster({
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">{t("qualificationsLabel")}:</span> {trainer.qualifications ?? "—"}
+                  <span className="font-medium">{t("qualificationsDisplayLabel")}:</span>{" "}
+                  {trainer.qualifications ?? t("qualificationsNone")}
                 </p>
                 <div className="flex flex-wrap items-start gap-2 pt-1">
                   <Button type="button" size="sm" variant="outline" onClick={() => startEdit(trainer)}>
                     {t("edit")}
                   </Button>
+                  {trainer.hasLogin ? null : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={creatingId === trainer.id || !trainer.email}
+                      title={trainer.email ?? t("loginNeedsEmail")}
+                      onClick={() => handleCreateLogin(trainer)}
+                    >
+                      {creatingId === trainer.id ? t("loginCreating") : t("createLogin")}
+                    </Button>
+                  )}
                   {/* A trainer signs in rarely and enrols MFA on a phone, so
                       they are the likeliest account to need recovery. */}
                   {trainer.userId ? <AccountActions userId={trainer.userId} fullName={trainer.fullName} /> : null}

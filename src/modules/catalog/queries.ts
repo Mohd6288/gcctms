@@ -241,6 +241,7 @@ export async function getAdminAttentionCounts(region?: string | null) {
     documents_to_verify: number;
     certificates_to_approve: number;
     awaiting_scheduling: number;
+    awaiting_quotation: number;
   }>(sql`
     select
       (select count(*)::int from training_requests tr join companies c on c.id = tr.company_id
@@ -255,9 +256,108 @@ export async function getAdminAttentionCounts(region?: string | null) {
       (select count(*)::int from certificates ct join companies c on c.id = ct.company_id
         where ct.status = 'pending_approval' ${scoped("c")}) as certificates_to_approve,
       (select count(*)::int from training_requests tr join companies c on c.id = tr.company_id
-        where tr.status = 'ready_for_scheduling' ${scoped("c")}) as awaiting_scheduling
+        where tr.status = 'ready_for_scheduling' ${scoped("c")}) as awaiting_scheduling,
+      (select count(*)::int from training_requests tr join companies c on c.id = tr.company_id
+        where tr.status = 'payment_pending' ${scoped("c")}
+          and not exists (select 1 from documents d where d.request_id = tr.id and d.type = 'quotation')) as awaiting_quotation
   `);
   return row;
+}
+
+export async function getAdminOverviewStats(region?: string | null) {
+  const scoped = region ? sql`where c.region = ${region}` : sql``;
+  const [row] = await db.execute<{
+    companies: number;
+    employees: number;
+    active_classes: number;
+    certificates_this_month: number;
+  }>(sql`
+    select
+      (select count(*)::int from companies c where c.status = 'active' ${region ? sql`and c.region = ${region}` : sql``}) as companies,
+      (select count(*)::int from employees e join companies c on c.id = e.company_id ${scoped}) as employees,
+      (select count(*)::int from classes cl where cl.status in ('scheduled', 'in_progress')
+        ${region ? sql`and cl.region = ${region}` : sql``}) as active_classes,
+      (select count(*)::int from certificates ct join companies c on c.id = ct.company_id
+        where ct.status = 'issued' and ct.issued_at >= date_trunc('month', current_date)
+        ${region ? sql`and c.region = ${region}` : sql``}) as certificates_this_month
+  `);
+  return row;
+}
+
+// Next classes on the board. "What is running soon" is the question an admin
+// opens this page with, and it was the one thing the page could not answer.
+export async function listUpcomingClasses(region?: string | null, limit = 5) {
+  return db
+    .select({
+      id: classes.id,
+      courseCode: courses.code,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      startDate: classes.startDate,
+      endDate: classes.endDate,
+      region: classes.region,
+      capacity: classes.capacity,
+      trainerName: trainers.fullName,
+      enrolled: sql<number>`(select count(*)::int from class_enrollments ce
+        where ce.class_id = ${classes.id} and ce.status = 'enrolled')`,
+    })
+    .from(classes)
+    .innerJoin(courses, eq(classes.courseId, courses.id))
+    .innerJoin(trainers, eq(classes.trainerId, trainers.id))
+    .where(
+      region
+        ? and(inArray(classes.status, ["scheduled", "in_progress"]), eq(classes.region, region))
+        : inArray(classes.status, ["scheduled", "in_progress"])
+    )
+    .orderBy(asc(classes.startDate))
+    .limit(limit);
+}
+
+export async function getContractorOverviewStats(companyId: number) {
+  const [row] = await db.execute<{
+    employees: number;
+    open_requests: number;
+    upcoming_classes: number;
+    valid_certificates: number;
+  }>(sql`
+    select
+      (select count(*)::int from employees e where e.company_id = ${companyId} and e.status = 'active') as employees,
+      (select count(*)::int from training_requests tr where tr.company_id = ${companyId}
+        and tr.status not in ('completed', 'rejected')) as open_requests,
+      (select count(distinct ce.class_id)::int from class_enrollments ce join classes cl on cl.id = ce.class_id
+        where ce.company_id = ${companyId} and ce.status = 'enrolled' and cl.status in ('scheduled', 'in_progress')) as upcoming_classes,
+      (select count(*)::int from certificates ct where ct.company_id = ${companyId} and ct.status = 'issued'
+        and (ct.expires_at is null or ct.expires_at >= current_date)) as valid_certificates
+  `);
+  return row;
+}
+
+// The contractor's own upcoming classes, with how many of THEIR people are on
+// each — the answer to "who of mine is going where, and when".
+export async function listUpcomingClassesForCompany(companyId: number, limit = 5) {
+  return db
+    .select({
+      id: classes.id,
+      courseCode: courses.code,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      startDate: classes.startDate,
+      endDate: classes.endDate,
+      region: classes.region,
+      attending: sql<number>`(select count(*)::int from class_enrollments ce
+        where ce.class_id = ${classes.id} and ce.company_id = ${companyId} and ce.status = 'enrolled')`,
+    })
+    .from(classes)
+    .innerJoin(courses, eq(classes.courseId, courses.id))
+    .where(
+      and(
+        inArray(classes.status, ["scheduled", "in_progress"]),
+        sql`exists (select 1 from class_enrollments ce where ce.class_id = ${classes.id}
+          and ce.company_id = ${companyId} and ce.status = 'enrolled')`
+      )
+    )
+    .orderBy(asc(classes.startDate))
+    .limit(limit);
 }
 
 // The contractor's own queue: only things they can act on themselves. An

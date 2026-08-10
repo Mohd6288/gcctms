@@ -467,7 +467,15 @@
       "linkEmployees": "الموظفون",
       "linkPayments": "المدفوعات",
       "linkCertificates": "الشهادات",
-      "linkProfile": "ملف الشركة"
+      "linkProfile": "ملف الشركة",
+      "statEmployees": "الموظفون النشطون",
+      "statOpenRequests": "الطلبات المفتوحة",
+      "statUpcomingClasses": "الفصول القادمة",
+      "statValidCertificates": "الشهادات السارية",
+      "upcomingTitle": "فصولك القادمة",
+      "upcomingAll": "عرض جميع تدريباتك",
+      "upcomingEmpty": "لا يوجد جدول بعد. بمجرد سداد الطلب وجدولته سيظهر هنا.",
+      "upcomingAttending": "{count} من موظفيك سيحضرون"
     }
   },
   "admin": {
@@ -764,7 +772,16 @@
       "linkEmployees": "الموظفون",
       "linkDocuments": "مستندات الموظفين",
       "linkReports": "التقارير",
-      "certificateHint": "إصدار الشهادات يتم من صفحة تفاصيل كل دورة."
+      "certificateHint": "إصدار الشهادات يتم من صفحة تفاصيل كل دورة.",
+      "queueQuotation": "معتمدة وبانتظار عرض السعر",
+      "statCompanies": "الشركات النشطة",
+      "statEmployees": "الموظفون المسجلون",
+      "statActiveClasses": "الفصول القائمة أو المجدولة",
+      "statCertificatesMonth": "الشهادات الصادرة هذا الشهر",
+      "upcomingTitle": "الفصول القادمة",
+      "upcomingAll": "فتح التقويم",
+      "upcomingEmpty": "لا توجد فصول مجدولة بعد.",
+      "upcomingSeats": "{enrolled}/{capacity} مقعد مشغول"
     },
     "trainers": {
       "title": "المدربون",
@@ -974,7 +991,10 @@
       "save": "حفظ",
       "saving": "جارٍ الحفظ…",
       "cancel": "إلغاء",
-      "description": "جميع من يقدمون دورات مختبر دول الخليج. ما تحدده هنا يقرر الفصول التي يمكن إسناد كل مدرب إليها."
+      "description": "جميع من يقدمون دورات مختبر دول الخليج. ما تحدده هنا يقرر الفصول التي يمكن إسناد كل مدرب إليها.",
+      "loginMissing": "لا يوجد حساب بعد",
+      "qualificationsDisplayLabel": "المؤهلات",
+      "qualificationsNone": "غير مسجلة"
     },
     "cities": {
       "title": "المدن",

@@ -467,7 +467,15 @@
       "linkEmployees": "Employees",
       "linkPayments": "Payments",
       "linkCertificates": "Certificates",
-      "linkProfile": "Company profile"
+      "linkProfile": "Company profile",
+      "statEmployees": "Active employees",
+      "statOpenRequests": "Open requests",
+      "statUpcomingClasses": "Upcoming classes",
+      "statValidCertificates": "Valid certificates",
+      "upcomingTitle": "Your next classes",
+      "upcomingAll": "See all your training",
+      "upcomingEmpty": "Nothing scheduled yet. Once a request is paid and scheduled, it appears here.",
+      "upcomingAttending": "{count} of your employees attending"
     }
   },
   "admin": {
@@ -764,7 +772,16 @@
       "linkEmployees": "Employee browser",
       "linkDocuments": "Employee documents",
       "linkReports": "Reports",
-      "certificateHint": "Certificate release lives on each class's detail page."
+      "certificateHint": "Certificate release lives on each class's detail page.",
+      "queueQuotation": "Approved, waiting on a quotation",
+      "statCompanies": "Active companies",
+      "statEmployees": "Employees on record",
+      "statActiveClasses": "Classes running or scheduled",
+      "statCertificatesMonth": "Certificates issued this month",
+      "upcomingTitle": "Next classes",
+      "upcomingAll": "Open the calendar",
+      "upcomingEmpty": "No classes scheduled yet.",
+      "upcomingSeats": "{enrolled}/{capacity} seats filled"
     },
     "trainers": {
       "title": "Trainers",
@@ -974,7 +991,10 @@
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "description": "Everyone who delivers GCC Lab courses. What you tick here decides which classes each trainer can be assigned to."
+      "description": "Everyone who delivers GCC Lab courses. What you tick here decides which classes each trainer can be assigned to.",
+      "loginMissing": "No login yet",
+      "qualificationsDisplayLabel": "Qualifications",
+      "qualificationsNone": "None recorded"
     },
     "cities": {
       "title": "Cities",
