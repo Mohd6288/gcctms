@@ -97,6 +97,9 @@ jobs:
         run: npm run seed:trainers
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          # Explicit rather than relying on the default, so CI keeps proving
+          # the placeholder path that dev and staging actually run.
+          TRAINER_EMAIL_MODE: placeholder
 
       - name: Test (unit + DB-backed integration/RLS suites)
         run: npm run test

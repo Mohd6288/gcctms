@@ -52,10 +52,18 @@ jobs:
 
       # Same deal as the catalog: idempotent, matched on email, and records
       # only — no auth accounts are provisioned for these 13 people here.
+      #
+      # Real addresses go to production and nowhere else. Everywhere else
+      # gets deterministic placeholders on trainers.example.com, so a
+      # non-production project never holds someone's personal gmail and no
+      # Supabase email feature enabled later can reach them from a test
+      # environment. The seeder rewrites in place, and refuses to touch the
+      # address of a trainer who already has a login.
       - name: Seed trainer roster
         run: npx tsx scripts/seed-trainers.mjs
         env:
           DATABASE_URL: postgresql://postgres.${{ vars.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+          TRAINER_EMAIL_MODE: ${{ inputs.environment == 'prod' && 'real' || 'placeholder' }}
 
       # Confirms the deployed schema didn't lose RLS coverage along the way
       # — same check CI runs locally, now against the real project.
