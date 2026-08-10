@@ -199,6 +199,35 @@ export async function listAllJobRoles() {
   return db.select({ id: jobRoles.id, nameEn: jobRoles.nameEn, nameAr: jobRoles.nameAr }).from(jobRoles).orderBy(asc(jobRoles.nameEn));
 }
 
+// A landing page of totals tells you the platform exists; it doesn't tell
+// you what is waiting on someone. These are the queues that block other
+// people until an admin acts, in one round trip — ::int throughout because
+// postgres.js returns bigint counts as strings.
+export async function getAttentionCounts() {
+  const [row] = await db.execute<{
+    requests_to_review: number;
+    payments_to_verify: number;
+    documents_to_verify: number;
+    certificates_to_approve: number;
+    trainers_without_login: number;
+    accounts_never_signed_in: number;
+  }>(sql`
+    select
+      (select count(*)::int from training_requests where status = 'submitted') as requests_to_review,
+      (select count(*)::int from payments where status = 'uploaded' and document_id is not null) as payments_to_verify,
+      (select count(*)::int from documents
+         where type in ('national_id', 'prior_certificate')
+           and verified_at is null and rejected_at is null
+           and (type = 'national_id' or course_id is not null)) as documents_to_verify,
+      (select count(*)::int from certificates where status = 'pending_approval') as certificates_to_approve,
+      (select count(*)::int from trainers where user_id is null and email is not null and active) as trainers_without_login,
+      (select count(*)::int from profiles p
+         where p.role <> 'contractor_manager'
+           and not exists (select 1 from auth.users u where u.id = p.user_id and u.last_sign_in_at is not null)) as accounts_never_signed_in
+  `);
+  return row;
+}
+
 export async function listCities() {
   return db
     .select({ name: cities.name, region: cities.region, nameAr: cities.nameAr, active: cities.active })
@@ -245,9 +274,14 @@ export async function listTrainers() {
       id: trainers.id,
       fullName: trainers.fullName,
       email: trainers.email,
+      phone: trainers.phone,
       qualifications: trainers.qualifications,
       active: trainers.active,
       hasLogin: sql<boolean>`${trainers.userId} is not null`,
+      // ::int, not a bare count — postgres.js hands bigint back as a string
+      // and sql<number> would not have caught it.
+      courseCount: sql<number>`(select count(*)::int from trainer_courses tc where tc.trainer_id = ${trainers.id})`,
+      lastSignInAt: sql<Date | null>`(select u.last_sign_in_at from auth.users u where u.id = ${trainers.userId})`,
     })
     .from(trainers)
     .orderBy(asc(trainers.fullName));

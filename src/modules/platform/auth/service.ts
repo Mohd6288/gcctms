@@ -1,6 +1,6 @@
 // platform/auth — Session context (getContext()), authorize(capability, context), permission matrix.
 import "server-only";
-import { desc, ne } from "drizzle-orm";
+import { desc, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { redirect } from "@/i18n/navigation";
@@ -103,6 +103,15 @@ export async function hasVerifiedTotpFactor(): Promise<boolean> {
 // Non-contractor accounts (super_admin/platform_admin/trainer) — the roster
 // the superadmin user-management screen (manage_users) lists. Caller must
 // have already checked authorize("manage_users", context).
+// Email, last sign-in and MFA state all live on auth.users, not profiles —
+// which is why the users screen could never show an email. Joined here so
+// the roster answers the questions actually asked of it: what is this
+// person's sign-in address, have they ever used it, and are they past MFA
+// enrolment or still stuck at it.
+//
+// ::int on the factor count is load-bearing: postgres.js returns a bigint
+// count as a STRING, and sql<T> is an unchecked assertion that would not
+// have caught it (see reporting/queries.ts).
 export async function listPrivilegedAccounts() {
   return db
     .select({
@@ -111,6 +120,9 @@ export async function listPrivilegedAccounts() {
       fullName: profiles.fullName,
       active: profiles.active,
       createdAt: profiles.createdAt,
+      email: sql<string | null>`(select u.email from auth.users u where u.id = ${profiles.userId})`,
+      lastSignInAt: sql<Date | null>`(select u.last_sign_in_at from auth.users u where u.id = ${profiles.userId})`,
+      mfaFactors: sql<number>`(select count(*)::int from auth.mfa_factors f where f.user_id = ${profiles.userId} and f.status = 'verified')`,
     })
     .from(profiles)
     .where(ne(profiles.role, "contractor_manager"))

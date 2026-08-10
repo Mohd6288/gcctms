@@ -730,7 +730,14 @@
       "mfaCleared": "{count} factor(s) cleared — they enrol again on next sign-in.",
       "confirm": "Confirm",
       "cancel": "Cancel",
-      "roleAuditor": "Auditor (read-only)"
+      "roleAuditor": "Auditor (read-only)",
+      "tableEmail": "Email",
+      "tableSignIn": "Sign-in",
+      "neverSignedIn": "Never signed in",
+      "mfaEnrolled": "MFA set up",
+      "mfaPending": "MFA not set up",
+      "copyEmail": "Click to copy",
+      "copied": "Copied"
     },
     "overview": {
       "title": "Platform Overview",
@@ -743,7 +750,15 @@
       "linkExams": "Exams",
       "linkCenters": "Training centers",
       "linkTrainers": "Trainer roster",
-      "linkUsers": "Admin & trainer accounts"
+      "linkUsers": "Admin & trainer accounts",
+      "needsAttention": "Needs attention",
+      "allClear": "Nothing is waiting on anyone right now.",
+      "queueRequests": "Requests awaiting review",
+      "queuePayments": "Payments awaiting verification",
+      "queueDocuments": "Employee documents to verify",
+      "queueCertificates": "Certificates awaiting approval",
+      "queueTrainerLogins": "Trainers without a login",
+      "queueNeverSignedIn": "Accounts never signed in"
     },
     "catalog": {
       "title": "Course Catalog",
@@ -859,7 +874,12 @@
       "bulkPrompt": "{count} trainer(s) on this roster have no login yet.",
       "bulkCreate": "Create logins for all {count}",
       "bulkCreating": "Creating logins…",
-      "bulkCreated": "{count} login(s) created"
+      "bulkCreated": "{count} login(s) created",
+      "tableContact": "Contact",
+      "tableCourses": "Courses",
+      "courseCount": "{count} course(s)",
+      "lastSignIn": "Last sign-in {date}",
+      "neverSignedIn": "Never signed in"
     },
     "cities": {
       "title": "Cities",

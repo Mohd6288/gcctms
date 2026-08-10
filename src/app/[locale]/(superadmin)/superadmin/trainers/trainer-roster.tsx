@@ -11,12 +11,15 @@ interface Trainer {
   id: number;
   fullName: string;
   email: string | null;
+  phone: string | null;
   qualifications: string | null;
   active: boolean;
   hasLogin: boolean;
+  courseCount: number;
+  lastSignInAt: string | Date | null;
 }
 
-export function TrainerRoster({ trainers }: { trainers: Trainer[] }) {
+export function TrainerRoster({ trainers, locale }: { trainers: Trainer[]; locale: string }) {
   const t = useTranslations("superadmin.trainers");
   const router = useRouter();
   const [edits, setEdits] = useState<Record<number, { fullName: string; qualifications: string; active: boolean }>>({});
@@ -147,6 +150,8 @@ export function TrainerRoster({ trainers }: { trainers: Trainer[] }) {
         <thead>
           <tr className="border-b border-border text-muted-foreground">
             <th className="p-3 text-start font-medium">{t("tableName")}</th>
+            <th className="p-3 text-start font-medium">{t("tableContact")}</th>
+            <th className="p-3 text-start font-medium">{t("tableCourses")}</th>
             <th className="p-3 text-start font-medium">{t("tableQualifications")}</th>
             <th className="p-3 text-start font-medium">{t("tableStatus")}</th>
             <th className="p-3 text-start font-medium">{t("tableLogin")}</th>
@@ -167,6 +172,22 @@ export function TrainerRoster({ trainers }: { trainers: Trainer[] }) {
                 <tr key={trainer.id} className="border-b border-border last:border-0">
                   <td className="p-3">
                     <Input value={fields.fullName} onChange={(e) => updateField(trainer, { fullName: e.target.value })} />
+                  </td>
+                  <td className="p-3">
+                    <div className="flex flex-col gap-0.5 text-xs">
+                      <span className="max-w-[16rem] truncate">{trainer.email ?? "—"}</span>
+                      <span className="text-muted-foreground">{trainer.phone ?? "—"}</span>
+                      <span className="text-muted-foreground">
+                        {trainer.lastSignInAt
+                          ? t("lastSignIn", { date: new Date(trainer.lastSignInAt).toLocaleDateString(locale) })
+                          : t("neverSignedIn")}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    {/* The competency count was invisible on this screen even
+                        though it decides which classes they can take. */}
+                    <span className="text-xs">{t("courseCount", { count: trainer.courseCount })}</span>
                   </td>
                   <td className="p-3">
                     <Input value={fields.qualifications} onChange={(e) => updateField(trainer, { qualifications: e.target.value })} />

@@ -730,7 +730,14 @@
       "mfaCleared": "تم مسح {count} عامل — سيسجّل من جديد عند الدخول التالي.",
       "confirm": "تأكيد",
       "cancel": "إلغاء",
-      "roleAuditor": "مراجع (قراءة فقط)"
+      "roleAuditor": "مراجع (قراءة فقط)",
+      "tableEmail": "البريد الإلكتروني",
+      "tableSignIn": "آخر دخول",
+      "neverSignedIn": "لم يسجّل الدخول",
+      "mfaEnrolled": "المصادقة مفعّلة",
+      "mfaPending": "المصادقة غير مفعّلة",
+      "copyEmail": "انقر للنسخ",
+      "copied": "تم النسخ"
     },
     "overview": {
       "title": "نظرة عامة على المنصة",
@@ -743,7 +750,15 @@
       "linkExams": "الاختبارات",
       "linkCenters": "مراكز التدريب",
       "linkTrainers": "قائمة المدربين",
-      "linkUsers": "حسابات المسؤولين والمدربين"
+      "linkUsers": "حسابات المسؤولين والمدربين",
+      "needsAttention": "يحتاج إلى إجراء",
+      "allClear": "لا يوجد ما ينتظر إجراءً حالياً.",
+      "queueRequests": "طلبات بانتظار المراجعة",
+      "queuePayments": "مدفوعات بانتظار الاعتماد",
+      "queueDocuments": "مستندات موظفين بانتظار الاعتماد",
+      "queueCertificates": "شهادات بانتظار الاعتماد",
+      "queueTrainerLogins": "مدربون بلا حساب دخول",
+      "queueNeverSignedIn": "حسابات لم تسجّل الدخول"
     },
     "catalog": {
       "title": "فهرس الدورات",
@@ -859,7 +874,12 @@
       "bulkPrompt": "{count} مدرب في هذه القائمة بلا حساب دخول.",
       "bulkCreate": "إنشاء حسابات دخول للـ {count}",
       "bulkCreating": "جارٍ إنشاء الحسابات…",
-      "bulkCreated": "تم إنشاء {count} حساب دخول"
+      "bulkCreated": "تم إنشاء {count} حساب دخول",
+      "tableContact": "بيانات الاتصال",
+      "tableCourses": "الدورات",
+      "courseCount": "{count} دورة",
+      "lastSignIn": "آخر دخول {date}",
+      "neverSignedIn": "لم يسجّل الدخول"
     },
     "cities": {
       "title": "المدن",

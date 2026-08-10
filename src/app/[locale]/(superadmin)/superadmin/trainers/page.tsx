@@ -27,7 +27,7 @@ export default async function TrainersPage({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <CreateTrainerForm />
         <div className="flex-1">
-          <TrainerRoster trainers={trainers} />
+          <TrainerRoster trainers={trainers} locale={locale} />
         </div>
       </div>
     </div>

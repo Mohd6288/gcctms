@@ -5,6 +5,7 @@ import { listRegionalAdminAssignments } from "@/modules/scheduling/queries";
 import { CreateAccountForm } from "./create-account-form";
 import { RegionSelect } from "./region-select";
 import { AccountActions } from "./account-actions";
+import { CopyEmail } from "./copy-email";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -46,9 +47,11 @@ export default async function SuperAdminUsersPage({
             <thead>
               <tr className="border-b border-border text-start text-muted-foreground">
                 <th className="p-3 text-start font-medium">{t("tableName")}</th>
+                <th className="p-3 text-start font-medium">{t("tableEmail")}</th>
                 <th className="p-3 text-start font-medium">{t("tableRole")}</th>
                 <th className="p-3 text-start font-medium">{t("tableRegion")}</th>
                 <th className="p-3 text-start font-medium">{t("tableStatus")}</th>
+                <th className="p-3 text-start font-medium">{t("tableSignIn")}</th>
                 <th className="p-3 text-start font-medium">{t("tableCreated")}</th>
                 <th className="p-3 text-start font-medium">{t("tableActions")}</th>
               </tr>
@@ -56,7 +59,7 @@ export default async function SuperAdminUsersPage({
             <tbody>
               {accounts.length === 0 ? (
                 <tr>
-                  <td className="p-3 text-muted-foreground" colSpan={6}>
+                  <td className="p-3 text-muted-foreground" colSpan={8}>
                     {t("empty")}
                   </td>
                 </tr>
@@ -64,6 +67,9 @@ export default async function SuperAdminUsersPage({
                 accounts.map((account) => (
                   <tr key={account.userId} className="border-b border-border last:border-0">
                     <td className="p-3">{account.fullName}</td>
+                    <td className="p-3">
+                      {account.email ? <CopyEmail email={account.email} /> : <span className="text-muted-foreground">—</span>}
+                    </td>
                     <td className="p-3">{roleLabels[account.role] ?? account.role}</td>
                     <td className="p-3">
                       {account.role === "platform_admin" ? (
@@ -73,6 +79,19 @@ export default async function SuperAdminUsersPage({
                       )}
                     </td>
                     <td className="p-3">{account.active ? t("statusActive") : t("statusInactive")}</td>
+                    <td className="p-3">
+                      {/* "never signed in" and "signed in but never got past
+                          MFA" look identical without this, and they need
+                          different help. */}
+                      {account.lastSignInAt ? (
+                        <span>{new Date(account.lastSignInAt).toLocaleDateString(locale)}</span>
+                      ) : (
+                        <span className="text-warning">{t("neverSignedIn")}</span>
+                      )}
+                      <span className="ms-2 text-xs text-muted-foreground">
+                        {account.mfaFactors > 0 ? t("mfaEnrolled") : t("mfaPending")}
+                      </span>
+                    </td>
                     <td className="p-3">{new Date(account.createdAt).toLocaleDateString(locale)}</td>
                     <td className="p-3">
                       <AccountActions userId={account.userId} fullName={account.fullName} />
