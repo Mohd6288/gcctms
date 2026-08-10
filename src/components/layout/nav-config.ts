@@ -68,6 +68,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   ],
   auditor: [
     { key: "overview", href: "/auditor", icon: LayoutDashboard, end: true },
+    { key: "directory", href: "/auditor/directory", icon: Users },
     { key: "requests", href: "/auditor/requests", icon: ClipboardList },
     { key: "certificates", href: "/auditor/certificates", icon: Award },
     { key: "activity", href: "/auditor/activity", icon: ScrollText },

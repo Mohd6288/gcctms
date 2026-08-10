@@ -39,3 +39,23 @@ export function decryptNationalId(enc: Buffer): string {
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
 }
+
+// What a screen is allowed to show. Until the directory existed the Iqama was
+// decrypted in exactly one place — printed onto the certificate PDF — and
+// displayed to nobody. A profile needs enough to match a person against a
+// paper record or an SEC list, which is the last four digits and no more;
+// anything longer ends up in a CSV export somebody emails.
+//
+// Returns null rather than throwing on a bad ciphertext: one unreadable row
+// must not take down a directory page, and "no number on file" is the honest
+// thing to render.
+export function maskNationalId(enc: Buffer | null | undefined): string | null {
+  if (!enc || enc.length === 0) return null;
+  try {
+    const plain = decryptNationalId(enc);
+    if (plain.length <= 4) return "•".repeat(plain.length);
+    return "•".repeat(plain.length - 4) + plain.slice(-4);
+  } catch {
+    return null;
+  }
+}

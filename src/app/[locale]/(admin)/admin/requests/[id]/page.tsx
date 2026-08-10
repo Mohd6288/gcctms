@@ -5,6 +5,8 @@ import { authorize, getContext } from "@/modules/platform/auth/service";
 import { getRequestById, getRequestItems, getRequestLevelDocuments, listAssignableAdmins } from "@/modules/requests/queries";
 import { listCourses } from "@/modules/catalog/queries";
 import { RequestOwnershipPanel } from "./request-ownership-panel";
+import { getEntityHistory } from "@/modules/directory/queries";
+import { Timeline } from "@/components/profile/timeline";
 import { getPaymentForRequest } from "@/modules/payments/queries";
 import { ReviewPanel } from "./review-panel";
 import { PaymentReviewPanel } from "./payment-review-panel";
@@ -49,6 +51,7 @@ export default async function AdminRequestDetailPage({
   const payment = canVerifyPayments && request.status !== "draft" && request.status !== "submitted" ? await getPaymentForRequest(requestId) : null;
   const admins = await listAssignableAdmins(request.companyRegion);
   const courseOptions = (await listCourses()).filter((c) => c.active);
+  const history = await getEntityHistory("training_request", request.id);
 
   const [items, requestDocs] = showEmployeeReview
     ? await Promise.all([getRequestItems(requestId), getRequestLevelDocuments(requestId)])
@@ -93,6 +96,10 @@ export default async function AdminRequestDetailPage({
         courses={courseOptions}
         locale={locale}
       />
+
+      <div className="w-full max-w-3xl">
+        <Timeline entries={history} locale={locale} />
+      </div>
 
       {payment ? (
         <PaymentReviewPanel

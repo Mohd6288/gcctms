@@ -1,4 +1,5 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listAllEmployees } from "@/modules/employees/queries";
@@ -43,7 +44,11 @@ export default async function AdminEmployeesPage({
             ) : (
               employees.map((employee) => (
                 <tr key={employee.id} className="border-b border-border last:border-0">
-                  <td className="p-3">{locale === "ar" ? employee.fullNameAr : employee.fullNameEn}</td>
+                  <td className="p-3">
+                    <Link href={`/admin/employees/${employee.id}`} className="text-primary hover:underline">
+                      {locale === "ar" ? employee.fullNameAr : employee.fullNameEn}
+                    </Link>
+                  </td>
                   <td className="p-3">{employee.companyName}</td>
                   <td className="p-3">{employee.jobRoleNameEn}</td>
                   <td className="p-3">{employee.status === "active" ? t("statusActive") : t("statusInactive")}</td>

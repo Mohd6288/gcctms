@@ -6,6 +6,8 @@ import { getEmployeeById, listActiveJobRoles } from "@/modules/employees/queries
 import { listDocumentsForEmployee, listExternalCertificatesForCompany } from "@/modules/platform/storage/queries";
 import { listActiveCourses } from "@/modules/requests/queries";
 import { ExternalCertificatePanel } from "@/components/documents/external-certificate-panel";
+import { loadEmployeeProfile, notAuthorizedToNull } from "@/modules/directory/employee-profile-data";
+import { EmployeeProfile } from "@/components/profile/employee-profile";
 import { EditEmployeeForm } from "./edit-employee-form";
 import { DocumentUpload } from "./document-upload";
 
@@ -44,6 +46,10 @@ export default async function EmployeeDetailPage({
   const courses = await listActiveCourses(context.companyId);
   const externalCertificates = await listExternalCertificatesForCompany(context.companyId);
 
+  // The same profile the admin and auditor see, scoped by
+  // assertCanViewCompany to this contractor's own company.
+  const profile = await loadEmployeeProfile(context, employee.id).catch(notAuthorizedToNull);
+
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-6">
       <div className="w-full max-w-lg">
@@ -51,6 +57,21 @@ export default async function EmployeeDetailPage({
           {t("backToList")}
         </Link>
       </div>
+      {profile ? (
+        <div className="w-full max-w-4xl">
+          <EmployeeProfile
+            employee={profile.employee}
+            identity={profile.identity}
+            progress={profile.progress}
+            certificates={profile.certificates}
+            training={profile.training}
+            history={profile.history}
+            locale={locale}
+            certificateHref={(certificateId) => `/api/certificates/${certificateId}/download`}
+          />
+        </div>
+      ) : null}
+
       <EditEmployeeForm employee={employee} jobRoles={jobRoles} locale={locale} />
       <DocumentUpload companyId={context.companyId} employeeId={employee.id} documents={documents} />
       <div className="w-full max-w-lg">

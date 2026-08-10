@@ -5,6 +5,8 @@ import { authorize, getContext } from "@/modules/platform/auth/service";
 import { listTrainerCourses, listTrainers, listTrainingCenters } from "@/modules/catalog/queries";
 import { listPendingApprovalCertificatesForClass, listIssuedCertificatesForClass } from "@/modules/certification/queries";
 import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems, listMoveTargets } from "@/modules/scheduling/queries";
+import { getEntityHistory } from "@/modules/directory/queries";
+import { Timeline } from "@/components/profile/timeline";
 import { ClassDetail } from "./class-detail";
 
 export function generateStaticParams() {
@@ -55,6 +57,7 @@ export default async function AdminClassDetailPage({
   const pendingCertificates = await listPendingApprovalCertificatesForClass(classId);
   const moveTargets = await listMoveTargets(classId);
   const issuedCertificates = await listIssuedCertificatesForClass(classId);
+  const history = await getEntityHistory("class", classId);
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
@@ -79,6 +82,9 @@ export default async function AdminClassDetailPage({
         issuedCertificates={issuedCertificates.map((c) => ({ ...c, issuedAt: c.issuedAt ? c.issuedAt.toISOString() : null }))}
         locale={locale}
       />
+      <div className="w-full max-w-3xl">
+        <Timeline entries={history} locale={locale} />
+      </div>
     </div>
   );
 }
