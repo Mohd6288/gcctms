@@ -5,7 +5,14 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { resetUserMfa, resetUserPassword } from "@/modules/platform/auth/actions";
 
-// Recovery for accounts the super_admin manages. Without these, an admin or
+// Recovery for accounts the super_admin manages — used by both the users
+// screen and the trainer roster, since a trainer is exactly the account most
+// likely to need it (they sign in rarely and enrol MFA on a phone).
+//
+// Keeps the "superadmin.users" namespace after the move: the strings are
+// account-generic and re-keying them would churn both locales for nothing.
+//
+// Without these, an admin or
 // trainer who loses their temporary password — or reinstalls their
 // authenticator, which Supabase treats as permanent since it refuses a
 // second enrolment while a verified factor exists — is locked out for good

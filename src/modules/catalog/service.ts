@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { cities, courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainers, trainingCenters } from "@/db/schema";
+import { cities, courseJobRoles, coursePrerequisites, courses, exams, pricing, profiles, trainerCourses, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -222,6 +222,19 @@ export async function setCityActive(context: AuthContext, input: SetCityActiveIn
   await writeAudit({ userId: context.userId, entityType: "city", entityId: 0, action: input.active ? "activate" : "deactivate", note: input.name });
 }
 
+// Which courses a trainer is certified to deliver. This is the list the
+// class scheduling board filters its trainer dropdown by, so it is the one
+// that has operational consequences — until now it was only ever written by
+// scripts/seed-trainers.mjs and had no UI at all.
+//
+// Replace-in-place rather than diffing: the set is small and the form always
+// submits the complete intended list.
+async function setTrainerCourses(trainerId: number, courseIds: number[]) {
+  await db.delete(trainerCourses).where(eq(trainerCourses.trainerId, trainerId));
+  if (courseIds.length === 0) return;
+  await db.insert(trainerCourses).values(courseIds.map((courseId) => ({ trainerId, courseId })));
+}
+
 export async function createTrainer(context: AuthContext, input: CreateTrainerInput) {
   requireTrainerRosterAccess(context);
 
@@ -240,6 +253,7 @@ export async function createTrainer(context: AuthContext, input: CreateTrainerIn
       .values({ userId: data.user.id, email: input.email, fullName: input.fullName, qualifications: input.qualifications })
       .returning({ id: trainers.id });
     await db.insert(profiles).values({ userId: data.user.id, role: "trainer", fullName: input.fullName, trainerId: trainer.id });
+    if (input.courseIds?.length) await setTrainerCourses(trainer.id, input.courseIds);
     await writeAudit({ userId: context.userId, entityType: "trainer", entityId: trainer.id, action: "create" });
     return { trainerId: trainer.id, email: input.email, tempPassword };
   } catch (err) {
@@ -322,5 +336,6 @@ export async function updateTrainer(context: AuthContext, input: UpdateTrainerIn
     .update(trainers)
     .set({ fullName: input.fullName, qualifications: input.qualifications, active: input.active })
     .where(eq(trainers.id, input.trainerId));
+  if (input.courseIds) await setTrainerCourses(input.trainerId, input.courseIds);
   await writeAudit({ userId: context.userId, entityType: "trainer", entityId: input.trainerId, action: "update" });
 }

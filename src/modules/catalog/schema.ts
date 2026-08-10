@@ -91,7 +91,11 @@ export type SetCityActiveInput = z.infer<typeof SetCityActiveInput>;
 export const CreateTrainerInput = z.object({
   email: z.string().email(),
   fullName: z.string().min(1),
+  // Free text: certificates a trainer holds ("NEBOSH IGC"), for a human to
+  // read. Distinct from courseIds below, which is what the scheduling board
+  // actually enforces — the two used to be conflated in one text box.
   qualifications: z.string().optional(),
+  courseIds: z.array(z.coerce.number().int().positive()).optional(),
 });
 export type CreateTrainerInput = z.infer<typeof CreateTrainerInput>;
 
@@ -105,5 +109,9 @@ export const UpdateTrainerInput = z.object({
   fullName: z.string().min(1),
   qualifications: z.string().optional(),
   active: z.boolean(),
+  // Omitted (undefined) leaves competencies untouched; an empty array
+  // clears them. A form that never shows the picker must not wipe the
+  // seeded roster just by saving a name change.
+  courseIds: z.array(z.coerce.number().int().positive()).optional(),
 });
 export type UpdateTrainerInput = z.infer<typeof UpdateTrainerInput>;

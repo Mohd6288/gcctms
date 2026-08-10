@@ -4,7 +4,7 @@ import { authorize, getContext, listPrivilegedAccounts } from "@/modules/platfor
 import { listRegionalAdminAssignments } from "@/modules/scheduling/queries";
 import { CreateAccountForm } from "./create-account-form";
 import { RegionSelect } from "./region-select";
-import { AccountActions } from "./account-actions";
+import { AccountActions } from "@/components/superadmin/account-actions";
 import { CopyEmail } from "./copy-email";
 
 export function generateStaticParams() {

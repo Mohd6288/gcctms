@@ -330,6 +330,9 @@ export async function listTrainers() {
   return db
     .select({
       id: trainers.id,
+      // Needed by the super admin's password/MFA recovery controls — a
+      // trainer locked out of their authenticator has no other way back.
+      userId: trainers.userId,
       fullName: trainers.fullName,
       email: trainers.email,
       phone: trainers.phone,

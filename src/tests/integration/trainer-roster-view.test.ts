@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import { courses, trainerCourses, trainers } from "../../db/schema";
 import { listTrainerCourses, listTrainers } from "../../modules/catalog/queries";
+import { updateTrainer } from "../../modules/catalog/service";
+import type { AuthContext } from "../../modules/platform/auth/shared";
 
 // Backs /admin/trainers: an admin scheduling a class needs to see who is
 // qualified to teach what. The page joins these two queries in JS rather than
@@ -57,6 +59,33 @@ describe("trainer roster view — real DB", () => {
     const [first] = rows.filter((r) => r.trainerId === qualifiedId);
     expect(first.titleEn).toBeTruthy();
     expect(first.titleAr).toBeTruthy();
+  });
+
+  // The super admin picks competencies from the catalog now, so updateTrainer
+  // writes trainer_courses. Getting the "omitted" case wrong would wipe the
+  // seeded roster's competencies every time someone renamed a trainer.
+  it("replaces competencies when courseIds is given and leaves them alone when it is omitted", async () => {
+    const superAdminId = randomUUID();
+    await db.execute(sql`insert into auth.users (id) values (${superAdminId})`);
+    const ctx: AuthContext = { userId: superAdminId, role: "super_admin", companyId: null, trainerId: null, region: null, aal: "aal2" };
+
+    try {
+      await updateTrainer(ctx, { trainerId: qualifiedId, fullName: `Qualified Trainer ${suffix}`, active: true, courseIds: [courseIds[0]] });
+      expect((await listTrainerCourses()).filter((r) => r.trainerId === qualifiedId).map((r) => r.courseId)).toEqual([courseIds[0]]);
+
+      // No courseIds key at all — a name-only edit must not clear the list.
+      await updateTrainer(ctx, { trainerId: qualifiedId, fullName: `Renamed ${suffix}`, active: true });
+      expect((await listTrainerCourses()).filter((r) => r.trainerId === qualifiedId)).toHaveLength(1);
+
+      // An explicit empty array is a real instruction to clear them.
+      await updateTrainer(ctx, { trainerId: qualifiedId, fullName: `Renamed ${suffix}`, active: true, courseIds: [] });
+      expect((await listTrainerCourses()).filter((r) => r.trainerId === qualifiedId)).toHaveLength(0);
+
+      await updateTrainer(ctx, { trainerId: qualifiedId, fullName: `Qualified Trainer ${suffix}`, qualifications: "NEBOSH IGC", active: true, courseIds });
+    } finally {
+      await db.execute(sql`delete from audit_log where user_id = ${superAdminId}`);
+      await db.execute(sql`delete from auth.users where id = ${superAdminId}`);
+    }
   });
 
   it("agrees with the course count listTrainers reports for the same trainer", async () => {
