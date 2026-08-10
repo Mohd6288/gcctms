@@ -1,0 +1,160 @@
+// platform/notifications/templates — what each email actually says.
+//
+// Bilingual in one message, Arabic first. The platform is bilingual but we
+// hold no language preference per recipient, and asking a contractor to pick
+// one before they can be told their request was approved is the wrong trade.
+// Both languages in one mail is what Saudi B2B correspondence looks like
+// anyway.
+import "server-only";
+import type { NotificationType } from "./service";
+
+interface Copy {
+  subject: string;
+  /** Arabic line, then English line. */
+  ar: string;
+  en: string;
+  /** Path within the platform this is about, if any. */
+  path?: string;
+}
+
+function num(value: unknown): string {
+  return value == null ? "" : String(value);
+}
+
+// Kept deliberately plain: what happened, and where to go. A transactional
+// notice that buries its one fact under branding is a notice people stop
+// opening.
+export function renderNotification(type: NotificationType, data: Record<string, unknown>): Copy {
+  const requestId = num(data.requestId);
+  const classId = num(data.classId);
+
+  switch (type) {
+    case "request.submitted":
+      return {
+        subject: `New training request #${requestId}`,
+        ar: `تم استلام طلب تدريب جديد رقم ${requestId} وهو بانتظار المراجعة.`,
+        en: `Training request #${requestId} has been submitted and is waiting for review.`,
+        path: `/admin/requests/${requestId}`,
+      };
+    case "request.approved":
+      return {
+        subject: `Training request #${requestId} approved`,
+        ar: `تم اعتماد طلب التدريب رقم ${requestId}. سيصلكم عرض السعر الرسمي قريباً، وبعد سداده يرجى رفع إيصال الدفع.`,
+        en: `Training request #${requestId} has been approved. Your official quotation follows shortly; once paid, upload the receipt.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "request.rejected":
+      return {
+        subject: `Training request #${requestId} was not approved`,
+        ar: `لم يتم اعتماد طلب التدريب رقم ${requestId}. يمكنكم الاطلاع على السبب في المنصة.`,
+        en: `Training request #${requestId} was not approved. The reason is on the request page.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "request.info_requested":
+      return {
+        subject: `More information needed for request #${requestId}`,
+        ar: `نحتاج معلومات إضافية بخصوص طلب التدريب رقم ${requestId} قبل استكمال المراجعة.`,
+        en: `We need more information about training request #${requestId} before the review can continue.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "request.closed":
+      return {
+        subject: `Training request #${requestId} closed`,
+        ar: `تم إغلاق طلب التدريب رقم ${requestId}.`,
+        en: `Training request #${requestId} has been closed.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "payment.uploaded":
+      return {
+        subject: `Payment receipt uploaded for request #${requestId}`,
+        ar: `تم رفع إيصال دفع للطلب رقم ${requestId} وهو بانتظار التحقق.`,
+        en: `A payment receipt for request #${requestId} is waiting to be verified.`,
+        path: `/admin/requests/${requestId}`,
+      };
+    case "payment.verified":
+      return {
+        subject: `Payment confirmed for request #${requestId}`,
+        ar: `تم التحقق من الدفع الخاص بالطلب رقم ${requestId}، وسيتم جدولة التدريب.`,
+        en: `Your payment for request #${requestId} has been confirmed. Scheduling follows.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "payment.rejected":
+      return {
+        subject: `Payment receipt returned for request #${requestId}`,
+        ar: `لم يتم قبول إيصال الدفع للطلب رقم ${requestId}${data.reason ? `: ${String(data.reason)}` : ""}. يرجى رفع إيصال صحيح.`,
+        en: `The payment receipt for request #${requestId} was not accepted${data.reason ? `: ${String(data.reason)}` : ""}. Please upload a corrected one.`,
+        path: `/dashboard/requests/${requestId}`,
+      };
+    case "class.scheduled":
+      return {
+        subject: `Training scheduled — class #${classId}`,
+        ar: `تم جدولة التدريب. تفاصيل الفصل رقم ${classId} والموقع متاحة في المنصة.`,
+        en: `Training has been scheduled. Class #${classId} dates and location are on the platform.`,
+        path: `/dashboard/training`,
+      };
+    case "class.cancelled":
+      return {
+        subject: `Class #${classId} cancelled`,
+        ar: `تم إلغاء الفصل رقم ${classId}${data.reason ? `: ${String(data.reason)}` : ""}. سيتم إعادة جدولة المرشحين.`,
+        en: `Class #${classId} has been cancelled${data.reason ? `: ${String(data.reason)}` : ""}. Candidates return to the scheduling pool.`,
+        path: `/dashboard/training`,
+      };
+    case "class.results_submitted":
+      return {
+        subject: `Results submitted for class #${classId}`,
+        ar: `تم تسجيل نتائج الفصل رقم ${classId} وهي جاهزة لمراجعة الشهادات.`,
+        en: `Results for class #${classId} have been submitted and certificates are ready to review.`,
+        path: `/admin/classes/${classId}`,
+      };
+    case "certificate.pending_approval":
+      return {
+        subject: `${num(data.count)} certificate(s) ready to release`,
+        ar: `هناك ${num(data.count)} شهادة جاهزة للإصدار للفصل رقم ${classId}.`,
+        en: `${num(data.count)} certificate(s) are ready to release for class #${classId}.`,
+        path: `/admin/classes/${classId}`,
+      };
+    case "certificate.issued":
+      return {
+        subject: `Certificate issued${data.serial ? ` — ${String(data.serial)}` : ""}`,
+        ar: `تم إصدار شهادة${data.serial ? ` برقم ${String(data.serial)}` : ""}. يمكنكم تنزيلها من المنصة.`,
+        en: `A certificate has been issued${data.serial ? ` (${String(data.serial)})` : ""}. You can download it from the platform.`,
+        path: `/dashboard/certificates`,
+      };
+  }
+}
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function siteUrl(path?: string) {
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+  if (!path) return base || null;
+  return base ? `${base}/en${path}` : null;
+}
+
+export function renderEmail(type: NotificationType, data: Record<string, unknown>) {
+  const copy = renderNotification(type, data);
+  const link = siteUrl(copy.path);
+
+  const text = [copy.ar, "", copy.en, "", link ? link : "", "", "GCC Lab Development & Certification Center"]
+    .filter((line) => line !== undefined)
+    .join("\n");
+
+  // Inline styles and a table-free layout: every email client strips <style>
+  // blocks differently, and this message has one job.
+  const html = `<!doctype html>
+<html><body style="margin:0;padding:24px;background:#f7f7f8;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1719">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e0dee2;border-radius:6px;padding:24px">
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;direction:rtl;text-align:right">${escapeHtml(copy.ar)}</p>
+    <p style="margin:0 0 20px;font-size:15px;line-height:1.6">${escapeHtml(copy.en)}</p>
+    ${
+      link
+        ? `<p style="margin:0 0 20px"><a href="${escapeHtml(link)}" style="display:inline-block;background:#6d1f2c;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:4px;font-size:14px">Open in GCC Lab TMS</a></p>`
+        : ""
+    }
+    <p style="margin:0;font-size:12px;color:#857e88">GCC Lab Development &amp; Certification Center</p>
+  </div>
+</body></html>`;
+
+  return { subject: copy.subject, html, text };
+}

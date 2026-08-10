@@ -120,6 +120,29 @@ For quick manual testing across all four roles without an authenticator app each
 
 The bypass is controlled entirely by the `NEXT_PUBLIC_MFA_BYPASS_EMAILS` env var (comma-separated emails) — currently set on Vercel's `gcctms` project for Production+Preview. **This must never be set on a real production environment** (see the checklist below) — with it unset, `isMfaBypassEmail()` always returns false and every account goes through real MFA again, no code change needed to "turn it off," just don't carry the env var forward.
 
+## Email delivery
+
+Notifications are enqueued into `jobs` and sent by `notification.email`
+(`src/modules/platform/notifications/`). Two things drain the queue:
+
+- `after()` on the request that enqueued it — normal delivery, seconds.
+- `GET /api/cron/jobs` — the retry net, scheduled in `vercel.json`, guarded by
+  `CRON_SECRET`. Currently daily (`0 3 * * *`) because Hobby plans only accept
+  daily schedules; **on Pro, change it to `*/5 * * * *`** so a backed-off
+  retry is minutes late rather than a day.
+
+Required environment variables in production:
+
+| Variable | Where it comes from | Notes |
+| --- | --- | --- |
+| `RESEND_API_KEY` | Vercel Marketplace → Resend integration | injected automatically on install |
+| `EMAIL_FROM` | you | must be a domain verified in Resend; until then mail only reaches the account owner |
+| `CRON_SECRET` | you | any long random string; without it `/api/cron/jobs` refuses every request |
+| `NEXT_PUBLIC_SITE_URL` | already set | the "Open in GCC Lab TMS" link is omitted if unset |
+
+Sends are idempotent on the job id (`Idempotency-Key: job-<id>`), so a retry
+after a timeout cannot deliver the same message twice within 24h.
+
 ## Before onboarding a real company (not done, deliberately deferred)
 
 1. Provision a real **prod** Supabase project on a **paid** plan (backups, no auto-pause) — deferred past Phase 11 specifically to stay within the free-tier 2-project cap while dev+staging cover everything needed pre-launch. See `docs/residency.md` for the region (`eu-central-1`, already decided, must match dev/staging).

@@ -1,6 +1,6 @@
 // platform/jobs — pg-backed async job queue for heavy/deferred work (PDF generation, bulk email, exports).
 import "server-only";
-import { and, eq, lte } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
 
@@ -9,7 +9,7 @@ export async function enqueueJob(type: string, payload: Record<string, unknown> 
   return job;
 }
 
-type JobHandler = (payload: Record<string, unknown>) => Promise<void>;
+type JobHandler = (payload: Record<string, unknown>, context: { jobId: number; attempt: number }) => Promise<void>;
 
 const handlers: Record<string, JobHandler> = {};
 
@@ -20,36 +20,71 @@ export function registerJobHandler(type: string, handler: JobHandler) {
   handlers[type] = handler;
 }
 
-// Real dispatch (Vercel Cron hitting an endpoint that calls this) lands in
-// Phase 10. For now this is directly callable — by tests, or a manually
-// triggered endpoint — proving jobs enqueued via enqueueJob() actually get
-// processed asynchronously rather than inline at request time.
+// Exponential-ish backoff, capped: 1, 4, 9, 16, 25 minutes. Without it a
+// failing job retried on every tick, so a provider outage turned into a tight
+// loop that burned all five attempts inside a few minutes and gave up.
+function retryDelayMinutes(attempt: number) {
+  return Math.min(attempt * attempt, 30);
+}
+
 export async function runPendingJobs(limit = 20): Promise<{ processed: number; failed: number }> {
-  const pending = await db
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.status, "pending"), lte(jobs.runAt, new Date())))
-    .limit(limit);
+  // ::int on the id — bigint comes back from postgres.js as a STRING, and
+  // the `as unknown as` cast below would have asserted otherwise all the way
+  // to a handler comparing it against a number. Third time this trap has been
+  // hit in this codebase.
+  //
+  // Claim atomically. The previous version SELECTed pending rows and then
+  // marked them processing one at a time, so two overlapping runs — a cron
+  // firing while an after() drain was still going — could both pick up the
+  // same row and send the same email twice. FOR UPDATE SKIP LOCKED is the
+  // standard Postgres queue claim: each row goes to exactly one worker, and
+  // a worker never waits on another's rows.
+  const claimed = (await db.execute(sql`
+    update jobs
+       set status = 'processing', updated_at = now()
+     where id in (
+       select id from jobs
+        where status = 'pending' and run_at <= now()
+        order by run_at
+        limit ${limit}
+        for update skip locked
+     )
+    returning id::int, type, payload, attempts, max_attempts
+  `)) as unknown as Array<{ id: number; type: string; payload: Record<string, unknown>; attempts: number; max_attempts: number }>;
 
   let processed = 0;
   let failed = 0;
 
-  for (const job of pending) {
+  for (const job of claimed) {
     const handler = handlers[job.type];
-    if (!handler) continue;
+    if (!handler) {
+      // An unknown type would otherwise sit in `processing` forever, invisible
+      // to the next run's `status = 'pending'` claim.
+      await db.execute(sql`
+        update jobs set status = 'failed', last_error = ${`No handler registered for "${job.type}"`}, updated_at = now()
+         where id = ${job.id}
+      `);
+      failed++;
+      continue;
+    }
 
-    await db.update(jobs).set({ status: "processing" }).where(eq(jobs.id, job.id));
     try {
-      await handler(job.payload as Record<string, unknown>);
-      await db.update(jobs).set({ status: "completed" }).where(eq(jobs.id, job.id));
+      await handler(job.payload, { jobId: job.id, attempt: job.attempts + 1 });
+      await db.execute(sql`update jobs set status = 'completed', updated_at = now() where id = ${job.id}`);
       processed++;
-    } catch (err) {
+    } catch (error) {
       const attempts = job.attempts + 1;
-      const status = attempts >= job.maxAttempts ? "failed" : "pending";
-      await db
-        .update(jobs)
-        .set({ status, attempts, lastError: err instanceof Error ? err.message : String(err) })
-        .where(eq(jobs.id, job.id));
+      const givingUp = attempts >= job.max_attempts;
+      const message = error instanceof Error ? error.message : String(error);
+      await db.execute(sql`
+        update jobs
+           set status = ${givingUp ? "failed" : "pending"},
+               attempts = ${attempts},
+               run_at = ${givingUp ? sql`run_at` : sql`now() + (${retryDelayMinutes(attempts)} || ' minutes')::interval`},
+               last_error = ${message},
+               updated_at = now()
+         where id = ${job.id}
+      `);
       failed++;
     }
   }
