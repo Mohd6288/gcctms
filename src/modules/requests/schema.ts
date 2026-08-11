@@ -3,6 +3,16 @@ import { REGIONS } from "@/lib/regions";
 
 const TRAINING_TYPES = ["on_site", "training_center", "virtual_theory_onsite_practical"] as const;
 
+/**
+ * The sentinel `preferred_city` carries for معهد خارجي.
+ *
+ * preferred_city is a foreign key onto cities.name, so an external venue
+ * cannot be stored there — and adding every contractor's own institute to the
+ * cities table would corrupt the list GCC Lab schedules against. The name goes
+ * in external_institute_name and this marks which of the two to read.
+ */
+export const EXTERNAL_INSTITUTE = "__external__";
+
 export const DraftRequestFields = z.object({
   courseId: z.number().int().positive(),
   preferredRegion: z.enum(REGIONS).optional(),
@@ -12,15 +22,28 @@ export const DraftRequestFields = z.object({
   preferredStartDate: z.string().date().optional(),
   preferredEndDate: z.string().date().optional(),
   notes: z.string().optional(),
-});
+  // نموذج طلب اختبار — نوع الطلب. Only meaningful for a course that awards a
+  // card; a certificate is issued once and not renewed by re-sitting.
+  issuanceType: z.enum(["new", "renewal"]).optional(),
+  // معهد خارجي — a venue that is none of GCC Lab's four institutes.
+  externalInstituteName: z.string().trim().max(200).optional(),
+})
+  // Choosing "other institute" without naming it produces a request an admin
+  // cannot schedule and has to phone about. Caught here, where the contractor
+  // can still fix it, rather than two days later.
+  .refine((v) => !(v.preferredCity === EXTERNAL_INSTITUTE && !v.externalInstituteName), {
+    message: "Name the external institute, or choose one of GCC Lab's centres.",
+    path: ["externalInstituteName"],
+  });
 export type DraftRequestFields = z.infer<typeof DraftRequestFields>;
 
 export const CreateDraftRequestInput = DraftRequestFields;
 export type CreateDraftRequestInput = z.infer<typeof CreateDraftRequestInput>;
 
-export const UpdateDraftRequestInput = DraftRequestFields.extend({
-  requestId: z.number().int().positive(),
-});
+export const UpdateDraftRequestInput = z.intersection(
+  DraftRequestFields,
+  z.object({ requestId: z.number().int().positive() })
+);
 export type UpdateDraftRequestInput = z.infer<typeof UpdateDraftRequestInput>;
 
 export const SyncRequestItemsInput = z.object({

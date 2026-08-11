@@ -14,6 +14,7 @@
       "employees": "Employees",
       "payments": "Payments",
       "certificates": "Certificates",
+      "cards": "Cards",
       "profile": "Company Profile",
       "scheduling": "Scheduling",
       "calendar": "Calendar",
@@ -482,6 +483,31 @@
       "upcomingAll": "See all your training",
       "upcomingEmpty": "Nothing scheduled yet. Once a request is paid and scheduled, it appears here.",
       "upcomingAttending": "{count} of your employees attending"
+    },
+    "cards": {
+      "title": "Qualification cards",
+      "description": "Cards issued by the equipment manufacturer after a practical test. They are not GCC Lab certificates and do not appear on the public verification page.",
+      "empty": "No qualification cards yet. They appear here once a technician passes a practical test and the card is issued.",
+      "expiredWarning": "{count} card(s) have expired. A technician with a lapsed card cannot work on SEC sites.",
+      "expiringWarning": "{count} card(s) expire within {days} days. Allow time to request, pay for and schedule a re-test.",
+      "tableEmployee": "Technician",
+      "tableQualification": "Qualification",
+      "tableCardNumber": "Card number",
+      "tableTested": "Tested",
+      "tableValidity": "Validity",
+      "withManufacturer": "With the manufacturer",
+      "validTo": "Valid to {date}",
+      "expiresInDays": "Expires in {days} days",
+      "expiredOn": "Expired {date}",
+      "collectedBy": "collected by {name}",
+      "status": {
+        "issued": "Ready to collect",
+        "collected": "Collected",
+        "expired": "Expired",
+        "void": "Void",
+        "awaiting_issuer": "With the manufacturer"
+      },
+      "footnote": "Cards are valid for two years from the date of the test. Collect them from GCC Lab against the card receipt form."
     }
   },
   "admin": {

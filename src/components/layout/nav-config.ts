@@ -3,6 +3,7 @@
 // Labels are i18n keys under "nav.items", not literals — this app is bilingual.
 import {
   Award,
+  IdCard,
   BarChart3,
   BookOpen,
   Building2,
@@ -39,6 +40,9 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { key: "employees", href: "/dashboard/employees", icon: Users },
     { key: "payments", href: "/dashboard/payments", icon: CreditCard },
     { key: "certificates", href: "/dashboard/certificates", icon: Award },
+    // Beside certificates, not inside them: a card is the manufacturer's, and
+    // a contractor looking for "what my technician holds" checks both.
+    { key: "cards", href: "/dashboard/cards", icon: IdCard },
     { key: "profile", href: "/dashboard/profile", icon: Building2 },
   ],
   platform_admin: [

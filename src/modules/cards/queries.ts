@@ -2,7 +2,7 @@
 import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { cardDispatches, employees, manufacturers, qualificationCards } from "@/db/schema";
+import { cardDispatches, courses, employees, manufacturers, qualificationCards } from "@/db/schema";
 import { maskNationalId } from "@/modules/platform/security/national-id";
 
 export interface CardRow {
@@ -80,4 +80,63 @@ export async function listDispatchesForClass(classId: number): Promise<DispatchR
     sentAt: row.sentAt.toISOString(),
     linkExpiresAt: row.linkExpiresAt.toISOString(),
   }));
+}
+
+export interface CompanyCardRow {
+  id: number;
+  employeeName: string;
+  courseTitleEn: string;
+  courseTitleAr: string;
+  status: string;
+  cardNumber: string | null;
+  testDate: string;
+  expiresAt: string | null;
+  collectedByName: string | null;
+  /** Negative once lapsed. Null while the card does not exist yet. */
+  daysToExpiry: number | null;
+}
+
+/**
+ * A contractor's cards, soonest to expire first.
+ *
+ * Expiry is what a contractor actually watches: a lapsed card stops a
+ * technician working on SEC sites, and the first anyone usually hears of it is
+ * being turned away at a gate. So the ordering is by expiry rather than by
+ * name or date issued, and the ones with no expiry yet — still with the
+ * manufacturer — sort last rather than first, because nothing can be done
+ * about them.
+ */
+export async function listCardsForCompany(companyId: number): Promise<CompanyCardRow[]> {
+  const rows = await db
+    .select({
+      id: qualificationCards.id,
+      employeeName: employees.fullNameEn,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      status: qualificationCards.status,
+      cardNumber: qualificationCards.cardNumber,
+      testDate: qualificationCards.testDate,
+      expiresAt: qualificationCards.expiresAt,
+      collectedByName: qualificationCards.collectedByName,
+    })
+    .from(qualificationCards)
+    .innerJoin(employees, eq(employees.id, qualificationCards.employeeId))
+    .innerJoin(courses, eq(courses.id, qualificationCards.courseId))
+    .where(eq(qualificationCards.companyId, companyId));
+
+  const today = new Date().toISOString().slice(0, 10);
+  return rows
+    .map((row) => ({
+      ...row,
+      daysToExpiry: row.expiresAt ? daysBetween(today, row.expiresAt) : null,
+    }))
+    .sort((a, b) => (a.daysToExpiry ?? Number.MAX_SAFE_INTEGER) - (b.daysToExpiry ?? Number.MAX_SAFE_INTEGER));
+}
+
+// Date-only arithmetic on the "YYYY-MM-DD" strings the DB uses, so no
+// timezone can shift a card's last valid day by one.
+function daysBetween(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
 }

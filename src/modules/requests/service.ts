@@ -10,6 +10,7 @@ import { GuardError } from "@/modules/platform/guard-error";
 import { notifyPlatformAdmins, queueNotification } from "@/modules/platform/notifications/service";
 import { pickAdminForRegion } from "./assignment";
 import { assertTransition, type RequestStatus } from "./machine";
+import { EXTERNAL_INSTITUTE } from "./schema";
 import type {
   ChangeRequestCourseInput,
   CreateDraftRequestInput,
@@ -44,6 +45,23 @@ function assertContractorOwnsEditableRequest(context: AuthContext, request: { co
   throw new Error("Not authorized");
 }
 
+/**
+ * Where the request wants to be held, as two columns.
+ *
+ * preferred_city is a foreign key onto cities.name, so معهد خارجي cannot live
+ * there — the form sends a sentinel and the free-text name goes beside it.
+ * Shared by create and update because writing the sentinel into the FK column
+ * on one path and not the other is precisely the divergence a helper prevents:
+ * it fails at the database, on whichever path was forgotten.
+ */
+function venueColumns(input: { preferredCity?: string; externalInstituteName?: string }) {
+  const external = input.preferredCity === EXTERNAL_INSTITUTE;
+  return {
+    preferredCity: external ? null : (input.preferredCity ?? null),
+    externalInstituteName: external ? (input.externalInstituteName ?? null) : null,
+  };
+}
+
 export async function createDraftRequest(context: AuthContext, input: CreateDraftRequestInput) {
   if (!authorize("submit_requests", context) || !context.companyId) throw new Error("Not authorized");
 
@@ -54,11 +72,12 @@ export async function createDraftRequest(context: AuthContext, input: CreateDraf
       requestedBy: context.userId,
       courseId: input.courseId,
       preferredRegion: input.preferredRegion,
-      preferredCity: input.preferredCity,
       preferredTrainingType: input.preferredTrainingType,
       preferredStartDate: input.preferredStartDate,
       preferredEndDate: input.preferredEndDate,
       notes: input.notes,
+      issuanceType: input.issuanceType,
+      ...venueColumns(input),
       status: "draft",
     })
     .returning({ id: trainingRequests.id });
@@ -76,11 +95,12 @@ export async function updateDraftRequest(context: AuthContext, input: UpdateDraf
     .set({
       courseId: input.courseId,
       preferredRegion: input.preferredRegion,
-      preferredCity: input.preferredCity,
       preferredTrainingType: input.preferredTrainingType,
       preferredStartDate: input.preferredStartDate,
       preferredEndDate: input.preferredEndDate,
       notes: input.notes,
+      issuanceType: input.issuanceType,
+      ...venueColumns(input),
     })
     .where(eq(trainingRequests.id, input.requestId));
 }
