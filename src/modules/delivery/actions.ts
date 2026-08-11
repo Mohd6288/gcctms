@@ -1,6 +1,7 @@
 "use server";
 
 import { getContext } from "@/modules/platform/auth/service";
+import { runGuarded } from "@/modules/platform/guard-error";
 import { SetAttendanceInput, SetExamResultInput } from "./schema";
 import { setAttendance, setExamResult, submitResults } from "./service";
 
@@ -17,7 +18,10 @@ export async function setAttendanceAction(input: SetAttendanceInput) {
 
 export async function setExamResultAction(input: SetExamResultInput) {
   const context = await requireContext();
-  return setExamResult(context, SetExamResultInput.parse(input));
+  // Guarded since the rubric split: "this test is scored on an evaluation
+  // form, not a single mark" is a refusal the trainer must be able to read,
+  // and a thrown error would reach them as a minified React code.
+  return runGuarded(() => setExamResult(context, SetExamResultInput.parse(input)));
 }
 
 export async function submitResultsAction(classId: number) {

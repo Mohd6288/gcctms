@@ -6,6 +6,7 @@ import { attendance, classEnrollments, classes, courses, examResults, requestIte
 import { evaluateClassEligibility } from "@/modules/certification/service";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
+import { GuardError } from "@/modules/platform/guard-error";
 import { notifyPlatformAdmins } from "@/modules/platform/notifications/service";
 import type { SetAttendanceInput, SetExamResultInput } from "./schema";
 
@@ -53,10 +54,21 @@ export async function setExamResult(context: AuthContext, input: SetExamResultIn
   if (cls.status !== "in_progress") throw new Error(`Can't record results for a class that's ${cls.status}.`);
 
   const [course] = await db
-    .select({ examRequired: courses.examRequired, passMark: courses.passMark })
+    .select({ examRequired: courses.examRequired, passMark: courses.passMark, rubric: courses.rubric })
     .from(courses)
     .where(eq(courses.id, cls.courseId));
   if (!course?.examRequired || course.passMark == null) throw new Error("This course is not examined.");
+
+  // A rubric-scored course cannot be marked with a single number. Its rule is
+  // per item — 18/16/19/17/10 is 80 out of 100 and a fail — so scoring it here
+  // by total would card a technician who cannot pass an insulation test.
+  // assessment/service.ts's recordAssessment() is the door for these, and it
+  // refuses courses with no rubric, so neither path can apply the wrong rule.
+  if (course.rubric) {
+    throw new GuardError(
+      "This test is scored on an evaluation form, not a single mark. Record it from the assessment sheet instead."
+    );
+  }
 
   const [enrollment] = await db
     .select({ id: classEnrollments.id })

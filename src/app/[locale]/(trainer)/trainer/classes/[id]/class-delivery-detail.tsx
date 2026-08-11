@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
 import { setAttendanceAction, setExamResultAction, submitResultsAction } from "@/modules/delivery/actions";
+import { refusalMessage } from "@/modules/platform/guard-error";
 
 interface ClassData {
   id: number;
@@ -77,7 +78,16 @@ export function ClassDeliveryDetail({
     setError(null);
     setLoading(key);
     try {
-      await fn();
+      // Some of these actions return a refusal rather than throwing one —
+      // Next.js redacts thrown Server Action errors in production, so a
+      // message the user is meant to read has to survive as a return value.
+      // refusalMessage() yields null for the actions that don't, so this is
+      // safe for all of them.
+      const refusal = refusalMessage(await fn());
+      if (refusal) {
+        setError(refusal);
+        return;
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("genericError"));
