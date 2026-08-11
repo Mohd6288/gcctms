@@ -8,16 +8,25 @@ import { encryptNationalId, hashNationalId } from "../../modules/platform/securi
 import { grantPriorCertificate } from "../helpers/ohs-induction";
 
 // GCC Lab's rule: a technician sits a technical certification test only if
-// they hold FOUR certificates — Safe Working Procedures for their discipline,
-// OHS Representative, Basic Fire Fighting and Basic First Aid.
+// they hold FOUR certificates —
 //
-// Before 0039 course_prerequisites could not express that. Every listed
-// prerequisite went into one group, and a group is satisfied by holding any
-// single course in it — so four rows would have admitted a technician holding
-// Basic First Aid and nothing else. These tests exist because that failure
-// mode is invisible: the rows look right, the gate runs, and the wrong people
-// pass.
-const FOUR = ["CSCC02", "CSCC13", "CSCC21", "CSCC22"];
+//   Safe Working Procedures for the test's discipline  (CSCC02 / CSCC03 / CSCC08)
+//   OHS General Induction                              (CSCC00)
+//   Basic Fire Fighting                                (CSCC21)
+//   Basic First Aid                                    (CSCC22)
+//
+// The induction is not a course_prerequisites row: getPrerequisiteGroups()
+// appends it to every course, because SEC's rule is that nobody trains at all
+// without it. It is still one of the four and is asserted here.
+//
+// Before 0039 course_prerequisites could not express an AND at all. Every
+// listed prerequisite went into one group, and a group is satisfied by holding
+// any single course in it — so the set would have admitted a technician
+// holding Basic First Aid and nothing else. These tests exist because that
+// failure mode is invisible: the rows look right, the gate runs, and the wrong
+// people pass.
+const INDUCTION = "CSCC00";
+const FOUR = ["CSCC02", INDUCTION, "CSCC21", "CSCC22"];
 
 describe("technical test entry requirements", () => {
   const suffix = randomUUID().slice(0, 8);
@@ -82,35 +91,34 @@ describe("technical test entry requirements", () => {
 
   it("groups the four certificates so each must be held separately", async () => {
     const groups = await getPrerequisiteGroups(cableTestId);
-    // Four requirement groups plus the OHS induction the platform adds to
-    // every course. If this collapses back to one group, the AND is gone.
-    expect(groups.length).toBe(5);
+    // One group per requirement: Safe Working Procedures, Fire Fighting,
+    // First Aid, and the induction the platform appends to every course. If
+    // this ever collapses toward one group, the AND is gone and any single
+    // certificate would admit a technician.
+    expect(groups.length).toBe(4);
     expect(groups.every((g) => g.length >= 1)).toBe(true);
-    // Basic Fire Fighting has two forms — CSCC21 and, for Transmission,
-    // CSCC24 — which belong to the same group so either satisfies it.
-    expect(groups.some((g) => g.length === 2)).toBe(true);
   });
 
   it("refuses a technician holding only one of the four", async () => {
-    const onlyFirstAid = await makeTechnician("Only First Aid", ["CSCC22", "CSCC00"]);
+    const onlyFirstAid = await makeTechnician("Only First Aid", ["CSCC22", INDUCTION]);
     const satisfied = await employeesSatisfyingPrerequisites([onlyFirstAid], cableTestId);
     expect(satisfied.has(onlyFirstAid)).toBe(false);
   });
 
   it("refuses a technician holding three of the four", async () => {
-    const threeOfFour = await makeTechnician("Three of Four", ["CSCC02", "CSCC13", "CSCC21", "CSCC00"]);
+    const threeOfFour = await makeTechnician("Three of Four", ["CSCC02", "CSCC21", INDUCTION]);
     const satisfied = await employeesSatisfyingPrerequisites([threeOfFour], cableTestId);
     expect(satisfied.has(threeOfFour), "missing Basic First Aid").toBe(false);
   });
 
-  it("admits a technician holding all four plus the induction", async () => {
-    const complete = await makeTechnician("Complete", [...FOUR, "CSCC00"]);
+  it("admits a technician holding all four", async () => {
+    const complete = await makeTechnician("Complete", FOUR);
     const satisfied = await employeesSatisfyingPrerequisites([complete], cableTestId);
     expect(satisfied.has(complete)).toBe(true);
   });
 
-  it("still refuses without the OHS induction, however complete the four", async () => {
-    const noInduction = await makeTechnician("No Induction", FOUR);
+  it("still refuses without the OHS General Induction", async () => {
+    const noInduction = await makeTechnician("No Induction", FOUR.filter((c) => c !== INDUCTION));
     const satisfied = await employeesSatisfyingPrerequisites([noInduction], cableTestId);
     expect(satisfied.has(noInduction)).toBe(false);
   });
@@ -135,6 +143,22 @@ describe("technical test entry requirements", () => {
       // only way to satisfy a group.
       const forcesNg = groups.some((g) => g.length === 1 && g[0] === ng.id);
       expect(forcesNg, `${test.code} forces the Transmission-only CSCC08`).toBe(false);
+    }
+  });
+
+  it("no longer demands the duplicate Basic Fire Fighting code", async () => {
+    // CSCC24 carries the same title as CSCC21 under contractor_category
+    // 'Transmission'. It is a duplicate row, not a category variant, and
+    // CSCC21 is already visible to every company — so no test should reference
+    // it and it should not appear in any catalog.
+    const [cscc24] = await db.select({ id: courses.id, active: courses.active })
+      .from(courses).where(eq(courses.code, "CSCC24"));
+    expect(cscc24.active).toBe(false);
+
+    const cards = await db.select({ id: courses.id }).from(courses).where(eq(courses.outcome, "card"));
+    for (const card of cards) {
+      const groups = await getPrerequisiteGroups(card.id);
+      expect(groups.flat()).not.toContain(cscc24.id);
     }
   });
 
