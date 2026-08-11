@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { addDays, courseDurationDays, endDateFor } from "../../lib/course-duration";
+import { createTranslator } from "use-intl/core";
+import ar from "../../i18n/ar.json";
+import en from "../../i18n/en.json";
 
 // Picking a start date fills the end date from the course's contact hours.
 // The off-by-one here is the whole point: a one-day course ends the day it
@@ -33,4 +36,33 @@ describe("course duration → calendar dates", () => {
   it("returns nothing when no start date has been picked yet", () => {
     expect(endDateFor("", "8")).toBe("");
   });
+});
+
+// The duration hint under the class date fields, formatted from the real
+// message catalogue rather than a copy of it.
+//
+// It read "One-day course (1 hours of training)" in English for months. In an
+// ICU plural, `#` is the PLURAL ARGUMENT — `days` — not whichever number reads
+// naturally at that point in the sentence. So the =1 branch substituted the
+// day count into a slot meaning hours, and produced a wrong number and a
+// broken plural in one go. The Arabic translation used {hours} and was right
+// the whole time, which is why nobody caught it from the Arabic side.
+describe("the class duration hint", () => {
+  const cases = [
+    { locale: "en", messages: en, oneDay: ["8 hours"], twoDay: ["2 training days", "16 hours"] },
+    { locale: "ar", messages: ar, oneDay: ["8 ساعة"], twoDay: ["16 ساعة"] },
+  ];
+
+  for (const { locale, messages, oneDay, twoDay } of cases) {
+    it(`reads correctly in ${locale}`, () => {
+      const t = createTranslator({ locale, messages, namespace: "admin.classes.detail" });
+
+      const single = t("durationHint", { days: courseDurationDays(8), hours: 8 });
+      for (const fragment of oneDay) expect(single).toContain(fragment);
+      expect(single, "the day count must not be printed as hours").not.toMatch(/\b1 hours\b/);
+
+      const multi = t("durationHint", { days: courseDurationDays(16), hours: 16 });
+      for (const fragment of twoDay) expect(multi).toContain(fragment);
+    });
+  }
 });
