@@ -38,7 +38,6 @@ export async function listPriorAttempts(
       result: examResults.result,
       score: examResults.score,
       attemptNo: examResults.attemptNo,
-      recordedAt: examResults.recordedAt,
     })
     .from(examResults)
     .innerJoin(classEnrollments, eq(classEnrollments.id, examResults.enrollmentId))
@@ -52,9 +51,11 @@ export async function listPriorAttempts(
     )
     // id as a tie-break: two attempts can share a millisecond, and an
     // ordering that flips between reads makes "the latest attempt" a lie.
+    // Ordering by a column the select does not return is fine — and better
+    // than selecting it only to drop it on the way out.
     .orderBy(desc(examResults.recordedAt), desc(examResults.id));
 
-  return rows.map(({ recordedAt: _recordedAt, ...attempt }) => attempt);
+  return rows;
 }
 
 /** The marked sheet for one attempt, for showing an evaluator what was scored before. */
