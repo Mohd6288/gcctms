@@ -6,7 +6,7 @@ const CONTRACTOR_CATEGORIES = ["Distribution", "Transmission"] as const;
 // contractorCategory: unset = universal course (shown to every company);
 // set = only shown to companies with that exact category — see
 // requests/queries.ts's listActiveCourses().
-export const CreateCourseInput = z.object({
+const CourseFields = z.object({
   code: z.string().min(1),
   titleEn: z.string().min(1),
   titleAr: z.string().min(1),
@@ -20,10 +20,20 @@ export const CreateCourseInput = z.object({
   passMark: z.number().int().min(0).max(100).optional(),
   validityMonths: z.number().int().positive().optional(),
   contractorCategory: z.enum(CONTRACTOR_CATEGORIES).optional(),
+  // 0038 — a 'test' is assessed but not taught, and a 'card' outcome means an
+  // external manufacturer issues the credential. Defaults keep every existing
+  // caller producing exactly what it produced before.
 });
+
+// `outcome` and `rubric` (0038) are deliberately absent from this form. The
+// four card-awarding courses are configured by migration, and a rubric is a
+// scoring sheet, not something to type into a course dialog. When a second
+// program needs one, that is the moment to build an editor for it — not now,
+// on the strength of one.
+export const CreateCourseInput = CourseFields;
 export type CreateCourseInput = z.infer<typeof CreateCourseInput>;
 
-export const UpdateCourseInput = CreateCourseInput.extend({
+export const UpdateCourseInput = CourseFields.extend({
   courseId: z.number().int().positive(),
   active: z.boolean(),
 });
@@ -55,6 +65,24 @@ export const UpdateTrainingCenterInput = CreateTrainingCenterInput.extend({
   active: z.boolean(),
 });
 export type UpdateTrainingCenterInput = z.infer<typeof UpdateTrainingCenterInput>;
+
+// The cable-accessory manufacturer (0038): confirms the test date, supplies
+// the evaluator, prints the cards. contactEmail is optional here because a
+// manufacturer can be recorded before anyone knows who receives the pass
+// list — dispatch is where its absence becomes a refusal.
+export const CreateManufacturerInput = z.object({
+  name: z.string().min(1),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+  phone: z.string().optional(),
+});
+export type CreateManufacturerInput = z.infer<typeof CreateManufacturerInput>;
+
+export const UpdateManufacturerInput = CreateManufacturerInput.extend({
+  manufacturerId: z.number().int().positive(),
+  active: z.boolean(),
+});
+export type UpdateManufacturerInput = z.infer<typeof UpdateManufacturerInput>;
 
 export const CreatePricingInput = z.object({
   courseId: z.number().int().positive(),

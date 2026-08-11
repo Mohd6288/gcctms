@@ -1,7 +1,27 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, date, index, integer, numeric, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { timestamptz } from "./_helpers";
 import { jobRoles } from "./auth";
+
+export type CourseOutcome = "certificate" | "card";
+
+/**
+ * The scoring sheet for a practically-assessed course (0038), e.g. the Cable
+ * Technician Evaluation: every criterion is marked once per part, so a cable
+ * assessment is 2 parts x 5 criteria = 10 marks.
+ *
+ * `passRule` is the important field and the reason scores are stored per cell
+ * rather than as a total:
+ *   - "per_item"  — EVERY criterion, in EVERY part, must reach the threshold.
+ *   - "aggregate" — the sum across everything must reach it.
+ * For the cable tests the rule is per_item, so 20/20/20/20/10 is 90% overall
+ * and still a fail.
+ */
+export interface Rubric {
+  passRule: "per_item" | "aggregate";
+  parts: { code: string; en: string; ar: string }[];
+  criteria: { code: string; max: number; en: string; ar: string }[];
+}
 
 export const courses = pgTable(
   "courses",
@@ -24,6 +44,15 @@ export const courses = pgTable(
     passMark: integer("pass_mark"),
     validityMonths: integer("validity_months"),
     contractorCategory: text("contractor_category"),
+    // 0038 — 'card' means an external manufacturer prints the credential and
+    // this platform only tracks it (the cable program, CTCT06/08/10/12).
+    // Defaults to the existing behaviour, so every course predating 0038 reads
+    // exactly as it did.
+    outcome: text("outcome").notNull().default("certificate").$type<CourseOutcome>(),
+    // How the course is assessed, when a single exam mark won't do. The
+    // threshold lives in passMark above, not in here — one number, so the two
+    // cannot drift apart.
+    rubric: jsonb("rubric").$type<Rubric>(),
     active: boolean("active").notNull().default(true),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
     updatedAt: timestamptz("updated_at").notNull().defaultNow(),
@@ -33,6 +62,10 @@ export const courses = pgTable(
       "courses_contractor_category_check",
       sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
     ),
+    check("courses_outcome_check", sql`${t.outcome} in ('certificate', 'card')`),
+    // A card is awarded on the strength of a rubric assessment; one without a
+    // rubric would reach assessment day with nothing to score against.
+    check("courses_card_requires_rubric", sql`${t.outcome} = 'certificate' or ${t.rubric} is not null`),
     // A code can have at most one row per contractor_category, PLUS at most
     // one category-agnostic (null) row. Two separate partial indexes because
     // Postgres never treats two NULLs as equal in a unique constraint, so a
@@ -85,6 +118,22 @@ export const trainingCenters = pgTable("training_centers", {
   city: text("city"),
   address: text("address"),
   capacity: integer("capacity"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+});
+
+// The external party in the cable program (0038): it confirms the test date,
+// supplies the evaluator, and prints the qualification cards. GCC Lab never
+// issues these cards — it sends the pass list and records the handover.
+export const manufacturers = pgTable("manufacturers", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  contactName: text("contact_name"),
+  // Nullable so a manufacturer can be recorded before anyone knows who
+  // receives the pass list; dispatch refuses to send without it.
+  contactEmail: text("contact_email"),
+  phone: text("phone"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),

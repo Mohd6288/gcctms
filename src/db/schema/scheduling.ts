@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { timestamptz } from "./_helpers";
 import { companies, employees, trainers } from "./auth";
-import { courses, trainingCenters } from "./catalog";
+import { courses, manufacturers, trainingCenters } from "./catalog";
 import { requestItems } from "./requests";
 
 export const classes = pgTable(
@@ -22,6 +22,12 @@ export const classes = pgTable(
     // link, plus whatever the gate/floor detail is.
     locationUrl: text("location_url"),
     locationNote: text("location_note"),
+    // 0038, cable program. Step 5 of the workflow: until the manufacturer
+    // confirms, the date is GCC Lab's proposal and no candidate should be
+    // told to travel. Step 6: the guidelines went out, once.
+    manufacturerId: bigint("manufacturer_id", { mode: "number" }).references(() => manufacturers.id),
+    manufacturerConfirmedAt: timestamptz("manufacturer_confirmed_at"),
+    guidelinesSentAt: timestamptz("guidelines_sent_at"),
     capacity: integer("capacity").notNull(),
     status: text("status").notNull().default("scheduled"),
     cancelReason: text("cancel_reason"),
@@ -116,5 +122,32 @@ export const examResults = pgTable(
     uniqueIndex("exam_results_enrollment_attempt_key").on(t.enrollmentId, t.attemptNo),
     index("exam_results_enrollment_id_idx").on(t.enrollmentId),
     check("exam_results_result_check", sql`${t.result} in ('pass', 'fail')`),
+  ]
+);
+
+// One row per (part, criterion) per attempt — ten for a cable test (0038).
+//
+// Deliberately not a total. The cable pass rule is per item, so a technician
+// scoring 20/20/20/20/10 has 90% and has still failed; a stored total throws
+// away the only information that can tell you so. The derived pass/fail lands
+// in exam_results above, which is why the certificate gate needed no change.
+export const assessmentScores = pgTable(
+  "assessment_scores",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    enrollmentId: bigint("enrollment_id", { mode: "number" }).notNull().references(() => classEnrollments.id),
+    // Mirrors exam_results.attempt_no so a re-test (إعادة) sits beside the
+    // first attempt rather than overwriting it.
+    attemptNo: integer("attempt_no").notNull().default(1),
+    partCode: text("part_code").notNull(),
+    criterionCode: text("criterion_code").notNull(),
+    score: integer("score").notNull(),
+    recordedBy: uuid("recorded_by").notNull(),
+    recordedAt: timestamptz("recorded_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("assessment_scores_cell_key").on(t.enrollmentId, t.attemptNo, t.partCode, t.criterionCode),
+    index("assessment_scores_enrollment_id_idx").on(t.enrollmentId),
+    check("assessment_scores_score_non_negative", sql`${t.score} >= 0`),
   ]
 );

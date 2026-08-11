@@ -66,6 +66,11 @@ export const trainers = pgTable("trainers", {
   email: text("email"),
   phone: text("phone"),
   qualifications: text("qualifications"),
+  // 0038 — an evaluator on the cable program can work for the accessory
+  // manufacturer rather than for GCC Lab. Existing trainers are GCC Lab's,
+  // which is what the default records.
+  employerKind: text("employer_kind").notNull().default("gcclab").$type<"gcclab" | "manufacturer">(),
+  manufacturerId: bigint("manufacturer_id", { mode: "number" }),
   active: boolean("active").notNull().default(true),
   createdAt: timestamptz("created_at").notNull().defaultNow(),
   updatedAt: timestamptz("updated_at").notNull().defaultNow(),

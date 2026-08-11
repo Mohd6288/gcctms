@@ -4,6 +4,11 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
+    // Vitest's default glob matches **/*.spec.ts, which sweeps up the
+    // Playwright suite in e2e/ — those need a browser and Playwright's own
+    // runner, so vitest fails to collect them and `npm test` reports a failed
+    // suite alongside 367 green tests. `npx playwright test` runs them.
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**", "e2e/**"],
     // Every integration/RLS test file shares ONE real local Postgres
     // instance (deliberately — see feedback_test_against_real_infra.md).
     // Most tests scope assertions to their own randomUUID-suffixed fixture

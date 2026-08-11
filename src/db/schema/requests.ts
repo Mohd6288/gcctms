@@ -17,6 +17,12 @@ export const trainingRequests = pgTable(
     preferredStartDate: date("preferred_start_date"),
     preferredEndDate: date("preferred_end_date"),
     notes: text("notes"),
+    // 0038 — نموذج طلب اختبار carries نوع الطلب. A renewal is a different
+    // request from a first sitting: the technician already holds a card, and
+    // the receipt form records which of the two it was.
+    issuanceType: text("issuance_type").$type<"new" | "renewal">(),
+    // معهد خارجي — a venue that is none of GCC Lab's four institutes.
+    externalInstituteName: text("external_institute_name"),
     status: text("status").notNull().default("draft"),
     // The admin doing this request (0035). Set on submit from the
     // least-loaded admin in the company's region; null when that region has
