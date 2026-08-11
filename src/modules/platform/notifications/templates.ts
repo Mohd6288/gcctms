@@ -120,6 +120,25 @@ export function renderNotification(type: NotificationType, data: Record<string, 
         en: `${num(data.count)} technician(s) passed class #${classId}. Send the pass list to the card issuer.`,
         path: `/admin/classes/${classId}`,
       };
+    case "card.pass_list_dispatched": {
+      // Masked identifiers only. The printable list, with full Iqama numbers,
+      // sits behind a link that expires — never in a message that will live in
+      // a third party's mailbox indefinitely.
+      const names = Array.isArray(data.names) ? (data.names as string[]) : [];
+      return {
+        subject: `Card printing list — ${String(data.courseTitle ?? "qualification test")}, ${num(data.count)} technician(s)`,
+        ar: `اجتاز ${num(data.count)} فني اختبار ${String(data.courseTitle ?? "")} بتاريخ ${String(data.testDate ?? "")}. القائمة الكاملة لإصدار البطاقات متاحة عبر الرابط أدناه ولمدة 72 ساعة.${names.length > 0 ? `\n\n${names.join("\n")}` : ""}`,
+        en: `${num(data.count)} technician(s) passed ${String(data.courseTitle ?? "")} on ${String(data.testDate ?? "")}. The full printing list is available from the link below for 72 hours.${names.length > 0 ? `\n\n${names.join("\n")}` : ""}`,
+        path: `/admin/classes/${classId}`,
+      };
+    }
+    case "card.ready_for_collection":
+      return {
+        subject: `Qualification card ready to collect${data.cardNumber ? ` — ${String(data.cardNumber)}` : ""}`,
+        ar: `بطاقة التأهيل${data.cardNumber ? ` رقم ${String(data.cardNumber)}` : ""} جاهزة للاستلام من مركز جي سي سي لاب.`,
+        en: `Qualification card${data.cardNumber ? ` ${String(data.cardNumber)}` : ""} is ready to collect from GCC Lab.`,
+        path: `/dashboard/cards`,
+      };
     case "certificate.issued":
       return {
         subject: `Certificate issued${data.serial ? ` — ${String(data.serial)}` : ""}`,

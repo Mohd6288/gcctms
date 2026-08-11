@@ -15,6 +15,21 @@ function toDataUri(path: string, mime: string): string {
   return `data:${mime};base64,${readFileSync(path).toString("base64")}`;
 }
 
+/**
+ * Noto Sans Arabic, inlined as data URIs.
+ *
+ * Headless Chromium has no system fonts to fall back on, so Arabic without
+ * this renders as boxes — or worse, as unshaped disconnected letters that
+ * look like text until someone who reads Arabic sees it. Every bilingual
+ * document this platform generates needs these two faces.
+ */
+export function arabicFontFaces(): string {
+  const regular = toDataUri(join(ROOT, "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff2"), "font/woff2");
+  const bold = toDataUri(join(ROOT, "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff2"), "font/woff2");
+  return `@font-face { font-family: 'Noto Sans Arabic'; src: url('${regular}') format('woff2'); font-weight: 400; }
+  @font-face { font-family: 'Noto Sans Arabic'; src: url('${bold}') format('woff2'); font-weight: 700; }`;
+}
+
 // % of the 2000x1414 background image — same calibration as the Phase 0
 // proof script for the pre-existing fields. qrCode is new here: placed in
 // the top-right corner, clear of the letterhead content, which only starts
@@ -53,8 +68,7 @@ function escapeHtml(value: string): string {
 
 async function buildHtml(data: CertificatePdfData): Promise<string> {
   const bgImage = toDataUri(join(ROOT, "public/certificates/gcc-lab-certificate-bg.png"), "image/png");
-  const notoRegular = toDataUri(join(ROOT, "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-400-normal.woff2"), "font/woff2");
-  const notoBold = toDataUri(join(ROOT, "node_modules/@fontsource/noto-sans-arabic/files/noto-sans-arabic-arabic-700-normal.woff2"), "font/woff2");
+
   const qrDataUri = await QRCode.toDataURL(data.verifyUrl, { margin: 1, width: 300 });
 
   const nameEn = escapeHtml(data.employeeNameEn);
@@ -76,8 +90,7 @@ async function buildHtml(data: CertificatePdfData): Promise<string> {
 <head>
 <meta charset="utf-8" />
 <style>
-  @font-face { font-family: 'Noto Sans Arabic'; src: url('${notoRegular}') format('woff2'); font-weight: 400; }
-  @font-face { font-family: 'Noto Sans Arabic'; src: url('${notoBold}') format('woff2'); font-weight: 700; }
+  ${arabicFontFaces()}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { width: 2000px; height: 1414px; position: relative; font-family: 'Noto Sans Arabic', Arial, sans-serif; }
   img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -154,23 +167,36 @@ async function launchBrowser() {
   });
 }
 
-export async function renderCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
-  const html = await buildHtml(data);
+/**
+ * HTML to PDF. The certificate is one caller; the card pass list is another.
+ *
+ * Waiting on document.fonts.ready is not optional — page.pdf() will happily
+ * snapshot before the inlined Arabic face has loaded, producing a document
+ * that renders correctly on screen and as fallback glyphs on paper.
+ */
+export async function renderPdf(
+  html: string,
+  page: { width: string; height: string; viewport: { width: number; height: number } }
+): Promise<Buffer> {
   const browser = await launchBrowser();
   try {
-    const page = await browser.newPage({ viewport: { width: 2000, height: 1414 } });
-    await page.setContent(html, { waitUntil: "networkidle" });
-    await page.evaluate(async () => {
+    const tab = await browser.newPage({ viewport: page.viewport });
+    await tab.setContent(html, { waitUntil: "networkidle" });
+    await tab.evaluate(async () => {
       await document.fonts.ready;
     });
-    const pdf = await page.pdf({
-      width: "2000px",
-      height: "1414px",
+    return await tab.pdf({
+      width: page.width,
+      height: page.height,
       printBackground: true,
       margin: { top: 0, bottom: 0, left: 0, right: 0 },
     });
-    return pdf;
   } finally {
     await browser.close();
   }
+}
+
+export async function renderCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
+  const html = await buildHtml(data);
+  return renderPdf(html, { width: "2000px", height: "1414px", viewport: { width: 2000, height: 1414 } });
 }

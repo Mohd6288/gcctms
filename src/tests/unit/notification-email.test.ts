@@ -96,7 +96,7 @@ describe("email templates", () => {
       "payment.uploaded", "payment.verified", "payment.rejected",
       "class.scheduled", "class.cancelled", "class.results_submitted",
       "certificate.pending_approval", "certificate.issued",
-      "card.awaiting_dispatch",
+      "card.awaiting_dispatch", "card.pass_list_dispatched", "card.ready_for_collection",
     ] as const;
 
     for (const type of types) {
