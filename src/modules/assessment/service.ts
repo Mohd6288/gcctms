@@ -11,6 +11,7 @@ import { assessmentScores, classEnrollments, classes, courses, examResults } fro
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
 import { GuardError } from "@/modules/platform/guard-error";
+import { listPriorAttempts } from "./queries";
 import { scoreRubric } from "./score";
 import type { RecordAssessmentInput } from "./schema";
 
@@ -63,6 +64,12 @@ export async function recordAssessment(context: AuthContext, input: RecordAssess
     );
   }
 
+  // "Test / Re-Test" on the evaluation form, and جديد / إعادة on the card
+  // receipt. Derived across every class, not just this one: a technician who
+  // failed in August and re-sits in October does so in a different class, and
+  // counting only this enrolment would call that a first attempt.
+  const priorAttempts = await listPriorAttempts(input.employeeId, cls.courseId, input.classId);
+
   const [latest] = await db
     .select({ attemptNo: examResults.attemptNo })
     .from(examResults)
@@ -70,6 +77,7 @@ export async function recordAssessment(context: AuthContext, input: RecordAssess
     .orderBy(desc(examResults.attemptNo))
     .limit(1);
   const attemptNo = (latest?.attemptNo ?? 0) + 1;
+  const isRetest = priorAttempts.length > 0 || attemptNo > 1;
 
   // Sequential, not Promise.all — concurrent Drizzle calls stall against the
   // pooler (see catalog/queries.ts's getPlatformOverviewStats).
@@ -100,7 +108,7 @@ export async function recordAssessment(context: AuthContext, input: RecordAssess
     entityType: "class",
     entityId: input.classId,
     action: "record_assessment",
-    note: `${input.evaluatorName} — ${outcome.result} (${outcome.total}/${outcome.max})${
+    note: `${input.evaluatorName} — ${isRetest ? "re-test" : "first attempt"} — ${outcome.result} (${outcome.total}/${outcome.max})${
       outcome.failures.length > 0 ? `, below threshold: ${outcome.failures.map((f) => f.criterionCode).join(", ")}` : ""
     }`,
   });
@@ -110,6 +118,10 @@ export async function recordAssessment(context: AuthContext, input: RecordAssess
     total: outcome.total,
     max: outcome.max,
     attemptNo,
+    // Failing is not final: the technician re-sits, and passing then earns the
+    // card exactly as a first-time pass does. What changes is only that the
+    // sheet and the receipt say so.
+    isRetest,
     failures: outcome.failures,
   };
 }
