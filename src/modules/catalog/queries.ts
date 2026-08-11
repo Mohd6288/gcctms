@@ -71,15 +71,38 @@ async function listOhsInductionCourseIds(): Promise<Set<number>> {
 }
 
 // Each group is OR-semantics internally (any one course in it satisfies it);
-// ALL groups must be satisfied. Group 1 = the course's own listed
-// prerequisites, group 2 = the OHS induction — except for the induction
-// courses themselves, which are where every employee starts.
+// ALL groups must be satisfied. The OHS induction is appended as its own
+// group — except for the induction courses themselves, which are where every
+// employee starts.
+//
+// Until 0039 every listed prerequisite went into ONE group, so a course could
+// only ever say "hold any one of these". That is wrong for the technical
+// certification tests, whose rule is that a technician holds FOUR named
+// certificates: as a single group, Basic First Aid alone would have admitted
+// them. course_prerequisites.group_no now carries the distinction, and rows
+// predating 0039 all default to group 1 — so every existing course keeps
+// exactly the behaviour it had.
+//
+// Grouping also expresses the codes that legitimately have two forms: Basic
+// Fire Fighting is CSCC21, or CSCC24 for Transmission. Both sit in one group,
+// so either satisfies it.
 export async function getPrerequisiteGroups(courseId: number): Promise<number[][]> {
-  const listed = await listCoursePrerequisiteIds(courseId);
-  const induction = await listOhsInductionCourseIds();
+  const rows = await db
+    .select({ prerequisiteCourseId: coursePrerequisites.prerequisiteCourseId, groupNo: coursePrerequisites.groupNo })
+    .from(coursePrerequisites)
+    .where(eq(coursePrerequisites.courseId, courseId))
+    .orderBy(coursePrerequisites.groupNo);
 
-  const groups: number[][] = [];
-  if (listed.size > 0) groups.push(Array.from(listed));
+  const byGroup = new Map<number, number[]>();
+  for (const row of rows) {
+    const group = byGroup.get(row.groupNo) ?? [];
+    group.push(row.prerequisiteCourseId);
+    byGroup.set(row.groupNo, group);
+  }
+
+  const groups = Array.from(byGroup.values());
+
+  const induction = await listOhsInductionCourseIds();
   if (induction.size > 0 && !induction.has(courseId)) groups.push(Array.from(induction));
   return groups;
 }

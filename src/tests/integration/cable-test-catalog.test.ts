@@ -3,15 +3,21 @@ import { describe, expect, it } from "vitest";
 import { db } from "../../db";
 import { assessmentScores, cardDispatches, courses, manufacturers, qualificationCards } from "../../db/schema";
 
-// The four Power Cable Joint and Termination courses award a card printed by
-// the cable-accessory manufacturer, not a certificate this platform issues.
+// The Power Cable Joint and Termination tests award a card printed by the
+// cable-accessory manufacturer, not a certificate this platform issues.
 //
-// They are the courses that ALREADY existed in the catalog from the SEC
-// training matrix — CTCT06/08/10/12 — not new rows. An earlier draft of this
-// work seeded duplicates under CBLT-* codes, which would have split each
-// technician's cable history across two course ids and made every report on it
-// quietly wrong. The first test below is what would have caught that.
-const CABLE_COURSES = ["CTCT06", "CTCT08", "CTCT10", "CTCT12"];
+// Eight of them: joint and termination are separate tests with their own code,
+// day and price. The catalog carried only the even codes under a combined
+// "Joint and Termination" title, and its gaps were exactly the odd ones —
+// CTCT07/09/11/13 — which is what GCC Lab's own price list uses for the
+// termination halves (0039).
+//
+// The even codes are rows that ALREADY existed from the SEC training matrix.
+// An earlier draft seeded duplicates under CBLT-* codes, which would have
+// split each technician's cable history across two course ids and made every
+// report on it quietly wrong. The first test below is what catches that.
+const CABLE_COURSES = ["CTCT06", "CTCT07", "CTCT08", "CTCT09", "CTCT10", "CTCT11", "CTCT12", "CTCT13"];
+const PRICED = ["CTCT06", "CTCT07", "CTCT08", "CTCT09", "CTCT10", "CTCT11"];
 
 describe("manufacturer-issued cards — catalog", () => {
   it("awards cards from the existing courses, with no duplicate rows", async () => {
@@ -21,7 +27,7 @@ describe("manufacturer-issued cards — catalog", () => {
     // No second row anywhere carrying the same programme under another code.
     const byTitle = await db.select({ code: courses.code, title: courses.titleEn }).from(courses);
     const cableTitled = byTitle.filter((c) => /power cable joint/i.test(c.title));
-    expect(cableTitled).toHaveLength(4);
+    expect(cableTitled).toHaveLength(8);
   });
 
   it("carries the Cable Technician Evaluation rubric, scored per item", async () => {
@@ -30,7 +36,9 @@ describe("manufacturer-issued cards — catalog", () => {
     // The single most important field in this feature: an aggregate rule would
     // card a technician who cannot pass an insulation test.
     expect(course.rubric?.passRule).toBe("per_item");
-    expect(course.rubric?.parts.map((p) => p.code)).toEqual(["splicing", "termination"]);
+    // ONE part per test — CTCT10 scores the joint, CTCT11 the termination.
+    // Two parts here would mean the split never happened.
+    expect(course.rubric?.parts.map((p) => p.code)).toEqual(["joint"]);
     expect(course.rubric?.criteria.map((c) => c.code)).toEqual([
       "safety",
       "preparation",
@@ -38,7 +46,7 @@ describe("manufacturer-issued cards — catalog", () => {
       "skills",
       "insulation",
     ]);
-    // Ten marks per attempt, each out of 20 — the paper form exactly.
+    // Five marks per sitting, each out of 20 — one column of the paper form.
     expect(course.rubric?.criteria.every((c) => c.max === 20)).toBe(true);
 
     // The threshold lives on the course, not in the rubric, so there is one
@@ -64,6 +72,33 @@ describe("manufacturer-issued cards — catalog", () => {
       const prereqs = await db.query.coursePrerequisites.findMany({ where: (t, { eq: e }) => e(t.courseId, row.id) });
       expect(roles.length, `${row.code} eligible job roles`).toBeGreaterThan(0);
       expect(prereqs.length, `${row.code} prerequisites`).toBeGreaterThan(0);
+    }
+  });
+
+  it("prices the six GCC Lab has priced at 695 nationally, and shows nothing for the rest", async () => {
+    // A flat national price, not the regional 450–1,100 inherited from a
+    // training day-rate formula that never described these tests.
+    for (const code of PRICED) {
+      const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, code));
+      const active = await db.query.pricing.findMany({
+        where: (t, { eq: e, and: a, or: o, isNull: n, gt: g }) =>
+          a(e(t.courseId, course.id), o(n(t.effectiveTo), g(t.effectiveTo, new Date().toISOString().slice(0, 10)))),
+      });
+      expect(active, `${code} active prices`).toHaveLength(1);
+      expect(active[0].region, `${code} must be national`).toBeNull();
+      expect(Number(active[0].price)).toBe(695);
+    }
+
+    // 69KV has no confirmed price. Showing the old training figure would be
+    // inventing one, so it carries none — an admin enters the amount at
+    // approval via the existing unit-price override.
+    for (const code of ["CTCT12", "CTCT13"]) {
+      const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, code));
+      const active = await db.query.pricing.findMany({
+        where: (t, { eq: e, and: a, or: o, isNull: n, gt: g }) =>
+          a(e(t.courseId, course.id), o(n(t.effectiveTo), g(t.effectiveTo, new Date().toISOString().slice(0, 10)))),
+      });
+      expect(active, `${code} should have no active price`).toHaveLength(0);
     }
   });
 

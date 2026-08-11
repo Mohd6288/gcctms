@@ -3,19 +3,21 @@ import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, 
 import { timestamptz } from "./_helpers";
 import { jobRoles } from "./auth";
 
+export type CourseDiscipline = "Electrical" | "Mechanical" | "Electrical-Electronics";
 export type CourseOutcome = "certificate" | "card";
 
 /**
  * The scoring sheet for a practically-assessed course (0038), e.g. the Cable
- * Technician Evaluation: every criterion is marked once per part, so a cable
- * assessment is 2 parts x 5 criteria = 10 marks.
+ * Technician Evaluation: every criterion is marked once per part. The cable
+ * tests carry ONE part each — joint and termination are separate tests with
+ * their own code, day and price — so a sitting is 5 marks out of 100.
  *
  * `passRule` is the important field and the reason scores are stored per cell
  * rather than as a total:
  *   - "per_item"  — EVERY criterion, in EVERY part, must reach the threshold.
  *   - "aggregate" — the sum across everything must reach it.
- * For the cable tests the rule is per_item, so 20/20/20/20/10 is 90% overall
- * and still a fail.
+ * For the cable tests the rule is per_item, so 18/16/19/17/10 is 80 out of 100
+ * and still a fail, because the last mark is under 70% of its 20.
  */
 export interface Rubric {
   passRule: "per_item" | "aggregate";
@@ -44,6 +46,9 @@ export const courses = pgTable(
     passMark: integer("pass_mark"),
     validityMonths: integer("validity_months"),
     contractorCategory: text("contractor_category"),
+    // 0039 — the technical discipline of a certification test, which decides
+    // which Safe Working Procedures certificate its candidates must hold.
+    discipline: text("discipline").$type<CourseDiscipline>(),
     // 0038 — 'card' means an external manufacturer prints the credential and
     // this platform only tracks it (the cable program, CTCT06/08/10/12).
     // Defaults to the existing behaviour, so every course predating 0038 reads
@@ -94,15 +99,21 @@ export const courseJobRoles = pgTable(
   ]
 );
 
-// OR-semantics: an employee satisfies course_id's prerequisite gate by
-// holding a valid certificate for ANY ONE listed prerequisite_course_id, not
-// all of them. Zero rows for a course = no prerequisite gate.
+// OR within a group_no, AND across them: an employee satisfies the gate by
+// holding a valid certificate for ANY ONE course in EVERY group. Zero rows
+// for a course = no prerequisite gate. Before 0039 there was a single
+// implicit group, which could only ever say "any one of these" — see
+// getPrerequisiteGroups() in catalog/queries.ts.
 export const coursePrerequisites = pgTable(
   "course_prerequisites",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     courseId: bigint("course_id", { mode: "number" }).notNull().references(() => courses.id),
     prerequisiteCourseId: bigint("prerequisite_course_id", { mode: "number" }).notNull().references(() => courses.id),
+    // 0039 — OR within a group, AND across groups. Everything seeded before
+    // 0039 sits in group 1, which is the single OR group the gate used to
+    // apply, so no existing course changes meaning.
+    groupNo: integer("group_no").notNull().default(1),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
