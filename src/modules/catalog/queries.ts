@@ -9,7 +9,7 @@ import {
   courseJobRoles,
   coursePrerequisites,
   cities,
-  courses,
+  courses, manufacturers,
   documents,
   employees,
   jobRoles,
@@ -513,4 +513,8 @@ export async function getPlatformOverviewStats() {
     certificatesIssued: row.certificates_issued,
     revenue: row.revenue,
   };
+}
+
+export async function listManufacturers() {
+  return db.select().from(manufacturers).orderBy(manufacturers.name);
 }

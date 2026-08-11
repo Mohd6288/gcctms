@@ -9,6 +9,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   cardDispatches,
+  classEnrollments,
   classes,
   companies,
   courses,
@@ -24,7 +25,7 @@ import { queueNotification } from "@/modules/platform/notifications/service";
 import { decryptNationalId, maskNationalId } from "@/modules/platform/security/national-id";
 import { listPriorAttempts } from "@/modules/assessment/queries";
 import { renderPassListPdf } from "./pass-list";
-import type { RecordCardCollectionInput, RecordCardIssuanceInput } from "./schema";
+import type { ConfirmSchedulingInput, RecordCardCollectionInput, RecordCardIssuanceInput } from "./schema";
 
 const BUCKET = "card-dispatches";
 
@@ -37,6 +38,103 @@ const BUCKET = "card-dispatches";
  * the message body.
  */
 export const PASS_LIST_LINK_TTL_SECONDS = 72 * 60 * 60;
+
+/**
+ * Step 5 — the manufacturer agrees the date.
+ *
+ * Until this is recorded the schedule is GCC Lab's proposal. That distinction
+ * is the whole reason the column exists: telling candidates to travel to a
+ * date the manufacturer has not agreed is how a test day is wasted.
+ */
+export async function confirmManufacturerScheduling(context: AuthContext, input: ConfirmSchedulingInput) {
+  if (!authorize("schedule_classes", context)) throw new Error("Not authorized");
+
+  const [cls] = await db.select().from(classes).where(eq(classes.id, input.classId));
+  if (!cls) throw new GuardError("That class no longer exists.");
+
+  const [manufacturer] = await db.select().from(manufacturers).where(eq(manufacturers.id, input.manufacturerId));
+  if (!manufacturer?.active) throw new GuardError("That manufacturer is not on the active list.");
+
+  await db
+    .update(classes)
+    .set({
+      manufacturerId: input.manufacturerId,
+      manufacturerConfirmedAt: input.confirmed ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(classes.id, input.classId));
+
+  await writeAudit({
+    userId: context.userId,
+    entityType: "class",
+    entityId: input.classId,
+    action: input.confirmed ? "manufacturer_confirmed" : "manufacturer_unconfirmed",
+    note: manufacturer.name,
+  });
+}
+
+/**
+ * Step 6 — the attendance guidelines and the material list, to every candidate.
+ *
+ * Locked until the manufacturer has confirmed, and refused a second time: the
+ * guidelines tell a technician where to be and what to bring, and a second
+ * copy of a date that has not changed only invites doubt about which one is
+ * right.
+ */
+export async function sendTestGuidelines(context: AuthContext, classId: number) {
+  if (!authorize("schedule_classes", context)) throw new Error("Not authorized");
+
+  const [cls] = await db.select().from(classes).where(eq(classes.id, classId));
+  if (!cls) throw new GuardError("That class no longer exists.");
+  if (cls.manufacturerConfirmedAt == null) {
+    throw new GuardError(
+      "The manufacturer has not confirmed this date yet. Until they do it is a proposal, and candidates should not be told to travel to it."
+    );
+  }
+  if (cls.guidelinesSentAt != null) {
+    throw new GuardError("The guidelines have already been sent for this class.");
+  }
+
+  const [course] = await db.select({ titleEn: courses.titleEn }).from(courses).where(eq(courses.id, cls.courseId));
+
+  // One message per enrolled company, not per technician: the contractor
+  // coordinates attendance, arranges the entry permit and brings the
+  // materials. Emailing each candidate would send the same instructions to
+  // people who cannot act on most of them.
+  const enrolments = await db
+    .select({ companyId: classEnrollments.companyId })
+    .from(classEnrollments)
+    .where(eq(classEnrollments.classId, classId));
+  const companyIds = [...new Set(enrolments.map((e) => e.companyId))];
+  if (companyIds.length === 0) throw new GuardError("Nobody is enrolled in this class yet.");
+
+  for (const companyId of companyIds) {
+    const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, companyId));
+    if (!company) continue;
+    await queueNotification({
+      type: "test.guidelines_sent",
+      recipientEmail: company.contactEmail,
+      data: {
+        classId,
+        courseTitle: course?.titleEn ?? "",
+        testDate: cls.startDate,
+        venue: cls.locationNote ?? cls.region,
+        locationUrl: cls.locationUrl ?? "",
+      },
+    });
+  }
+
+  await db.update(classes).set({ guidelinesSentAt: new Date(), updatedAt: new Date() }).where(eq(classes.id, classId));
+  await writeAudit({
+    userId: context.userId,
+    entityType: "class",
+    entityId: classId,
+    action: "send_guidelines",
+    note: `${companyIds.length} contractor(s)`,
+  });
+
+  return { sentTo: companyIds.length };
+}
 
 export async function dispatchPassList(context: AuthContext, classId: number) {
   if (!authorize("approve_certificates", context)) throw new Error("Not authorized");

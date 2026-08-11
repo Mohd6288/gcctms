@@ -821,7 +821,22 @@
         "recordCollected": "تسجيل الاستلام",
         "collectedDone": "تم تسجيل استلام {name}.",
         "collectedBy": "استلمها {name} ({mobile})",
-        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "manufacturerLabel": "الجهة المصنّعة",
+        "manufacturerNone": "— اختر —",
+        "manufacturerNoEmail": "لا يوجد بريد للتواصل",
+        "awaitingConfirmation": "بانتظار تأكيد الجهة المصنّعة",
+        "confirmedOn": "تم التأكيد في {date}",
+        "markConfirmed": "تأكيد الموعد",
+        "markUnconfirmed": "سحب التأكيد",
+        "confirmedDone": "تم تأكيد الموعد مع الجهة المصنّعة.",
+        "unconfirmedDone": "تم سحب التأكيد.",
+        "guidelinesTitle": "إرشادات الحضور وقائمة المواد",
+        "guidelinesLocked": "مقفلة حتى تؤكد الجهة المصنّعة الموعد — قبل ذلك يبقى مقترحاً.",
+        "guidelinesReady": "جاهزة للإرسال إلى جميع المقاولين المسجّلين.",
+        "guidelinesSentOn": "أُرسلت في {date}.",
+        "sendGuidelines": "إرسال الإرشادات",
+        "guidelinesDone": "تم إرسال الإرشادات إلى المقاولين المسجّلين."
       }
     },
     "scheduling": {

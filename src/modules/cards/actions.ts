@@ -2,8 +2,15 @@
 
 import { getContext } from "@/modules/platform/auth/service";
 import { runGuarded } from "@/modules/platform/guard-error";
-import { RecordCardCollectionInput, RecordCardIssuanceInput } from "./schema";
-import { dispatchPassList, getPassListUrl, recordCardCollection, recordCardIssuance } from "./service";
+import { ConfirmSchedulingInput, RecordCardCollectionInput, RecordCardIssuanceInput } from "./schema";
+import {
+  confirmManufacturerScheduling,
+  dispatchPassList,
+  getPassListUrl,
+  recordCardCollection,
+  recordCardIssuance,
+  sendTestGuidelines,
+} from "./service";
 
 async function requireContext() {
   const context = await getContext();
@@ -33,4 +40,14 @@ export async function recordCardIssuanceAction(input: RecordCardIssuanceInput) {
 export async function recordCardCollectionAction(input: RecordCardCollectionInput) {
   const context = await requireContext();
   return runGuarded(() => recordCardCollection(context, RecordCardCollectionInput.parse(input)));
+}
+
+export async function confirmManufacturerSchedulingAction(input: ConfirmSchedulingInput) {
+  const context = await requireContext();
+  return runGuarded(() => confirmManufacturerScheduling(context, ConfirmSchedulingInput.parse(input)));
+}
+
+export async function sendTestGuidelinesAction(classId: number) {
+  const context = await requireContext();
+  return runGuarded(() => sendTestGuidelines(context, classId));
 }

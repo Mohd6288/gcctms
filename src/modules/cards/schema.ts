@@ -19,3 +19,12 @@ export const RecordCardCollectionInput = z.object({
   receiptDocumentId: z.number().int().positive().optional(),
 });
 export type RecordCardCollectionInput = z.infer<typeof RecordCardCollectionInput>;
+
+export const ConfirmSchedulingInput = z.object({
+  classId: z.number().int().positive(),
+  manufacturerId: z.number().int().positive(),
+  // Unsettable as well as settable — a date can be un-agreed, and leaving no
+  // way back would mean editing the database to fix a misclick.
+  confirmed: z.boolean(),
+});
+export type ConfirmSchedulingInput = z.infer<typeof ConfirmSchedulingInput>;

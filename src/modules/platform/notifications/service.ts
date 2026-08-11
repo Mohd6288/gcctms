@@ -24,6 +24,7 @@ export type NotificationType =
   | "certificate.issued"
   // The card programme (0038). A certificate waits for GCC Lab to approve it;
   // a card waits for the pass list to reach whoever prints it.
+  | "test.guidelines_sent"
   | "card.awaiting_dispatch"
   | "card.pass_list_dispatched"
   | "card.ready_for_collection";

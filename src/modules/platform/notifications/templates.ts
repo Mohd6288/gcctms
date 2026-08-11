@@ -113,6 +113,53 @@ export function renderNotification(type: NotificationType, data: Record<string, 
         en: `${num(data.count)} certificate(s) are ready to release for class #${classId}.`,
         path: `/admin/classes/${classId}`,
       };
+    case "test.guidelines_sent": {
+      // ارشادات حضور الاختبارات + MATERIAL LIST, carried in the message rather
+      // than attached. An attachment is a file to lose; the four things a
+      // contractor must actually DO — identity, permit, materials, notice —
+      // belong in front of them when they open it.
+      const venue = String(data.venue ?? "");
+      const when = String(data.testDate ?? "");
+      const link = String(data.locationUrl ?? "");
+      const en = [
+        `Your technicians are booked for ${String(data.courseTitle ?? "a qualification test")} on ${when}, at ${venue}.${link ? ` Location: ${link}` : ""}`,
+        "",
+        "Before the test day:",
+        "• Each technician brings a valid Iqama or civil ID and a recent photograph. The Iqama must name your company as employer.",
+        "• Their occupation must be a specialisation suited to the test — electrical or mechanical.",
+        "• Send the list of materials, tools and equipment, with vehicle registration, insurance and the driver's licence, AT LEAST TWO WORKING DAYS ahead so entry permits can be issued.",
+        "• If a technician cannot attend, tell the centre AT LEAST THREE WORKING DAYS ahead so the slot can be rescheduled.",
+        "",
+        "Materials to bring, per technician per test:",
+        "straight connection kit and end connection kit for the voltage being tested; 3 m of straight cable for that voltage; gas cylinder; torch; crimping tool; wooden-handled knife; scoring knife; hacksaw and blade; electrician pliers; long-nose pliers; flat file; circular file; cutter; flat screwdrivers.",
+        "",
+        "On the day: arrive at the stated times, in work uniform. Smoking is prohibited except in designated areas.",
+        "",
+        "A card is awarded to a technician scoring 70% or above in every item of the evaluation, and is valid two years from the date of the test.",
+      ].join("\n");
+      const ar = [
+        `تم جدولة الفنيين لديكم لاختبار ${String(data.courseTitle ?? "")} بتاريخ ${when}، في ${venue}.${link ? ` الموقع: ${link}` : ""}`,
+        "",
+        "قبل يوم الاختبار:",
+        "• يحضر كل فني بطاقة أحوال مدنية أو إقامة سارية وصورة شخصية حديثة، على أن يكون اسم المقاول مثبتاً في الإقامة.",
+        "• أن تكون مهنته ضمن إحدى المهن التخصصية المناسبة للاختبار (الكهربائية أو الميكانيكية).",
+        "• إرسال قائمة المواد والأدوات والمعدات مع استمارة المركبة وصورة التأمين ورخصة السائق قبل موعد الاختبار بيومي عمل على الأقل لإصدار تصاريح الدخول.",
+        "• في حال تعذّر حضور أحد الفنيين، إبلاغ المركز قبل ثلاثة أيام عمل على الأقل لإعادة الجدولة.",
+        "",
+        "المواد المطلوب إحضارها لكل فني ولكل اختبار:",
+        "طقم وصلة مستقيمة وطقم وصلة نهاية حسب الجهد المطلوب؛ قطعة كابل مستقيم بطول 3 أمتار حسب الجهد؛ اسطوانة غاز؛ شعلة؛ أداة كبس؛ سكين بمقبض خشبي؛ سكين تخطيط؛ منشار حديد بشفرة؛ زرادية كهربائي؛ زرادية طويلة الأنف؛ مبرد مسطح؛ مبرد دائري؛ قاطع؛ مفكات مسطحة.",
+        "",
+        "يوم الاختبار: الالتزام بمواعيد البدء والانتهاء وبالزي الرسمي للعمل. يمنع التدخين في غير الأماكن المصرح بها.",
+        "",
+        "تُمنح بطاقة الاجتياز لمن يحقق 70% فأعلى في كل بند من بنود التقييم، وتكون صالحة لمدة عامين من تاريخ الاختبار.",
+      ].join("\n");
+      return {
+        subject: `Test guidelines — ${String(data.courseTitle ?? "qualification test")}, ${when}`,
+        ar,
+        en,
+        path: `/dashboard/training`,
+      };
+    }
     case "card.awaiting_dispatch":
       return {
         subject: `${num(data.count)} qualification card(s) to request from the manufacturer`,

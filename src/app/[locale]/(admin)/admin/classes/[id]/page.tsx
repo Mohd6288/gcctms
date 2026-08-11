@@ -9,7 +9,7 @@ import { getEntityHistory } from "@/modules/directory/queries";
 import { Timeline } from "@/components/profile/timeline";
 import { listAssessmentCandidates } from "@/modules/assessment/queries";
 import { listCardsForClass, listDispatchesForClass } from "@/modules/cards/queries";
-import { getCourseById } from "@/modules/catalog/queries";
+import { getCourseById, listManufacturers } from "@/modules/catalog/queries";
 import { AssessmentPanel } from "./assessment-panel";
 import { CardsPanel } from "./cards-panel";
 import { ClassDetail } from "./class-detail";
@@ -73,6 +73,7 @@ export default async function AdminClassDetailPage({
   const assessmentCandidates = awardsCard ? await listAssessmentCandidates(classId) : [];
   const cards = awardsCard ? await listCardsForClass(classId) : [];
   const dispatches = awardsCard ? await listDispatchesForClass(classId) : [];
+  const manufacturerOptions = awardsCard ? await listManufacturers() : [];
 
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
@@ -107,7 +108,22 @@ export default async function AdminClassDetailPage({
             canEdit={cls.status === "in_progress"}
             locale={locale}
           />
-          <CardsPanel classId={classId} cards={cards} dispatches={dispatches} canEdit locale={locale} />
+          <CardsPanel
+            classId={classId}
+            cards={cards}
+            dispatches={dispatches}
+            manufacturers={manufacturerOptions.map((m) => ({
+              id: m.id,
+              name: m.name,
+              contactEmail: m.contactEmail,
+              active: m.active,
+            }))}
+            manufacturerId={cls.manufacturerId}
+            confirmedAt={cls.manufacturerConfirmedAt ? cls.manufacturerConfirmedAt.toISOString() : null}
+            guidelinesSentAt={cls.guidelinesSentAt ? cls.guidelinesSentAt.toISOString() : null}
+            canEdit
+            locale={locale}
+          />
         </>
       ) : null}
       <div className="w-full max-w-3xl">

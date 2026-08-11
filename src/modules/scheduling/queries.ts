@@ -139,6 +139,11 @@ export async function getClassById(classId: number) {
       status: classes.status,
       locationUrl: classes.locationUrl,
       locationNote: classes.locationNote,
+      // The cable programme's coordination state (0038). Null on every other
+      // class, which is what the panel keys off to stay hidden.
+      manufacturerId: classes.manufacturerId,
+      manufacturerConfirmedAt: classes.manufacturerConfirmedAt,
+      guidelinesSentAt: classes.guidelinesSentAt,
     })
     .from(classes)
     .innerJoin(courses, eq(classes.courseId, courses.id))

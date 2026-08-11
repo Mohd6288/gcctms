@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { cities, courseJobRoles, coursePrerequisites, courses, pricing, profiles, trainerCourses, trainers, trainingCenters } from "@/db/schema";
+import { cities, courseJobRoles, coursePrerequisites, courses, manufacturers, pricing, profiles, trainerCourses, trainers, trainingCenters } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorize, type AuthContext } from "@/modules/platform/auth/shared";
 import { writeAudit } from "@/modules/platform/audit/service";
@@ -12,12 +12,14 @@ import type {
   CreateTrainerLoginInput,
   SetCityActiveInput,
   CreateCourseInput,
+  CreateManufacturerInput,
   CreatePricingInput,
   CreateTrainerInput,
   CreateTrainingCenterInput,
   SetCoursePrerequisitesInput,
   SetCourseJobRolesInput,
   UpdateCourseInput,
+  UpdateManufacturerInput,
   UpdateTrainerInput,
   UpdateTrainingCenterInput,
 } from "./schema";
@@ -148,6 +150,32 @@ export async function updateTrainingCenter(context: AuthContext, input: UpdateTr
     .set({ name: input.name, city: input.city, address: input.address, capacity: input.capacity, active: input.active })
     .where(eq(trainingCenters.id, input.centerId));
   await writeAudit({ userId: context.userId, entityType: "training_center", entityId: input.centerId, action: "update" });
+}
+
+// The external party in the cable programme. Mirrors createTrainingCenter:
+// super_admin maintains the list, everyone signed in can read it, and
+// scheduling names one per class.
+export async function createManufacturer(context: AuthContext, input: CreateManufacturerInput) {
+  requireCatalogAccess(context);
+  const [row] = await db.insert(manufacturers).values(input).returning({ id: manufacturers.id });
+  await writeAudit({ userId: context.userId, entityType: "manufacturer", entityId: row.id, action: "create" });
+  return row;
+}
+
+export async function updateManufacturer(context: AuthContext, input: UpdateManufacturerInput) {
+  requireCatalogAccess(context);
+  await db
+    .update(manufacturers)
+    .set({
+      name: input.name,
+      contactName: input.contactName ?? null,
+      contactEmail: input.contactEmail ?? null,
+      phone: input.phone ?? null,
+      active: input.active,
+      updatedAt: new Date(),
+    })
+    .where(eq(manufacturers.id, input.manufacturerId));
+  await writeAudit({ userId: context.userId, entityType: "manufacturer", entityId: input.manufacturerId, action: "update" });
 }
 
 // region omitted = the default price for the course; a region-specific row

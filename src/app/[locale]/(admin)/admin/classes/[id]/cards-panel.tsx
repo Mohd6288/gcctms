@@ -8,17 +8,30 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import type { CardRow, DispatchRow } from "@/modules/cards/queries";
 import {
+  confirmManufacturerSchedulingAction,
   dispatchPassListAction,
   getPassListUrlAction,
   recordCardCollectionAction,
   recordCardIssuanceAction,
+  sendTestGuidelinesAction,
 } from "@/modules/cards/actions";
 import { refusalMessage } from "@/modules/platform/guard-error";
+
+interface ManufacturerOption {
+  id: number;
+  name: string;
+  contactEmail: string | null;
+  active: boolean;
+}
 
 interface Props {
   classId: number;
   cards: CardRow[];
   dispatches: DispatchRow[];
+  manufacturers: ManufacturerOption[];
+  manufacturerId: number | null;
+  confirmedAt: string | null;
+  guidelinesSentAt: string | null;
   canEdit: boolean;
   locale: string;
 }
@@ -39,7 +52,17 @@ const STATUS_STYLES: Record<string, string> = {
  * order, because an admin working from the paper form should not have to
  * translate between the two.
  */
-export function CardsPanel({ classId, cards, dispatches, canEdit, locale }: Props) {
+export function CardsPanel({
+  classId,
+  cards,
+  dispatches,
+  manufacturers,
+  manufacturerId,
+  confirmedAt,
+  guidelinesSentAt,
+  canEdit,
+  locale,
+}: Props) {
   const t = useTranslations("admin.classes.cards");
   const router = useRouter();
 
@@ -48,6 +71,7 @@ export function CardsPanel({ classId, cards, dispatches, canEdit, locale }: Prop
   const [done, setDone] = useState<string | null>(null);
   const [cardNumbers, setCardNumbers] = useState<Record<number, string>>({});
   const [collector, setCollector] = useState<Record<number, { name: string; mobile: string }>>({});
+  const [chosenManufacturer, setChosenManufacturer] = useState(manufacturerId ? String(manufacturerId) : "");
 
   const awaiting = cards.filter((c) => c.status === "awaiting_issuer" && c.dispatchedAt === null);
   const dateFmt = new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", { dateStyle: "medium" });
@@ -95,6 +119,85 @@ export function CardsPanel({ classId, cards, dispatches, canEdit, locale }: Prop
       <div aria-live="polite">
         {done ? <p className="rounded-md bg-success/10 p-2.5 text-xs font-medium text-success">{done}</p> : null}
         {error ? <p className="rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">{error}</p> : null}
+      </div>
+
+      {/* Steps 5 and 6. Before the manufacturer agrees, the date is a
+          proposal — so the guidelines, which are what tells a technician to
+          travel, stay locked behind that confirmation. */}
+      <div className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="manufacturer">{t("manufacturerLabel")}</Label>
+          <select
+            id="manufacturer"
+            disabled={!canEdit}
+            className="h-8 w-full max-w-sm rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+            value={chosenManufacturer}
+            onChange={(e) => setChosenManufacturer(e.target.value)}
+          >
+            <option value="">{t("manufacturerNone")}</option>
+            {manufacturers
+              .filter((m) => m.active)
+              .map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                  {m.contactEmail ? "" : ` — ${t("manufacturerNoEmail")}`}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {confirmedAt ? (
+            <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+              {t("confirmedOn", { date: dateFmt.format(new Date(confirmedAt)) })}
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+              {t("awaitingConfirmation")}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant={confirmedAt ? "secondary" : "default"}
+            disabled={!canEdit || !chosenManufacturer || busy === "confirm"}
+            onClick={() =>
+              run(
+                "confirm",
+                () =>
+                  confirmManufacturerSchedulingAction({
+                    classId,
+                    manufacturerId: Number(chosenManufacturer),
+                    confirmed: !confirmedAt,
+                  }),
+                confirmedAt ? t("unconfirmedDone") : t("confirmedDone")
+              )
+            }
+          >
+            {confirmedAt ? t("markUnconfirmed") : t("markConfirmed")}
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
+          <div className="flex flex-1 flex-col gap-0.5">
+            <span className="text-sm font-medium">{t("guidelinesTitle")}</span>
+            <span className="text-xs text-muted-foreground">
+              {guidelinesSentAt
+                ? t("guidelinesSentOn", { date: dateFmt.format(new Date(guidelinesSentAt)) })
+                : confirmedAt
+                  ? t("guidelinesReady")
+                  : t("guidelinesLocked")}
+            </span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canEdit || !confirmedAt || guidelinesSentAt !== null || busy === "guidelines"}
+            onClick={() => run("guidelines", () => sendTestGuidelinesAction(classId), t("guidelinesDone"))}
+          >
+            {busy === "guidelines" ? t("sending") : t("sendGuidelines")}
+          </Button>
+        </div>
       </div>
 
       {/* Step 9 */}

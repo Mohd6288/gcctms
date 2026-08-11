@@ -821,7 +821,22 @@
         "recordCollected": "Record collection",
         "collectedDone": "Collection recorded for {name}.",
         "collectedBy": "collected by {name} ({mobile})",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "manufacturerLabel": "Manufacturer",
+        "manufacturerNone": "— select —",
+        "manufacturerNoEmail": "no contact email",
+        "awaitingConfirmation": "Awaiting manufacturer confirmation",
+        "confirmedOn": "Confirmed {date}",
+        "markConfirmed": "Mark confirmed",
+        "markUnconfirmed": "Withdraw confirmation",
+        "confirmedDone": "Date confirmed with the manufacturer.",
+        "unconfirmedDone": "Confirmation withdrawn.",
+        "guidelinesTitle": "Attendance guidelines and material list",
+        "guidelinesLocked": "Locked until the manufacturer confirms the date — until then it is a proposal.",
+        "guidelinesReady": "Ready to send to every enrolled contractor.",
+        "guidelinesSentOn": "Sent {date}.",
+        "sendGuidelines": "Send guidelines",
+        "guidelinesDone": "Guidelines sent to the enrolled contractors."
       }
     },
     "scheduling": {
