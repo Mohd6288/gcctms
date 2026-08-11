@@ -373,7 +373,16 @@ async function resolvePrice(courseId: number, region: string | null): Promise<st
     order by region nulls last, effective_from desc
     limit 1
   `)) as unknown as Array<{ price: string }>;
-  if (rows.length === 0) throw new Error("No active pricing found for this course.");
+  if (rows.length === 0) {
+    // Not every course has a price yet — GCC Lab is still confirming them for
+    // most of the technical tests, and those deliberately carry none rather
+    // than an inherited figure nobody agreed. So this is an ordinary state an
+    // admin resolves, not a fault: say what to do about it, and say it in a
+    // way that survives the Server Action boundary.
+    throw new GuardError(
+      "This course has no price set yet. Enter the amount for this request below, or add a price for the course in the catalog."
+    );
+  }
   return rows[0].price;
 }
 
@@ -397,11 +406,11 @@ export async function approveRequest(context: AuthContext, requestId: number, un
     .where(eq(documents.requestId, requestId));
   const verifiedTypes = new Set(requestDocs.filter((d) => d.verifiedAt !== null).map((d) => d.type));
   if (!verifiedTypes.has("registration_sheet") || !verifiedTypes.has("hrbl_request_form")) {
-    throw new Error("Both the Registration Sheet and HRBL_0004_FO_001 must be verified before approving.");
+    throw new GuardError("Both the Registration Sheet and HRBL_0004_FO_001 must be verified before approving.");
   }
 
   const items = await db.select().from(requestItems).where(eq(requestItems.requestId, requestId));
-  if (items.length === 0) throw new Error("Request has no employees.");
+  if (items.length === 0) throw new GuardError("This request has no employees on it.");
   const billable = items.filter((i) => i.decision !== "rejected");
 
   const [company] = await db.select({ contactEmail: companies.contactEmail }).from(companies).where(eq(companies.id, request.companyId));

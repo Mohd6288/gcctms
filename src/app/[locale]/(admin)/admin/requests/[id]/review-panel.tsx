@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { verifyEmployeeDocumentAction } from "@/modules/platform/storage/actions";
 import { useRouter } from "@/i18n/navigation";
+import { refusalMessage } from "@/modules/platform/guard-error";
 import {
   approveRequestAction,
   rejectRequestAction,
@@ -137,7 +138,17 @@ export function ReviewPanel({
     setError(null);
     setLoading("approve");
     try {
-      await approveRequestAction({ requestId, unitPrice: unitPrice ? Number(unitPrice) : undefined });
+      // Checked BEFORE navigating. approveRequestAction returns its refusals
+      // rather than throwing them, so redirecting on a resolved promise would
+      // send the admin back to the queue as though an approval that never
+      // happened had succeeded.
+      const refusal = refusalMessage(
+        await approveRequestAction({ requestId, unitPrice: unitPrice ? Number(unitPrice) : undefined })
+      );
+      if (refusal) {
+        setError(refusal);
+        return;
+      }
       router.push("/admin/requests");
       router.refresh();
     } catch (err) {

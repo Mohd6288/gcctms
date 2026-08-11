@@ -85,7 +85,10 @@ export async function rejectRequestDocumentAction(input: RejectRequestDocumentIn
 export async function approveRequestAction(input: ApproveRequestInput) {
   const context = await requireContext();
   const parsed = ApproveRequestInput.parse(input);
-  return approveRequest(context, parsed.requestId, parsed.unitPrice);
+  // Guarded: approval is where an unpriced course surfaces, and "enter the
+  // amount below" is only useful if the admin can read it. Thrown Server
+  // Action errors reach production as a minified React code.
+  return runGuarded(() => approveRequest(context, parsed.requestId, parsed.unitPrice));
 }
 
 export async function requestMoreInfoAction(input: RequestMoreInfoInput) {

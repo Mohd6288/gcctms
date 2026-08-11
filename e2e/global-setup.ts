@@ -11,13 +11,20 @@ export default async function globalSetup() {
 
   const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
   const email = "e2e-superadmin@gcclab.test";
+  const sql = postgres(databaseUrl);
 
-  const { data } = await admin.auth.admin.listUsers();
+  // Looked up by email against the table, NOT via listUsers().
+  //
+  // listUsers() is paginated and returns only the first 50. Once this database
+  // had more accounts than that, the existing e2e user stopped being found,
+  // createUser() then failed on the duplicate email, and the whole browser
+  // suite died in setup on `.data.user!.id` being null — a failure that looked
+  // like a broken app and was really a page boundary.
+  const existing = await sql<{ id: string }[]>`select id from auth.users where email = ${email} limit 1`;
   const userId =
-    data.users.find((u) => u.email === email)?.id ??
+    existing[0]?.id ??
     (await admin.auth.admin.createUser({ email, password: "E2ePassw0rd!", email_confirm: true })).data.user!.id;
 
-  const sql = postgres(databaseUrl);
   await sql`
     insert into profiles (user_id, role, full_name) values (${userId}, 'super_admin', 'E2E Super Admin')
     on conflict (user_id) do update set role = 'super_admin', active = true
