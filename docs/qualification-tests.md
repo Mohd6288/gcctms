@@ -121,6 +121,24 @@ registered — the same document step as a course request.
 
 **No new mechanism is needed. What is needed is the list of four.**
 
+### The four, per test
+
+| Test | Safe Working Procedures | Plus, always |
+| --- | --- | --- |
+| CTCT06–CTCT13 (cable, Distribution) | CSCC02 Electrical | Basic Fire Fighting (CSCC21) · Basic First Aid (CSCC22) · OHS General Induction (CSCC00) |
+| CTCT02 Heavy Vehicles | CSCC03 Mechanical **or** CSCC02 Electrical | as above |
+| CTCT18 Transformer Maintenance | CSCC08 **and** CSCC03 — the work is both | as above |
+| CTCT19–CTCT22 (Transmission) | CSCC08 | as above |
+
+The induction is not a `course_prerequisites` row: the platform appends it to
+every course, because SEC's rule is that nobody trains at all without it. It is
+still one of the four and is enforced.
+
+CTCT02 and CTCT18 are the reason `group_no` exists. "Either of these" and "both
+of these" are different requirements, and a single list cannot say which one is
+meant — CTCT02's two courses share a group so either satisfies it, CTCT18's sit
+in separate groups so both are needed.
+
 ### What is configured today, and the gap
 
 Each of the four courses already restricts to its matching job role and requires
@@ -158,6 +176,43 @@ employer named on this document is this company* — stored with the verificatio
 and visible in the audit trail.
 
 ---
+
+## How the upload steps must look
+
+Two screens GCC Lab flagged show the failure mode to avoid. Both render a bare
+`<input type="file">`, which produces:
+
+- **"No file chosen  Choose File" in English, inside an Arabic page.** Browsers
+  render that text themselves and it cannot be translated — so an Arabic user
+  gets an English control, laid out left-to-right in a right-to-left page.
+- **No statement of what to upload,** or why, or what happens next.
+- **No visible required/optional marker and no review status.**
+
+`src/components/documents/document-upload-slot.tsx` already solves all of this
+— its own comment says it exists "rather than a bare `<input type="file">` with
+a status string next to it". Six files render their own input anyway; two of
+them are the screens flagged.
+
+**Every upload the cable programme adds uses `DocumentUploadSlot`, with no
+exceptions.** Concretely, each upload point must state:
+
+1. **What document** — "Basic Fire Fighting certificate (CSCC21)", not "file".
+2. **Why it is needed** — one line: which requirement it satisfies.
+3. **Required or optional**, visibly, before the upload rather than after a
+   refusal.
+4. **What is accepted** — PDF or image, and any size limit.
+5. **Current status** — not attached / pending review / verified / rejected,
+   and the rejection reason where there is one.
+6. **What happens next** — "an admin verifies this before your request can be
+   approved".
+
+And for the entry certificates specifically: the screen lists the four by name
+with a tick against each, so a contractor sees what is still missing **before**
+choosing employees — not as a refusal at submit.
+
+Buttons follow the same rule. An action that uploads says "Upload", one that
+sends says "Send", and the confirmation names what happened. No control that
+performs an action may look like plain text.
 
 ## Build order
 
