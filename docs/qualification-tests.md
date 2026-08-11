@@ -1,31 +1,43 @@
-# Manufacturer-issued cards — the cable programme
+# Technical certification tests — manufacturer-issued cards
 
 ## What this is
 
-Four courses GCC Lab already runs — the Power Cable Joint and Termination
-courses at 1KV, 13.8KV, 33KV and 69KV — award a **card printed by the
-cable-accessory manufacturer** instead of a certificate this platform issues.
-Everything else about them follows the workflow the platform already runs.
+GCC Lab's technical certification tests, **CTCT01–CTCT22**, award a card printed
+by the manufacturer rather than a certificate this platform issues. The
+contractor attendance guidelines say so for all of them, not only cable:
+*"تمنح بطاقة اجتياز لمن يجتاز الاختبار بنسبة 70% فأعلى ومدتها عامين"* — a passing
+card at 70% or above, valid two years.
 
-| Code | Course |
-| --- | --- |
-| CTCT06 | Installation of Power Cable Joint and Termination – 1KV |
-| CTCT08 | … 13.8KV |
-| CTCT10 | … 33KV |
-| CTCT12 | … 69KV |
+Everything before the assessment follows the workflow the platform already runs.
 
-**These are existing catalog rows, not new ones.** An earlier draft of this work
-created four duplicates under `CBLT-*` codes before checking, which would have
-split every technician's cable history across two course ids and made any
-report on it quietly wrong. That has been undone; a test now fails if a second
-row with the same programme title ever appears.
+**Joint and termination are separate tests**, each with its own code, day and
+price. The catalog carried only the even codes under a combined title; the gaps
+were exactly the odd ones GCC Lab uses for the termination halves.
+
+| Voltage | Joint | Termination | Price |
+| --- | --- | --- | --- |
+| 1KV | CTCT06 | CTCT07 | 695 |
+| 13.8KV | CTCT08 | CTCT09 | 695 |
+| 33KV | CTCT10 | CTCT11 | 695 |
+| 69KV | CTCT12 | CTCT13 | not set |
+
+695 SAR **nationally** — one price, no regional variation. The other nine tests
+(CTCT01–05, 18–22) carry no price yet; the catalog shows none and an admin
+enters the amount at approval until it is confirmed.
+
+**The even codes are existing catalog rows, not new ones.** An earlier draft
+created duplicates under `CBLT-*` codes before checking, which would have split
+every technician's cable history across two course ids and made any report on it
+quietly wrong. That was rolled back; a test now fails if a second row with the
+same programme title ever appears.
 
 ## What actually differs from a normal course
 
 Only the last third of the workflow:
 
-1. The assessment is a **scored rubric** across two practical tests — the Cable
-   Technician Evaluation form — not a single exam mark.
+1. The assessment is a **scored rubric** — the Cable Technician Evaluation form —
+   not a single exam mark. Five criteria at 20 each, and **70% is required in
+   every one of them**: 18/16/19/17/10 is 80 out of 100 and still a fail.
 2. The evaluator can belong to the **manufacturer** rather than to GCC Lab.
 3. The credential is a **physical card the manufacturer prints**. The platform
    sends them the pass list and records who collected a card. It never issues
@@ -139,29 +151,18 @@ of these" are different requirements, and a single list cannot say which one is
 meant — CTCT02's two courses share a group so either satisfies it, CTCT18's sit
 in separate groups so both are needed.
 
-### What is configured today, and the gap
+### Also enforced, and unchanged
 
-Each of the four courses already restricts to its matching job role and requires
-one prior course:
+Each test restricts to its matching job role — `Cable Joint & Termination
+Technician (33KV)` and so on — from the SEC matrix. Zero eligible roles means
+*unrestricted* in this system, so a test that lists none is gating nothing; a
+test asserts every one of them still has its roles after any change to what the
+course awards.
 
-| Course | Eligible job role | Prerequisite |
-| --- | --- | --- |
-| CTCT06 | Cable Joint & Termination Technician (1KV) | CSCC02 Safe Working Procedures for Electrical |
-| CTCT08 | … (13.8KV) | CSCC02 |
-| CTCT10 | … (33KV) | CSCC02 |
-| CTCT12 | … (69KV) | CSCC02 |
-
-Plus **CSCC00 OHS General Induction**, which the platform requires for every
-course. That is **two** certificates enforced, where the rule says four.
-
-**The remaining two are named in `ضوابط التأهيل لفني الكابلات`, which is not among
-the supplied documents.** Adding them is a one-line insert into
-`course_prerequisites` once confirmed. Guessing would refuse legitimate
-technicians, so nothing has been guessed.
-
-Also still to confirm: whether the voltages step up — does 33KV require holding
-13.8KV first? The form's "courses obtained" column hints at a ladder, but a hint
-is not a rule, and this one has to come from SEC.
+**Still to confirm:** whether the voltages step up — does 33KV require holding
+13.8KV first? The request form's "courses obtained" column hints at a ladder,
+but a hint is not a rule and this one has to come from SEC. Nothing has been
+invented, so no ladder is enforced today.
 
 ### One rule the platform cannot currently check
 
@@ -216,8 +217,8 @@ performs an action may look like plain text.
 
 ## Build order
 
-1. **Confirm and seed the four prerequisites.** Nothing else should ship first;
-   the gate is worth little while it enforces two of four.
+1. ~~Confirm and seed the four prerequisites.~~ **Done** — all four are enforced,
+   per test, with the AND/OR distinction CTCT02 and CTCT18 require.
 2. **Employer attestation** on Iqama verification.
 3. **Request intake** — course, new/renewal, venue including external institute;
    employees picked from a list with occupation, ID and prior courses filled in.
