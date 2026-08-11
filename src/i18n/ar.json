@@ -154,7 +154,11 @@
       "dragDropHint": "اضغط للرفع أو اسحب الملف وأفلته هنا",
       "replaceFile": "استبدال الملف",
       "uploading": "جارٍ الرفع…",
-      "viewFile": "عرض الملف"
+      "viewFile": "عرض الملف",
+      "uploadSucceeded": "تم الرفع",
+      "uploadSucceededNext": "سيقوم المسؤول بمراجعته. لا يلزمك القيام بأي إجراء آخر.",
+      "uploadFailed": "فشل الرفع",
+      "uploadFailedRetry": "لم يتم حفظ أي شيء. يرجى المحاولة مرة أخرى."
     },
     "externalCertificate": {
       "title": "شهادات سابقة",

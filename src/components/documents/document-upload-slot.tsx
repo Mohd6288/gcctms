@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState, type DragEvent } from "react";
+import { useEffect, useId, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { DocumentPreview } from "./document-preview";
+import { acknowledgesUpload } from "./upload-acknowledgement";
 
 export type DocumentSlotStatus = "not_attached" | "pending" | "verified" | "rejected";
 
@@ -28,6 +29,15 @@ interface DocumentUploadSlotProps {
   templateLabel?: string;
   uploading: boolean;
   onSelectFile: (file: File) => void;
+  /**
+   * Set by the caller when the upload it started has failed. Its presence is
+   * also how this component tells a finished upload from a failed one: when
+   * `uploading` goes false with no error, the upload succeeded.
+   *
+   * It belongs here rather than at the top of the parent form because an error
+   * shown far from the control that caused it reads as unrelated.
+   */
+  error?: string | null;
   readOnly?: boolean;
   // When set, the slot renders an inline preview instead of a bare download
   // link — the whole point being that reviewing a document shouldn't mean
@@ -56,6 +66,7 @@ export function DocumentUploadSlot({
   templateLabel,
   uploading,
   onSelectFile,
+  error,
   readOnly = false,
   documentId,
   mimeType,
@@ -63,6 +74,32 @@ export function DocumentUploadSlot({
   const t = useTranslations("documents.uploadSlot");
   const inputId = useId();
   const [dragActive, setDragActive] = useState(false);
+
+  // Finishing an upload used to be silent: the "Uploading…" text vanished, a
+  // small badge in the far corner changed colour, and the page re-rendered.
+  // Nothing said "done" where the person was actually looking, so they were
+  // left wondering whether to press it again.
+  //
+  // Derived during render rather than in an effect — this is React's
+  // adjust-state-when-props-change pattern. An effect that calls setState
+  // triggers a second render pass for something already knowable here, and
+  // eslint's react-hooks/set-state-in-effect rightly refuses it.
+  const [prevUploading, setPrevUploading] = useState(uploading);
+  const [acknowledged, setAcknowledged] = useState(false);
+  if (prevUploading !== uploading) {
+    setPrevUploading(uploading);
+    // A fresh attempt clears the previous acknowledgement, so two uploads in a
+    // row cannot leave a stale "done" sitting over the second one.
+    setAcknowledged(acknowledgesUpload(prevUploading, uploading, error));
+  }
+
+  // The confirmation holds long enough to be read, then steps aside; the
+  // status badge remains the durable answer to "did that work?".
+  useEffect(() => {
+    if (!acknowledged) return;
+    const timer = setTimeout(() => setAcknowledged(false), 8000);
+    return () => clearTimeout(timer);
+  }, [acknowledged]);
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -103,6 +140,36 @@ export function DocumentUploadSlot({
         <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium", STATUS_STYLES[status])}>
           {statusLabel[status]}
         </span>
+      </div>
+
+      {/* Announced, not just shown — a screen reader user gets the same
+          confirmation a sighted one does. */}
+      <div aria-live="polite">
+        {acknowledged ? (
+          <div className="flex items-start gap-2 rounded-md bg-success/10 p-2.5 text-success">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            <span className="text-xs">
+              <span className="font-semibold">{t("uploadSucceeded")}</span>
+              {fileName ? <span className="font-normal"> — {fileName}</span> : null}
+              <span className="block font-normal opacity-90">{t("uploadSucceededNext")}</span>
+            </span>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2.5 text-destructive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <span className="text-xs">
+              <span className="font-semibold">{t("uploadFailed")}</span>
+              <span className="block font-normal">{error}</span>
+              <span className="block font-normal opacity-90">{t("uploadFailedRetry")}</span>
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {status === "rejected" && rejectionReason ? (

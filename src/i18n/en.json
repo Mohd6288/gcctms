@@ -154,7 +154,11 @@
       "dragDropHint": "Click to upload or drag and drop",
       "replaceFile": "Replace file",
       "uploading": "Uploading…",
-      "viewFile": "View file"
+      "viewFile": "View file",
+      "uploadSucceeded": "Uploaded",
+      "uploadSucceededNext": "An administrator will review it. You do not need to do anything else.",
+      "uploadFailed": "Upload failed",
+      "uploadFailedRetry": "Nothing was saved. Please try again."
     },
     "externalCertificate": {
       "title": "External certificates",
