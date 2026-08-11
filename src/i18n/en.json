@@ -116,7 +116,15 @@
       "submit": "Register",
       "submitting": "Registering…",
       "genericError": "Could not complete registration. Please try again.",
-      "signInLink": "Already have an account? Sign in"
+      "signInLink": "Already have an account? Sign in",
+      "cityExternal": "Other institute",
+      "externalInstituteLabel": "Name of the external institute",
+      "externalInstitutePlaceholder": "e.g. Cable workshop – GCCLAB",
+      "requiredExternalInstitute": "Name the external institute, or choose one of GCC Lab's centres.",
+      "issuanceTypeLabel": "Request type",
+      "issuanceNew": "New issue",
+      "issuanceRenewal": "Renewal",
+      "issuanceHint": "Choose Renewal if the technician already holds a card for this qualification. Cards are valid two years from the test date."
     },
     "forgotPassword": {
       "title": "Reset your password",

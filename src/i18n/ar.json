@@ -116,7 +116,15 @@
       "submit": "تسجيل",
       "submitting": "جارٍ التسجيل…",
       "genericError": "تعذّر إكمال التسجيل. يرجى المحاولة مرة أخرى.",
-      "signInLink": "لديك حساب بالفعل؟ تسجيل الدخول"
+      "signInLink": "لديك حساب بالفعل؟ تسجيل الدخول",
+      "cityExternal": "معهد خارجي",
+      "externalInstituteLabel": "اسم المعهد الخارجي",
+      "externalInstitutePlaceholder": "مثال: ورشة الكابلات – جي سي سي لاب",
+      "requiredExternalInstitute": "أدخل اسم المعهد الخارجي، أو اختر أحد مراكز جي سي سي لاب.",
+      "issuanceTypeLabel": "نوع الطلب",
+      "issuanceNew": "إصدار جديد",
+      "issuanceRenewal": "تجديد",
+      "issuanceHint": "اختر «تجديد» إذا كان الفني يحمل بطاقة لهذا التأهيل بالفعل. البطاقات صالحة لمدة عامين من تاريخ الاختبار."
     },
     "forgotPassword": {
       "title": "إعادة تعيين كلمة المرور",

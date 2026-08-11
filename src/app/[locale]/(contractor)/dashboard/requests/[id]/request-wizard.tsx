@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
 import { createDraftRequestAction, submitRequestAction, syncRequestItemsAction, updateDraftRequestAction } from "@/modules/requests/actions";
+import { EXTERNAL_INSTITUTE } from "@/modules/requests/schema";
 import { uploadDocumentAction } from "@/modules/platform/storage/actions";
 import { getEmployeeEligibilitySnapshotAction } from "@/modules/catalog/actions";
 import { DocumentUploadSlot, type DocumentSlotStatus } from "@/components/documents/document-upload-slot";
@@ -27,6 +28,7 @@ interface CourseOption {
   code: string;
   titleEn: string;
   titleAr: string;
+  outcome: string;
 }
 
 const OHS_COURSE_CODE = "CSCC00";
@@ -85,6 +87,8 @@ interface RequestWizardFields {
   courseId: number | null;
   preferredRegion: string | null;
   preferredCity: string | null;
+  externalInstituteName?: string | null;
+  issuanceType?: "new" | "renewal" | null;
   preferredTrainingType: string | null;
   notes: string | null;
 }
@@ -137,7 +141,11 @@ export function RequestWizard({
 
   const [courseId, setCourseId] = useState<number | null>(initialFields.courseId ?? courses[0]?.id ?? null);
   const [preferredRegion, setPreferredRegion] = useState<Region | "">((initialFields.preferredRegion as Region) ?? "");
-  const [preferredCity, setPreferredCity] = useState(initialFields.preferredCity ?? "");
+  const [preferredCity, setPreferredCity] = useState(
+    initialFields.externalInstituteName ? EXTERNAL_INSTITUTE : (initialFields.preferredCity ?? "")
+  );
+  const [externalInstituteName, setExternalInstituteName] = useState(initialFields.externalInstituteName ?? "");
+  const [issuanceType, setIssuanceType] = useState<"new" | "renewal">(initialFields.issuanceType ?? "new");
   const [preferredTrainingType, setPreferredTrainingType] = useState<TrainingType | "">(
     (initialFields.preferredTrainingType as TrainingType) ?? ""
   );
@@ -194,7 +202,10 @@ export function RequestWizard({
         courseId: courseId as number,
         preferredRegion: preferredRegion || undefined,
         preferredCity: preferredCity || undefined,
-        preferredTrainingType: preferredTrainingType || undefined,
+        externalInstituteName: preferredCity === EXTERNAL_INSTITUTE ? externalInstituteName.trim() || undefined : undefined,
+        // Only meaningful where a card is awarded; a certificate is issued
+        // once and not renewed by re-sitting.
+        issuanceType: awardsCard ? issuanceType : undefined,
         notes: notes || undefined,
       } as const;
 
@@ -303,6 +314,9 @@ export function RequestWizard({
 
   const selectedEmployees = companyEmployees.filter((e) => selectedEmployeeIds.has(e.id));
   const selectedCourse = courses.find((c) => c.id === courseId);
+  // A test whose credential is printed by the manufacturer. It changes what
+  // this form asks for and what the contractor should expect at the end.
+  const awardsCard = selectedCourse?.outcome === "card";
   const ohsCourse = courses.find((c) => c.code === OHS_COURSE_CODE);
 
   // An employee who doesn't already hold the OHS General Induction has to
@@ -320,6 +334,9 @@ export function RequestWizard({
       if (!courseId) return t("requiredCourse");
       if (!preferredRegion) return t("requiredRegion");
       if (!preferredCity) return t("requiredCity");
+      // An unnamed external venue cannot be scheduled, and reaches an admin as
+      // a request that costs a phone call to resolve.
+      if (preferredCity === EXTERNAL_INSTITUTE && externalInstituteName.trim() === "") return t("requiredExternalInstitute");
       if (!preferredTrainingType) return t("requiredTrainingType");
       return null;
     }
@@ -420,8 +437,40 @@ export function RequestWizard({
                       {locale === "ar" ? city.nameAr : city.name}
                     </option>
                   ))}
+                {/* معهد خارجي. Its own option rather than a separate checkbox,
+                    because it is one of the same choice — the form offers four
+                    institutes or somewhere else, never both. */}
+                <option value={EXTERNAL_INSTITUTE}>{t("cityExternal")}</option>
               </select>
+              {preferredCity === EXTERNAL_INSTITUTE ? (
+                <div className="mt-1.5 flex flex-col gap-1">
+                  <Label htmlFor="externalInstituteName">
+                    {t("externalInstituteLabel")} <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="externalInstituteName"
+                    value={externalInstituteName}
+                    onChange={(e) => setExternalInstituteName(e.target.value)}
+                    placeholder={t("externalInstitutePlaceholder")}
+                  />
+                </div>
+              ) : null}
             </div>
+            {awardsCard ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="issuanceType">{t("issuanceTypeLabel")}</Label>
+                <select
+                  id="issuanceType"
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  value={issuanceType}
+                  onChange={(e) => setIssuanceType(e.target.value as "new" | "renewal")}
+                >
+                  <option value="new">{t("issuanceNew")}</option>
+                  <option value="renewal">{t("issuanceRenewal")}</option>
+                </select>
+                <p className="text-xs text-muted-foreground">{t("issuanceHint")}</p>
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="preferredTrainingType">
                 {t("trainingTypeLabel")} <span className="text-destructive">*</span>

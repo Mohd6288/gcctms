@@ -206,8 +206,19 @@ export async function listActiveCourses(companyId: number) {
   const categoryFilter = category ? or(isNull(courses.contractorCategory), eq(courses.contractorCategory, category)) : isNull(courses.contractorCategory);
 
   return db
-    .select({ id: courses.id, code: courses.code, titleEn: courses.titleEn, titleAr: courses.titleAr })
+    // outcome so the wizard knows a card-awarding test when it sees one: it
+    // asks for نوع الطلب, which is meaningless for a certificate.
+    .select({ id: courses.id, code: courses.code, titleEn: courses.titleEn, titleAr: courses.titleAr, outcome: courses.outcome })
     .from(courses)
     .where(and(eq(courses.active, true), categoryFilter))
     .orderBy(courses.titleEn);
+}
+
+/** Just enough to decide who may download a request's generated form. */
+export async function getRequestFormAccess(requestId: number) {
+  const [row] = await db
+    .select({ companyId: trainingRequests.companyId })
+    .from(trainingRequests)
+    .where(eq(trainingRequests.id, requestId));
+  return row ?? null;
 }
