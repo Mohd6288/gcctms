@@ -21,7 +21,10 @@ export type NotificationType =
   | "class.cancelled"
   | "class.results_submitted"
   | "certificate.pending_approval"
-  | "certificate.issued";
+  | "certificate.issued"
+  // The card programme (0038). A certificate waits for GCC Lab to approve it;
+  // a card waits for the pass list to reach whoever prints it.
+  | "card.awaiting_dispatch";
 
 export interface QueueNotificationInput {
   type: NotificationType;

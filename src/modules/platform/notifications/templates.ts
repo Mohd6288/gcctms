@@ -113,6 +113,13 @@ export function renderNotification(type: NotificationType, data: Record<string, 
         en: `${num(data.count)} certificate(s) are ready to release for class #${classId}.`,
         path: `/admin/classes/${classId}`,
       };
+    case "card.awaiting_dispatch":
+      return {
+        subject: `${num(data.count)} qualification card(s) to request from the manufacturer`,
+        ar: `اجتاز ${num(data.count)} فني اختبار الفصل رقم ${classId}. أرسل قائمة الناجحين إلى الجهة المصدرة للبطاقات.`,
+        en: `${num(data.count)} technician(s) passed class #${classId}. Send the pass list to the card issuer.`,
+        path: `/admin/classes/${classId}`,
+      };
     case "certificate.issued":
       return {
         subject: `Certificate issued${data.serial ? ` — ${String(data.serial)}` : ""}`,

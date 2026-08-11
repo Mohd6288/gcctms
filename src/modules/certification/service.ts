@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { classEnrollments, classes, companies, courses, employees, examResults, payments, requestItems, certificates } from "@/db/schema";
+import { classEnrollments, classes, companies, courses, employees, examResults, payments, qualificationCards, requestItems, trainingRequests, certificates } from "@/db/schema";
 import { employeeSatisfiesPrerequisites, listCourseJobRoleIds } from "@/modules/catalog/queries";
 import { getCertificateRenderData } from "./queries";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -46,9 +46,17 @@ export async function evaluateClassEligibility(classId: number): Promise<{ creat
   const eligibleRoleIds = await listCourseJobRoleIds(cls.courseId);
   const enrollments = await db.select().from(classEnrollments).where(and(eq(classEnrollments.classId, classId), eq(classEnrollments.status, "attended_complete")));
 
+  // A card-awarding course (0038) hands its credential to the manufacturer to
+  // print. This platform records that it was earned; it never issues it, and
+  // must never say it did — the public verify page's promise is that a serial
+  // it recognises came from GCC Lab.
+  const awardsCard = course.outcome === "card";
+
   let created = 0;
   for (const enrollment of enrollments) {
-    const existing = await db.select({ id: certificates.id }).from(certificates).where(and(eq(certificates.employeeId, enrollment.employeeId), eq(certificates.classId, classId)));
+    const existing = awardsCard
+      ? await db.select({ id: qualificationCards.id }).from(qualificationCards).where(and(eq(qualificationCards.employeeId, enrollment.employeeId), eq(qualificationCards.classId, classId)))
+      : await db.select({ id: certificates.id }).from(certificates).where(and(eq(certificates.employeeId, enrollment.employeeId), eq(certificates.classId, classId)));
     if (existing.length > 0) continue;
 
     const [employee] = await db.select().from(employees).where(eq(employees.id, enrollment.employeeId));
@@ -76,24 +84,59 @@ export async function evaluateClassEligibility(classId: number): Promise<{ creat
     const activeOk = employee.status === "active";
 
     if (attendanceOk && examOk && paymentOk && jobRoleOk && prereqOk && activeOk) {
-      const [cert] = await db
-        .insert(certificates)
-        .values({
-          employeeId: employee.id,
-          courseId: cls.courseId,
-          classId,
-          companyId: enrollment.companyId,
-          status: "pending_approval",
-          eligibility: { attendanceOk, examOk, paymentOk, jobRoleOk, prereqOk, activeOk },
-        })
-        .returning({ id: certificates.id });
-      await writeAudit({ userId: null, entityType: "certificate", entityId: cert.id, action: "gate_passed", toStatus: "pending_approval" });
+      const eligibility = { attendanceOk, examOk, paymentOk, jobRoleOk, prereqOk, activeOk };
+
+      if (awardsCard) {
+        // No serial, no PDF, no approval step — there is nothing for GCC Lab
+        // to approve about a card someone else prints. expires_at is left
+        // unset: the two-year clock runs from the test date, but the card does
+        // not exist until the manufacturer reports it issued.
+        const [issuanceType] = await db
+          .select({ value: trainingRequests.issuanceType })
+          .from(requestItems)
+          .innerJoin(trainingRequests, eq(trainingRequests.id, requestItems.requestId))
+          .where(eq(requestItems.id, enrollment.requestItemId));
+
+        const [card] = await db
+          .insert(qualificationCards)
+          .values({
+            employeeId: employee.id,
+            courseId: cls.courseId,
+            classId,
+            companyId: enrollment.companyId,
+            manufacturerId: cls.manufacturerId,
+            status: "awaiting_issuer",
+            issuanceType: issuanceType?.value ?? "new",
+            testDate: cls.endDate,
+            eligibility,
+          })
+          .returning({ id: qualificationCards.id });
+        await writeAudit({ userId: null, entityType: "qualification_card", entityId: card.id, action: "gate_passed", toStatus: "awaiting_issuer" });
+      } else {
+        const [cert] = await db
+          .insert(certificates)
+          .values({
+            employeeId: employee.id,
+            courseId: cls.courseId,
+            classId,
+            companyId: enrollment.companyId,
+            status: "pending_approval",
+            eligibility,
+          })
+          .returning({ id: certificates.id });
+        await writeAudit({ userId: null, entityType: "certificate", entityId: cert.id, action: "gate_passed", toStatus: "pending_approval" });
+      }
       created += 1;
     }
   }
 
   if (created > 0) {
-    await notifyPlatformAdmins("certificate.pending_approval", { classId, count: created });
+    // Different next action: a certificate waits for an approval, a card waits
+    // for the pass list to reach whoever prints it.
+    await notifyPlatformAdmins(awardsCard ? "card.awaiting_dispatch" : "certificate.pending_approval", {
+      classId,
+      count: created,
+    });
   }
   return { created };
 }

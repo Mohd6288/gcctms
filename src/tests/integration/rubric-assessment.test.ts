@@ -4,22 +4,28 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "../../db";
 import {
   assessmentScores,
+  certificates,
   classEnrollments,
   classes,
   companies,
   courses,
+  documents,
   employees,
   examResults,
   jobRoles,
+  payments,
   profiles,
+  qualificationCards,
   requestItems,
   trainers,
   trainingRequests,
 } from "../../db/schema";
 import { recordAssessment } from "../../modules/assessment/service";
+import { evaluateClassEligibility } from "../../modules/certification/service";
 import { setExamResult } from "../../modules/delivery/service";
 import { GuardError } from "../../modules/platform/guard-error";
 import { encryptNationalId, hashNationalId } from "../../modules/platform/security/national-id";
+import { grantPriorCertificate } from "../helpers/ohs-induction";
 import type { AuthContext } from "../../modules/platform/auth/shared";
 
 // Two doors, each admitting only what it can score correctly.
@@ -38,6 +44,7 @@ describe("recording a rubric-scored assessment", () => {
   let cableClassId: number;
   let writtenClassId: number;
   let technicianId: number;
+  const requestIdByClass = new Map<number, number>();
 
   async function seedClass(courseCode: string) {
     const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, courseCode));
@@ -75,6 +82,7 @@ describe("recording a rubric-scored assessment", () => {
       companyId,
       status: "enrolled",
     });
+    requestIdByClass.set(cls.id, request.id);
     return cls.id;
   }
 
@@ -112,6 +120,12 @@ describe("recording a rubric-scored assessment", () => {
       .returning({ id: employees.id });
     technicianId = employee.id;
 
+    // CTCT10's four entry certificates. Without them the prerequisite gate
+    // refuses — correctly — and no card would be earned to test.
+    for (const code of ["CSCC02", "CSCC21", "CSCC22", "CSCC00"]) {
+      await grantPriorCertificate(companyId, technicianId, code, adminId);
+    }
+
     cableClassId = await seedClass("CTCT10"); // rubric-scored
     writtenClassId = await seedClass("CSCC14"); // an ordinary written course
   });
@@ -125,12 +139,18 @@ describe("recording a rubric-scored assessment", () => {
       await db.delete(assessmentScores).where(eq(assessmentScores.enrollmentId, e.id));
       await db.delete(examResults).where(eq(examResults.enrollmentId, e.id));
     }
+    for (const requestId of requestIdByClass.values()) {
+      await db.delete(payments).where(eq(payments.requestId, requestId));
+    }
+    await db.delete(qualificationCards).where(eq(qualificationCards.companyId, companyId));
+    await db.delete(certificates).where(eq(certificates.companyId, companyId));
     await db.delete(classEnrollments).where(eq(classEnrollments.companyId, companyId));
     await db.delete(requestItems).where(eq(requestItems.employeeId, technicianId));
     await db.delete(trainingRequests).where(eq(trainingRequests.companyId, companyId));
     for (const id of [cableClassId, writtenClassId]) {
       if (id) await db.delete(classes).where(eq(classes.id, id));
     }
+    await db.delete(documents).where(eq(documents.companyId, companyId));
     await db.delete(employees).where(eq(employees.companyId, companyId));
     await db.delete(companies).where(eq(companies.id, companyId));
     await db.delete(profiles).where(eq(profiles.userId, adminId));
@@ -230,5 +250,51 @@ describe("recording a rubric-scored assessment", () => {
     // The gate reads the latest attempt; the earlier fail stays on file.
     expect(attempts.find((a) => a.attemptNo === 1)?.result).toBe("fail");
     expect(attempts.find((a) => a.attemptNo === 2)?.result).toBe("pass");
+  });
+
+  it("awards a card and NOT a certificate once the gate passes", async () => {
+    // The second hazard: evaluateClassEligibility inserted into `certificates`
+    // unconditionally, never looking at what the course awards. A cable pass
+    // would have produced a GCC Lab certificate for a credential GCC Lab does
+    // not issue — and put it on the public verify page, which promises the
+    // opposite.
+    await db
+      .update(classEnrollments)
+      .set({ status: "attended_complete", attendancePct: "100.00" })
+      .where(eq(classEnrollments.classId, cableClassId));
+
+    // The gate needs a verified payment, and the last recorded attempt above
+    // was the passing re-test.
+    await db.insert(payments).values({
+      requestId: requestIdByClass.get(cableClassId)!,
+      description: "Cable test",
+      qty: 1,
+      unitPrice: "695.00",
+      status: "verified",
+    });
+
+    await evaluateClassEligibility(cableClassId);
+
+    const cards = await db.select().from(qualificationCards).where(eq(qualificationCards.classId, cableClassId));
+    const certs = await db.select().from(certificates).where(eq(certificates.classId, cableClassId));
+
+    expect(certs, "a card course must never mint a certificate").toHaveLength(0);
+    expect(cards, "the card is what a passing technician earns").toHaveLength(1);
+    expect(cards[0].status).toBe("awaiting_issuer");
+    expect(cards[0].issuanceType).toBe("new");
+    expect(cards[0].testDate).toBe("2026-08-01");
+    // Expiry is set when the manufacturer reports the card issued. The
+    // two-year clock runs from the test date, but the card does not exist yet.
+    expect(cards[0].expiresAt).toBeNull();
+    expect(cards[0].cardNumber).toBeNull();
+    // The six gate inputs travel with it, so an auditor can see why it was
+    // earned without recomputing them.
+    expect(cards[0].eligibility).toMatchObject({ examOk: true, paymentOk: true, attendanceOk: true });
+  });
+
+  it("is idempotent — running the gate twice does not mint a second card", async () => {
+    await evaluateClassEligibility(cableClassId);
+    const cards = await db.select().from(qualificationCards).where(eq(qualificationCards.classId, cableClassId));
+    expect(cards).toHaveLength(1);
   });
 });
