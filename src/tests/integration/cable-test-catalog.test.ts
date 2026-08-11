@@ -30,9 +30,15 @@ describe("manufacturer-issued cards — catalog", () => {
     }
 
     // No second row anywhere carrying the same programme under another code.
+    // Both halves, since 0044 renamed them apart: four joints, four
+    // terminations, and nothing else claiming to be either.
     const byTitle = await db.select({ code: courses.code, title: courses.titleEn }).from(courses);
-    const cableTitled = byTitle.filter((c) => /power cable joint/i.test(c.title));
+    const cableTitled = byTitle.filter((c) => /power cable (joint|termination)/i.test(c.title));
     expect(cableTitled).toHaveLength(8);
+    expect(cableTitled.filter((c) => /joint/i.test(c.title))).toHaveLength(4);
+    expect(cableTitled.filter((c) => /termination/i.test(c.title))).toHaveLength(4);
+    // And no title still claims to cover both, which is what 0039 left behind.
+    expect(cableTitled.filter((c) => /joint and termination/i.test(c.title))).toHaveLength(0);
   });
 
   it("carries the Cable Technician Evaluation rubric, scored per item", async () => {

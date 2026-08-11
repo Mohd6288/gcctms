@@ -2,7 +2,7 @@
 import "server-only";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { assessmentScores, classEnrollments, classes, examResults } from "@/db/schema";
+import { assessmentScores, classEnrollments, classes, employees, examResults } from "@/db/schema";
 
 export interface PriorAttempt {
   classId: number;
@@ -68,4 +68,60 @@ export async function getAttemptSheet(enrollmentId: number, attemptNo: number) {
     })
     .from(assessmentScores)
     .where(and(eq(assessmentScores.enrollmentId, enrollmentId), eq(assessmentScores.attemptNo, attemptNo)));
+}
+
+export interface AssessmentCandidate {
+  employeeId: number;
+  enrollmentId: number;
+  fullNameEn: string;
+  latestResult: string | null;
+  latestScore: number | null;
+  latestAttemptNo: number | null;
+  /** Prior sittings of this course in OTHER classes — the "Re-Test" box. */
+  priorAttempts: number;
+}
+
+/**
+ * Everything the rubric screen needs for one class, in one place.
+ *
+ * The marks themselves are not returned: an evaluator transcribes a signed
+ * paper form, so the screen starts empty every time rather than pre-filling
+ * from a previous attempt — pre-filled numbers are the ones that get saved
+ * unread.
+ */
+export async function listAssessmentCandidates(classId: number): Promise<AssessmentCandidate[]> {
+  const [cls] = await db.select({ courseId: classes.courseId }).from(classes).where(eq(classes.id, classId));
+  if (!cls) return [];
+
+  const enrolled = await db
+    .select({
+      employeeId: classEnrollments.employeeId,
+      enrollmentId: classEnrollments.id,
+      fullNameEn: employees.fullNameEn,
+    })
+    .from(classEnrollments)
+    .innerJoin(employees, eq(employees.id, classEnrollments.employeeId))
+    .where(eq(classEnrollments.classId, classId))
+    .orderBy(employees.fullNameEn);
+
+  // Sequential, not Promise.all — concurrent Drizzle calls stall against the
+  // pooler (see catalog/queries.ts's getPlatformOverviewStats).
+  const candidates: AssessmentCandidate[] = [];
+  for (const row of enrolled) {
+    const [latest] = await db
+      .select({ result: examResults.result, score: examResults.score, attemptNo: examResults.attemptNo })
+      .from(examResults)
+      .where(eq(examResults.enrollmentId, row.enrollmentId))
+      .orderBy(desc(examResults.attemptNo))
+      .limit(1);
+    const prior = await listPriorAttempts(row.employeeId, cls.courseId, classId);
+    candidates.push({
+      ...row,
+      latestResult: latest?.result ?? null,
+      latestScore: latest?.score ?? null,
+      latestAttemptNo: latest?.attemptNo ?? null,
+      priorAttempts: prior.length,
+    });
+  }
+  return candidates;
 }

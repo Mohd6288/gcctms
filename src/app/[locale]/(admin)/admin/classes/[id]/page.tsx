@@ -7,6 +7,11 @@ import { listPendingApprovalCertificatesForClass, listIssuedCertificatesForClass
 import { getClassById, listActiveEnrollmentRequestItemIds, listEnrollmentsForClass, listSchedulableRequestItems, listMoveTargets } from "@/modules/scheduling/queries";
 import { getEntityHistory } from "@/modules/directory/queries";
 import { Timeline } from "@/components/profile/timeline";
+import { listAssessmentCandidates } from "@/modules/assessment/queries";
+import { listCardsForClass, listDispatchesForClass } from "@/modules/cards/queries";
+import { getCourseById } from "@/modules/catalog/queries";
+import { AssessmentPanel } from "./assessment-panel";
+import { CardsPanel } from "./cards-panel";
 import { ClassDetail } from "./class-detail";
 
 export function generateStaticParams() {
@@ -59,6 +64,16 @@ export default async function AdminClassDetailPage({
   const issuedCertificates = await listIssuedCertificatesForClass(classId);
   const history = await getEntityHistory("class", classId);
 
+  // The cable programme's two panels, and only for the courses that need
+  // them: everything else in this app still ends in a GCC Lab certificate,
+  // and showing a card handover beside it would be a screen that never does
+  // anything.
+  const course = await getCourseById(cls.courseId);
+  const awardsCard = course?.outcome === "card";
+  const assessmentCandidates = awardsCard ? await listAssessmentCandidates(classId) : [];
+  const cards = awardsCard ? await listCardsForClass(classId) : [];
+  const dispatches = awardsCard ? await listDispatchesForClass(classId) : [];
+
   // "Available in this region" pool: billable, ready_for_scheduling, this
   // class's region, no active enrollment anywhere yet.
   const availablePool = pooled.filter((p) => !activeIds.has(p.requestItemId) && p.assignedRegion === cls.region);
@@ -82,6 +97,19 @@ export default async function AdminClassDetailPage({
         issuedCertificates={issuedCertificates.map((c) => ({ ...c, issuedAt: c.issuedAt ? c.issuedAt.toISOString() : null }))}
         locale={locale}
       />
+      {awardsCard ? (
+        <>
+          <AssessmentPanel
+            classId={classId}
+            rubric={course?.rubric ?? null}
+            passMark={course?.passMark ?? null}
+            candidates={assessmentCandidates}
+            canEdit={cls.status === "in_progress"}
+            locale={locale}
+          />
+          <CardsPanel classId={classId} cards={cards} dispatches={dispatches} canEdit locale={locale} />
+        </>
+      ) : null}
       <div className="w-full max-w-3xl">
         <Timeline entries={history} locale={locale} />
       </div>
