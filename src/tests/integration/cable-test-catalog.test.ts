@@ -21,8 +21,13 @@ const PRICED = ["CTCT06", "CTCT07", "CTCT08", "CTCT09", "CTCT10", "CTCT11"];
 
 describe("manufacturer-issued cards — catalog", () => {
   it("awards cards from the existing courses, with no duplicate rows", async () => {
+    // Every technical certification test awards a card, per the contractor
+    // attendance guidelines — not only the cable ones (0040).
     const cardCourses = await db.select().from(courses).where(eq(courses.outcome, "card"));
-    expect(cardCourses.map((c) => c.code).sort()).toEqual(CABLE_COURSES);
+    expect(cardCourses.every((c) => c.code.startsWith("CTCT"))).toBe(true);
+    for (const code of CABLE_COURSES) {
+      expect(cardCourses.map((c) => c.code), `${code} awards a card`).toContain(code);
+    }
 
     // No second row anywhere carrying the same programme under another code.
     const byTitle = await db.select({ code: courses.code, title: courses.titleEn }).from(courses);
@@ -102,10 +107,33 @@ describe("manufacturer-issued cards — catalog", () => {
     }
   });
 
-  it("leaves every other course awarding a certificate", async () => {
+  it("leaves the taught safety courses awarding certificates", async () => {
     const certified = await db.select().from(courses).where(eq(courses.outcome, "certificate"));
-    expect(certified.length).toBeGreaterThan(40);
+    // The CSCC safety syllabus — taught by GCC Lab, certified by GCC Lab.
+    expect(certified.length).toBeGreaterThan(25);
+    expect(certified.some((c) => c.code.startsWith("CTCT"))).toBe(false);
     expect(certified.every((c) => c.rubric === null)).toBe(true);
+  });
+
+  it("marks a test with no evaluation form as not yet assessable", async () => {
+    // Thirteen of the fourteen evaluation forms are still to come. Those tests
+    // are requestable and schedulable but must not be markable — the guard
+    // belongs at assessment, not on the catalog row, or the test could not be
+    // listed or priced at all.
+    const cards = await db.select({ code: courses.code, rubric: courses.rubric })
+      .from(courses).where(eq(courses.outcome, "card"));
+
+    const assessable = cards.filter((c) => c.rubric !== null).map((c) => c.code).sort();
+    // Only the cable tests have a form today, and every one of them has it.
+    expect(assessable).toEqual(CABLE_COURSES);
+
+    // Whatever has a rubric must have a usable one — an empty parts or
+    // criteria list would pass a null check and score nothing.
+    for (const card of cards) {
+      if (!card.rubric) continue;
+      expect(card.rubric.parts.length, `${card.code} parts`).toBe(1);
+      expect(card.rubric.criteria.length, `${card.code} criteria`).toBeGreaterThan(0);
+    }
   });
 
   it("has the new tables addressable through Drizzle", async () => {

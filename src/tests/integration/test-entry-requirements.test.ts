@@ -115,6 +115,29 @@ describe("technical test entry requirements", () => {
     expect(satisfied.has(noInduction)).toBe(false);
   });
 
+  it("never demands a Safe Working Procedures course from the wrong side", async () => {
+    // 0040 nearly shipped a gate no Distribution technician could pass. It
+    // added "the discipline's SWP" as its own OR group of CSCC02 + CSCC08,
+    // trusting the unique index to skip whichever was already required. For a
+    // Distribution test that already listed CSCC02, only CSCC02 was skipped —
+    // leaving CSCC08, the Transmission-only NG procedures course, alone in a
+    // group of its own and therefore mandatory.
+    const tests = await db
+      .select({ id: courses.id, code: courses.code, category: courses.contractorCategory })
+      .from(courses)
+      .where(eq(courses.outcome, "card"));
+
+    for (const test of tests) {
+      if (test.category !== "Distribution") continue;
+      const groups = await getPrerequisiteGroups(test.id);
+      const [ng] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, "CSCC08"));
+      // CSCC08 may appear as one option among others; it must never be the
+      // only way to satisfy a group.
+      const forcesNg = groups.some((g) => g.length === 1 && g[0] === ng.id);
+      expect(forcesNg, `${test.code} forces the Transmission-only CSCC08`).toBe(false);
+    }
+  });
+
   it("leaves ordinary courses behaving exactly as before", async () => {
     // Everything seeded before 0039 sits in group 1, so a course with several
     // listed prerequisites is still satisfied by holding any one of them.

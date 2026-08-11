@@ -57,6 +57,11 @@ export const courses = pgTable(
     // How the course is assessed, when a single exam mark won't do. The
     // threshold lives in passMark above, not in here — one number, so the two
     // cannot drift apart.
+    //
+    // Null means GCC Lab has not supplied the evaluation form yet (0040). Such
+    // a test is requestable and schedulable but not markable — the requirement
+    // sits at the point of assessment rather than blocking the course from
+    // existing, because thirteen of the fourteen forms are still to come.
     rubric: jsonb("rubric").$type<Rubric>(),
     active: boolean("active").notNull().default(true),
     createdAt: timestamptz("created_at").notNull().defaultNow(),
@@ -68,9 +73,6 @@ export const courses = pgTable(
       sql`${t.contractorCategory} is null or ${t.contractorCategory} in ('Distribution', 'Transmission')`
     ),
     check("courses_outcome_check", sql`${t.outcome} in ('certificate', 'card')`),
-    // A card is awarded on the strength of a rubric assessment; one without a
-    // rubric would reach assessment day with nothing to score against.
-    check("courses_card_requires_rubric", sql`${t.outcome} = 'certificate' or ${t.rubric} is not null`),
     // A code can have at most one row per contractor_category, PLUS at most
     // one category-agnostic (null) row. Two separate partial indexes because
     // Postgres never treats two NULLs as equal in a unique constraint, so a
