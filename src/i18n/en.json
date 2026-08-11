@@ -1410,7 +1410,19 @@
       "colExam": "Exam",
       "certValid": "Valid",
       "certExpired": "Expired",
-      "certRevoked": "Revoked"
+      "certRevoked": "Revoked",
+      "cardsTitle": "Qualification cards",
+      "cardsNote": "Issued by the equipment manufacturer after a practical test. Not GCC Lab certificates, and not on the public verification page.",
+      "colQualification": "Qualification",
+      "colCardNumber": "Card number",
+      "colIssuer": "Issued by",
+      "colTested": "Tested",
+      "cardValid": "Valid",
+      "cardExpired": "Expired",
+      "cardAwaiting": "With the manufacturer",
+      "cardRenewal": "renewal",
+      "statCardsValid": "Cards valid",
+      "statCardsExpired": "Cards expired"
     }
   }
 }

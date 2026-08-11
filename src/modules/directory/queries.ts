@@ -19,6 +19,8 @@ import {
   classes,
   companies,
   courses,
+  manufacturers,
+  qualificationCards,
   documents,
   employees,
   jobRoles,
@@ -99,6 +101,37 @@ export async function listEmployeeCertificates(employeeId: number) {
     .orderBy(desc(certificates.issuedAt));
 }
 
+/**
+ * The manufacturer-issued cards this technician holds.
+ *
+ * Listed separately from certificates rather than merged into them. An auditor
+ * asking "what does this person hold" needs both, but conflating them would
+ * imply GCC Lab stands behind a card it did not print — and the two answer
+ * different questions at a site gate.
+ */
+export async function listEmployeeCards(employeeId: number) {
+  return db
+    .select({
+      id: qualificationCards.id,
+      cardNumber: qualificationCards.cardNumber,
+      status: qualificationCards.status,
+      issuanceType: qualificationCards.issuanceType,
+      courseCode: courses.code,
+      courseTitleEn: courses.titleEn,
+      courseTitleAr: courses.titleAr,
+      testDate: qualificationCards.testDate,
+      expiresAt: qualificationCards.expiresAt,
+      collectedAt: qualificationCards.collectedAt,
+      collectedByName: qualificationCards.collectedByName,
+      manufacturerName: manufacturers.name,
+    })
+    .from(qualificationCards)
+    .innerJoin(courses, eq(courses.id, qualificationCards.courseId))
+    .leftJoin(manufacturers, eq(manufacturers.id, qualificationCards.manufacturerId))
+    .where(eq(qualificationCards.employeeId, employeeId))
+    .orderBy(desc(qualificationCards.testDate));
+}
+
 // Where they are in training right now: the classes they sit in, with the
 // attendance and exam outcome the certificate gate reads.
 export async function listEmployeeTraining(employeeId: number) {
@@ -136,6 +169,9 @@ export async function getEmployeeProgress(employeeId: number) {
     expired: number;
     revoked: number;
     classes_upcoming: number;
+    cards_valid: number;
+    cards_expiring_soon: number;
+    cards_expired: number;
   }>(sql`
     select
       (select count(*)::int from certificates c
@@ -151,7 +187,20 @@ export async function getEmployeeProgress(employeeId: number) {
         where c.employee_id = ${employeeId} and c.status = 'revoked') as revoked,
       (select count(*)::int from class_enrollments ce join classes cl on cl.id = ce.class_id
         where ce.employee_id = ${employeeId} and ce.status = 'enrolled'
-          and cl.status in ('scheduled', 'in_progress')) as classes_upcoming
+          and cl.status in ('scheduled', 'in_progress')) as classes_upcoming,
+      -- Counted alongside certificates, not instead of them. A cable
+      -- technician holds cards and no certificates for that work, and a
+      -- progress card that only counted certificates would show them as
+      -- holding nothing at all.
+      (select count(*)::int from qualification_cards qc
+        where qc.employee_id = ${employeeId} and qc.status in ('issued', 'collected')
+          and (qc.expires_at is null or qc.expires_at >= current_date)) as cards_valid,
+      (select count(*)::int from qualification_cards qc
+        where qc.employee_id = ${employeeId} and qc.status in ('issued', 'collected')
+          and qc.expires_at between current_date and current_date + ${EXPIRING_SOON_DAYS}::int) as cards_expiring_soon,
+      (select count(*)::int from qualification_cards qc
+        where qc.employee_id = ${employeeId} and qc.status in ('issued', 'collected')
+          and qc.expires_at is not null and qc.expires_at < current_date) as cards_expired
   `);
   return row;
 }

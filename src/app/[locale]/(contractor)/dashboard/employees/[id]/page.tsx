@@ -64,6 +64,7 @@ export default async function EmployeeDetailPage({
             identity={profile.identity}
             progress={profile.progress}
             certificates={profile.certificates}
+            cards={profile.cards}
             training={profile.training}
             history={profile.history}
             locale={locale}

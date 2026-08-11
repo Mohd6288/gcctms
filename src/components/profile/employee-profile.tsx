@@ -25,6 +25,7 @@ export async function EmployeeProfile({
   identity,
   progress,
   certificates,
+  cards,
   training,
   history,
   locale,
@@ -32,7 +33,15 @@ export async function EmployeeProfile({
 }: {
   employee: EmployeeProfileData;
   identity: { verifiedAt: Date | string | null; rejectedAt: Date | string | null; verifierName: string | null } | null;
-  progress: { valid: number; expiring_soon: number; expired: number; classes_upcoming: number };
+  progress: {
+    valid: number;
+    expiring_soon: number;
+    expired: number;
+    classes_upcoming: number;
+    cards_valid: number;
+    cards_expiring_soon: number;
+    cards_expired: number;
+  };
   certificates: {
     id: number;
     serial: string | null;
@@ -42,6 +51,18 @@ export async function EmployeeProfile({
     courseTitleAr: string;
     issuedAt: Date | string | null;
     expiresAt: Date | string | null;
+  }[];
+  cards: {
+    id: number;
+    cardNumber: string | null;
+    status: string;
+    issuanceType: string;
+    courseCode: string;
+    courseTitleEn: string;
+    courseTitleAr: string;
+    testDate: string;
+    expiresAt: string | null;
+    manufacturerName: string | null;
   }[];
   training: {
     enrollmentId: number;
@@ -104,8 +125,80 @@ export async function EmployeeProfile({
           { label: t("statExpiringSoon"), value: progress.expiring_soon, tone: progress.expiring_soon > 0 ? "warning" : undefined },
           { label: t("statExpired"), value: progress.expired, tone: progress.expired > 0 ? "destructive" : undefined },
           { label: t("statUpcoming"), value: progress.classes_upcoming },
+          // Cards counted separately from certificates rather than added to
+          // them. They are different credentials from different issuers, and
+          // a single "valid" number would hide which one a technician is
+          // actually short of at a site gate.
+          ...(cards.length > 0
+            ? [
+                { label: t("statCardsValid"), value: progress.cards_valid },
+                {
+                  label: t("statCardsExpired"),
+                  value: progress.cards_expired,
+                  tone: progress.cards_expired > 0 ? ("destructive" as const) : undefined,
+                },
+              ]
+            : []),
         ]}
       />
+
+      {cards.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-sm font-semibold">{t("cardsTitle")}</h2>
+            {/* Stated once, here: these are not GCC Lab credentials, and an
+                auditor reading this page needs to know whose they are. */}
+            <p className="text-xs text-muted-foreground">{t("cardsNote")}</p>
+          </div>
+          <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
+            <table className="w-full min-w-[40rem] text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="p-3 text-start font-medium">{t("colQualification")}</th>
+                  <th className="p-3 text-start font-medium">{t("colCardNumber")}</th>
+                  <th className="p-3 text-start font-medium">{t("colIssuer")}</th>
+                  <th className="p-3 text-start font-medium">{t("colTested")}</th>
+                  <th className="p-3 text-start font-medium">{t("colExpires")}</th>
+                  <th className="p-3 text-start font-medium">{t("colStatus")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cards.map((card) => {
+                  const expired = card.expiresAt != null && new Date(card.expiresAt) < new Date();
+                  const held = card.status === "issued" || card.status === "collected";
+                  return (
+                    <tr key={card.id} className="border-b border-border last:border-0">
+                      <td className="p-3">
+                        {card.courseCode} — {title(card.courseTitleEn, card.courseTitleAr)}
+                        {card.issuanceType === "renewal" ? (
+                          <span className="ms-2 text-[11px] text-muted-foreground">{t("cardRenewal")}</span>
+                        ) : null}
+                      </td>
+                      <td className="p-3 font-mono text-xs">{card.cardNumber ?? "—"}</td>
+                      <td className="p-3">{card.manufacturerName ?? "—"}</td>
+                      <td className="p-3">{day(card.testDate) ?? "—"}</td>
+                      <td className="p-3">{day(card.expiresAt) ?? "—"}</td>
+                      <td className="p-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            !held
+                              ? "bg-muted text-muted-foreground"
+                              : expired
+                                ? "bg-destructive/15 text-destructive"
+                                : "bg-success/15 text-success"
+                          }`}
+                        >
+                          {!held ? t("cardAwaiting") : expired ? t("cardExpired") : t("cardValid")}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold">{t("certificatesTitle")}</h2>

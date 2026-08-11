@@ -1410,7 +1410,19 @@
       "colExam": "الاختبار",
       "certValid": "سارية",
       "certExpired": "منتهية",
-      "certRevoked": "ملغاة"
+      "certRevoked": "ملغاة",
+      "cardsTitle": "بطاقات التأهيل",
+      "cardsNote": "تصدرها الجهة المصنّعة بعد الاختبار العملي. ليست شهادات صادرة عن جي سي سي لاب ولا تظهر في صفحة التحقق العامة.",
+      "colQualification": "التأهيل",
+      "colCardNumber": "رقم البطاقة",
+      "colIssuer": "جهة الإصدار",
+      "colTested": "تاريخ الاختبار",
+      "cardValid": "سارية",
+      "cardExpired": "منتهية",
+      "cardAwaiting": "لدى الجهة المصنّعة",
+      "cardRenewal": "تجديد",
+      "statCardsValid": "بطاقات سارية",
+      "statCardsExpired": "بطاقات منتهية"
     }
   }
 }

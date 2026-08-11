@@ -44,6 +44,7 @@ export default async function AdminEmployeeProfilePage({
         identity={data.identity}
         progress={data.progress}
         certificates={data.certificates}
+        cards={data.cards}
         training={data.training}
         history={data.history}
         locale={locale}

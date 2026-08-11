@@ -12,6 +12,7 @@ import {
   getEmployeeProfile,
   getEmployeeProgress,
   getEntityHistory,
+  listEmployeeCards,
   listEmployeeCertificates,
   listEmployeeTraining,
 } from "./queries";
@@ -28,10 +29,14 @@ export async function loadEmployeeProfile(context: AuthContext | null, employeeI
   const identity = await getEmployeeIdentityStatus(employeeId);
   const progress = await getEmployeeProgress(employeeId);
   const certificates = await listEmployeeCertificates(employeeId);
+  // Loaded here, so the auditor, the admin and the contractor all see the
+  // same answer to "what does this technician hold" — the whole reason this
+  // loader exists rather than three page-level queries.
+  const cards = await listEmployeeCards(employeeId);
   const training = await listEmployeeTraining(employeeId);
   const history = await getEntityHistory("employee", employeeId);
 
-  return { employee, identity, progress, certificates, training, history };
+  return { employee, identity, progress, certificates, cards, training, history };
 }
 
 // A page may only turn "you cannot see this" into a redirect. Swallowing
